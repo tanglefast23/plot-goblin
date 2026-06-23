@@ -72,6 +72,13 @@
   stroke-width: 4;
 }
 
+.tooth {
+  fill: var(--goblin-mist);
+  stroke: var(--goblin-night);
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
 .tease {
   justify-self: end;
 }

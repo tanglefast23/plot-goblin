@@ -157,6 +157,74 @@
   transform: translateY(-1px);
 }
 
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgb(var(--goblin-night-rgb) / 0.42);
+}
+
+.modalDialog {
+  display: grid;
+  gap: 16px;
+  width: min(560px, 100%);
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.2);
+  border-radius: 16px;
+  padding: 28px;
+  background: var(--goblin-mist);
+  box-shadow: 0 28px 60px rgb(var(--goblin-night-rgb) / 0.28);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modalHeader p {
+  color: var(--goblin-moss);
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.modalClose {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.2);
+  border-radius: 999px;
+  color: var(--goblin-night);
+  background: rgb(var(--goblin-mist-rgb) / 0.68);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background-color 180ms ease;
+}
+
+.modalClose:hover {
+  background: rgb(var(--goblin-lichen-rgb) / 0.32);
+}
+
+.modalLede {
+  color: rgb(var(--goblin-night-rgb) / 0.78);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.modalError {
+  color: var(--goblin-night);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
 .hero h1,
 .sectionHeader h2 {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;

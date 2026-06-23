@@ -8,7 +8,11 @@ describe("PlotGoblinMascot", () => {
   it("renders the teasing Plot Goblin mascot", () => {
     render(<PlotGoblinMascot />);
 
-    expect(screen.getByRole("img", { name: /teasing plot goblin mascot/i })).toBeDefined();
+    const mascot = screen.getByRole("img", { name: /teasing plot goblin mascot/i });
+
+    expect(mascot).toBeDefined();
+    expect(mascot.querySelector('[data-mascot-part="glasses"]')).toBeTruthy();
+    expect(mascot.querySelector('[data-mascot-part="fang"]')).toBeTruthy();
     expect(screen.getByText("Need a plot? Cute.")).toBeDefined();
   });
 
@@ -25,6 +29,9 @@ describe("PlotGoblinMascot", () => {
     expect(within(roomList).getByRole("link", { name: /Premise/ }).getAttribute("href")).toBe("/rooms/premise");
     expect(within(roomList).getByRole("link", { name: /Script Parameters/ }).getAttribute("href")).toBe(
       "/rooms/script-parameters",
+    );
+    expect(within(roomList).getByRole("link", { name: /Create the Script/ }).getAttribute("href")).toBe(
+      "/rooms/create-script",
     );
     expect(within(roomList).getByText("Relationships")).toBeDefined();
     expect(within(roomList).getAllByText("Coming soon")).toHaveLength(5);

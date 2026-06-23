@@ -8,7 +8,12 @@ import { parseCowriterChoices } from "@/lib/cowriterChoices";
 import { ACCESS_KEY_STORAGE_KEY } from "@/lib/cowriterAccess";
 import { buildExportMarkdown, NEEDS_ANSWER, NEEDS_WRITING, type ScriptBase } from "@/lib/guidedSetup";
 import { ensureProject, saveProject } from "@/lib/projectStorage";
-import { storyRooms } from "@/lib/storyRooms";
+import {
+  CREATE_SCRIPT_BLOCKED_MESSAGES,
+  getScriptReadiness,
+  type ScriptRoomProgress,
+  storyRooms,
+} from "@/lib/storyRooms";
 
 type BeatSection = {
   heading: string;
@@ -732,8 +737,8 @@ function beatDisplayBody(body: string) {
 
 function beatNoteRows(body: string) {
   const explicitLines = body.split("\n").length;
-  const estimatedWrappedLines = Math.ceil(body.length / 38);
-  return Math.min(11, Math.max(4, explicitLines + estimatedWrappedLines));
+  const estimatedWrappedLines = Math.ceil(body.length / 21);
+  return Math.min(17, Math.max(4, explicitLines + estimatedWrappedLines));
 }
 
 type GuidedRoomEditorProps = {
@@ -779,8 +784,14 @@ function SuggestionGoblin({ label, state }: { label: string; state?: SuggestionM
         <path className={styles.suggestionGoblinEar} d="m62 36 13-8c4-2 3-8-2-9l-18-3Z" />
         <path className={styles.suggestionGoblinHat} d="M22 8h36c6 0 10 4 10 10v10H12V18c0-6 4-10 10-10Z" />
         <path className={styles.suggestionGoblinFace} d="M18 24h44c8 0 14 6 14 14v4c0 10-8 18-18 18H22C12 60 4 52 4 42v-4c0-8 6-14 14-14Z" />
+        <path
+          className={styles.suggestionGoblinGlasses}
+          d="M16 34c5-5 18-5 23 0 3 3 2 12-1 15-5 4-17 4-22 0-4-3-4-12 0-15Zm25 0c5-5 18-5 23 0 4 3 4 12 0 15-5 4-17 4-22 0-3-3-4-12-1-15Zm-2 7h3"
+          data-mascot-part="glasses"
+        />
         <path className={styles.suggestionGoblinLine} d={isHappy ? "M22 35c5-5 12-5 17 0m19 0c-5-5-12-5-17 0" : "M23 33c5-3 11-3 16 0m18 0c-5-3-11-3-16 0"} />
         <path className={styles.suggestionGoblinLine} d={isHappy ? "M29 46c7 7 16 7 23 0" : "M33 47c5 2 10 2 15 0"} />
+        <path className={styles.suggestionGoblinTooth} d="M38 49 42 59l5-10Z" data-mascot-part="fang" />
         <g className={styles.suggestionGoblinThinkingArm}>
           <path className={styles.suggestionGoblinLine} d="M61 57c-5-9-10-13-17-12" />
           <circle className={styles.suggestionGoblinHand} cx="43" cy="45" r="3.6" />
@@ -1121,6 +1132,7 @@ function SceneBoard({ firstSceneRef, markdown, onMarkdownChange }: SceneBoardPro
   const [sceneDraft, setSceneDraft] = useState(template);
   const [draftChanged, setDraftChanged] = useState(false);
   const [draggedSceneIndex, setDraggedSceneIndex] = useState<number | null>(null);
+  const [isTrashTargetActive, setIsTrashTargetActive] = useState(false);
   const activeScene = selectedSceneIndex === null ? template : sceneCards[selectedSceneIndex] ?? template;
   const displayedSceneDraft = draftChanged ? sceneDraft : activeScene;
   const sceneValues = useMemo(() => parseSceneDraftValues(displayedSceneDraft), [displayedSceneDraft]);
@@ -1168,7 +1180,32 @@ function SceneBoard({ firstSceneRef, markdown, onMarkdownChange }: SceneBoardPro
     setSelectedSceneIndex((current) =>
       current === null ? null : selectedSceneAfterMove(current, draggedSceneIndex, toIndex),
     );
+    setIsTrashTargetActive(false);
     setDraggedSceneIndex(null);
+  }
+
+  function endSceneDrag() {
+    setDraggedSceneIndex(null);
+    setIsTrashTargetActive(false);
+  }
+
+  function deleteDraggedScene() {
+    if (draggedSceneIndex === null) return;
+
+    const nextSceneCards = sceneCards.filter((_, index) => index !== draggedSceneIndex);
+    onMarkdownChange(formatScenesMarkdown(markdown, nextSceneCards));
+    setSelectedSceneIndex((current) => {
+      if (current === null) return null;
+      if (current === draggedSceneIndex) return null;
+      return current > draggedSceneIndex ? current - 1 : current;
+    });
+
+    if (selectedSceneIndex === draggedSceneIndex) {
+      setSceneDraft(template);
+      setDraftChanged(false);
+    }
+
+    endSceneDrag();
   }
 
   function updateSceneDraft(patch: Partial<SceneDraftValues>) {
@@ -1178,43 +1215,60 @@ function SceneBoard({ firstSceneRef, markdown, onMarkdownChange }: SceneBoardPro
 
   return (
     <section aria-label="Scene cards" className={styles.sceneBoardPanel}>
-      <div aria-label="Saved scene cards" className={styles.sceneStrip}>
-        <button
-          aria-label="Start new scene"
-          className={styles.sceneAddTile}
-          onClick={startNewScene}
-          title="Start new scene"
-          type="button"
-        >
-          +
-        </button>
+      <div className={styles.sceneStripShell}>
+        {draggedSceneIndex !== null ? (
+          <button
+            aria-label="Delete dragged scene"
+            className={`${styles.sceneTrashTarget} ${isTrashTargetActive ? styles.sceneTrashTargetActive : ""}`}
+            onDragEnter={() => setIsTrashTargetActive(true)}
+            onDragLeave={() => setIsTrashTargetActive(false)}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={deleteDraggedScene}
+            type="button"
+          >
+            <span aria-hidden="true" className={styles.sceneTrashIcon} />
+            <span>Drop to delete</span>
+          </button>
+        ) : null}
 
-        {sceneCards.map((sceneCard, index) => {
-          const summary = sceneSummary(sceneCard);
-          const isSelected = selectedSceneIndex === index;
+        <div aria-label="Saved scene cards" className={styles.sceneStrip}>
+          <button
+            aria-label="Start new scene"
+            className={styles.sceneAddTile}
+            onClick={startNewScene}
+            title="Start new scene"
+            type="button"
+          >
+            +
+          </button>
 
-          return (
-            <button
-              aria-current={isSelected ? "true" : undefined}
-              aria-label={`${summary.title}. ${summary.location}. ${summary.characters}`}
-              className={`${styles.sceneMiniCard} ${isSelected ? styles.sceneMiniCardActive : ""}`}
-              draggable
-              key={`${summary.title}-${index}`}
-              onClick={() => openScene(index)}
-              onDragEnd={() => setDraggedSceneIndex(null)}
-              onDragOver={(event) => event.preventDefault()}
-              onDragStart={() => setDraggedSceneIndex(index)}
-              onDrop={() => dropScene(index)}
-              title="Drag to reorder"
-              type="button"
-            >
-              <span className={styles.sceneMiniNumber}>{String(index + 1).padStart(2, "0")}</span>
-              <span className={styles.sceneMiniTitle}>{summary.title}</span>
-              <span className={styles.sceneMiniMeta}>{summary.location}</span>
-              <span className={styles.sceneMiniMeta}>{summary.characters}</span>
-            </button>
-          );
-        })}
+          {sceneCards.map((sceneCard, index) => {
+            const summary = sceneSummary(sceneCard);
+            const isSelected = selectedSceneIndex === index;
+
+            return (
+              <button
+                aria-current={isSelected ? "true" : undefined}
+                aria-label={`${summary.title}. ${summary.location}. ${summary.characters}`}
+                className={`${styles.sceneMiniCard} ${isSelected ? styles.sceneMiniCardActive : ""}`}
+                draggable
+                key={`${summary.title}-${index}`}
+                onClick={() => openScene(index)}
+                onDragEnd={endSceneDrag}
+                onDragOver={(event) => event.preventDefault()}
+                onDragStart={() => setDraggedSceneIndex(index)}
+                onDrop={() => dropScene(index)}
+                title="Drag to reorder"
+                type="button"
+              >
+                <span className={styles.sceneMiniNumber}>{String(index + 1).padStart(2, "0")}</span>
+                <span className={styles.sceneMiniTitle}>{summary.title}</span>
+                <span className={styles.sceneMiniMeta}>{summary.location}</span>
+                <span className={styles.sceneMiniMeta}>{summary.characters}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className={styles.sceneDraftPanel}>
@@ -1431,6 +1485,141 @@ type ScriptParametersEditorProps = {
   markdown: string;
   onMarkdownChange: (markdown: string) => void;
 };
+
+type CreateScriptRoomProps = {
+  markdown: string;
+  onMarkdownChange: (markdown: string) => void;
+  project: ScriptBase;
+};
+
+type CreateScriptGateState =
+  | { status: "idle" }
+  | { message: string; reason: string; roomSlug: string; roomTitle: string; status: "blocked" }
+  | { status: "ready" };
+
+function randomBlockedMessage(roomTitle: string) {
+  const template =
+    CREATE_SCRIPT_BLOCKED_MESSAGES[Math.floor(Math.random() * CREATE_SCRIPT_BLOCKED_MESSAGES.length)] ??
+    CREATE_SCRIPT_BLOCKED_MESSAGES[0];
+
+  return template.replace("{room}", roomTitle);
+}
+
+function CreateScriptRoom({ markdown, onMarkdownChange, project }: CreateScriptRoomProps) {
+  const readiness = useMemo(() => getScriptReadiness(project.rooms), [project.rooms]);
+  const [gateState, setGateState] = useState<CreateScriptGateState>({ status: "idle" });
+
+  function requestDraft() {
+    if (readiness.ready) {
+      setGateState({ status: "ready" });
+      return;
+    }
+
+    const missing = readiness.missingRooms[0];
+    if (!missing) return;
+
+    setGateState({
+      message: randomBlockedMessage(missing.room.title),
+      reason: missing.reason,
+      roomSlug: missing.room.slug,
+      roomTitle: missing.room.title,
+      status: "blocked",
+    });
+  }
+
+  return (
+    <section aria-label="Create the Script draft gate" className={styles.scriptGatePanel}>
+      <div aria-label="Huge Create the Script goblin" className={styles.scriptGateGoblin} role="img">
+        <span className={styles.scriptGateGoblinGlasses} data-mascot-part="glasses" />
+        <span className={styles.scriptGateGoblinMouth} />
+        <span className={styles.scriptGateGoblinFang} data-mascot-part="fang" />
+      </div>
+
+      <div className={styles.scriptGateCopy}>
+        <p className={styles.stepMeta}>Draft checkpoint</p>
+        <h2>Summon the goblin when the script has bones.</h2>
+        <p>
+          The goblin checks the first six rooms before drafting. If the story is still underfed, it points to the room
+          that needs work instead of inventing your movie for you.
+        </p>
+      </div>
+
+      <div className={styles.scriptGateLinks}>
+        <button className={`${styles.primaryButton} ${styles.goblinDraftButton}`} onClick={requestDraft} type="button">
+          Please Oh Mighty Goblin. Write a draft.
+        </button>
+      </div>
+
+      {gateState.status === "blocked" ? (
+        <div className={styles.scriptGateNotice} role="status">
+          <p>{gateState.message}</p>
+          <small>{gateState.reason}</small>
+          <Link
+            className={`${styles.primaryButton} ${styles.attentionButton} ${styles.scriptGateQuestButton}`}
+            href={`/rooms/${gateState.roomSlug}`}
+          >
+            {gateState.roomTitle} - take me there
+          </Link>
+        </div>
+      ) : null}
+
+      {gateState.status === "ready" ? (
+        <div className={styles.scriptGateNotice} role="status">
+          <p>The goblin has enough bones to start a tailored draft. Dangerous. Promising. Finally.</p>
+          <textarea
+            aria-label="Create the Script markdown"
+            className={styles.editorTextarea}
+            onChange={(event) => onMarkdownChange(event.target.value)}
+            value={markdown}
+          />
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function CreateScriptGuidanceMeters({ roomProgress }: { roomProgress: ScriptRoomProgress[] }) {
+  const unfinishedRooms = roomProgress.filter((progress) => progress.remaining > 0);
+
+  if (unfinishedRooms.length === 0) {
+    return <p className={styles.nudge}>Every required room has enough material for the draft gate.</p>;
+  }
+
+  return (
+    <div aria-label="Create the Script readiness meters" className={styles.guidanceMeters}>
+      {unfinishedRooms.map((progress) => (
+        <div className={styles.guidanceMeterRow} key={progress.room.slug}>
+          <div className={styles.guidanceMeterHeader}>
+            <strong>{progress.room.title}</strong>
+            <span>{progress.percent}%</span>
+          </div>
+          <div
+            aria-label={`${progress.room.title} readiness`}
+            aria-valuemax={progress.total}
+            aria-valuemin={0}
+            aria-valuenow={progress.completed}
+            className={styles.guidanceMeterTrack}
+            role="progressbar"
+          >
+            <span className={styles.guidanceMeterFill} style={{ width: `${progress.percent}%` }} />
+          </div>
+          <div className={styles.guidanceMeterFooter}>
+            <span>
+              {progress.completed} filled / {progress.remaining} to go
+            </span>
+            <Link
+              aria-label={`${progress.room.title} - take me there`}
+              className={styles.guidanceMeterButton}
+              href={`/rooms/${progress.room.slug}`}
+            >
+              Take me there
+            </Link>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function ScriptParametersEditor({ markdown, onMarkdownChange }: ScriptParametersEditorProps) {
   const values = useMemo(() => parseScriptParameters(markdown), [markdown]);
@@ -1656,6 +1845,10 @@ export function RoomEditorClient() {
   const firstGuidedRoomFieldRef = useRef<HTMLTextAreaElement>(null);
   const firstBeatTextareaRef = useRef<HTMLTextAreaElement>(null);
   const sceneTitleRef = useRef<HTMLInputElement>(null);
+  const createScriptRoomProgress = useMemo(
+    () => (project ? getScriptReadiness(project.rooms).roomProgress : []),
+    [project],
+  );
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -1722,6 +1915,8 @@ export function RoomEditorClient() {
             />
           ) : room.slug === "scenes" ? (
             <SceneBoard firstSceneRef={sceneTitleRef} markdown={markdown} onMarkdownChange={setMarkdown} />
+          ) : room.slug === "create-script" ? (
+            <CreateScriptRoom markdown={markdown} onMarkdownChange={setMarkdown} project={project} />
           ) : room.slug === "script-parameters" ? (
             <ScriptParametersEditor markdown={markdown} onMarkdownChange={setMarkdown} />
           ) : GUIDED_ROOM_SLUGS.has(room.slug) ? (
@@ -1747,11 +1942,15 @@ export function RoomEditorClient() {
         <aside className={styles.guidanceBox}>
           <h2>Goblin guidance</h2>
           <p className={styles.nudge}>{room.guidingQuestion}</p>
-          <ul>
-            {room.prompts.map((prompt) => (
-              <li key={prompt}>{prompt}</li>
-            ))}
-          </ul>
+          {room.slug === "create-script" ? (
+            <CreateScriptGuidanceMeters roomProgress={createScriptRoomProgress} />
+          ) : (
+            <ul>
+              {room.prompts.map((prompt) => (
+                <li key={prompt}>{prompt}</li>
+              ))}
+            </ul>
+          )}
           <div className={styles.actionRow}>
             <Link className={styles.secondaryButton} href="/rooms">
               Back to rooms

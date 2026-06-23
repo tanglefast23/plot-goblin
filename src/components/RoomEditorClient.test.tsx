@@ -140,7 +140,10 @@ describe("RoomEditorClient", () => {
     vi.useFakeTimers();
     fireEvent.click(screen.getByRole("button", { name: "Goblin Suggest for Stakes" }));
 
-    expect(screen.getByRole("img", { name: "Goblin is thinking for Stakes" })).toBeTruthy();
+    const thinkingGoblin = screen.getByRole("img", { name: "Goblin is thinking for Stakes" });
+    expect(thinkingGoblin).toBeTruthy();
+    expect(thinkingGoblin.querySelector('[data-mascot-part="glasses"]')).toBeTruthy();
+    expect(thinkingGoblin.querySelector('[data-mascot-part="fang"]')).toBeTruthy();
 
     await act(async () => {
       resolveFetch({
@@ -368,6 +371,33 @@ describe("RoomEditorClient", () => {
       expect(storedProject.rooms.beats).toContain("## Opening Image\nA locker room wall of tryout flyers.");
       expect(storedProject.rooms.beats).toContain("## Setup\nEstablish the world");
     });
+  });
+
+  it("gives long beat notes at least fifty percent more visible rows", async () => {
+    routeState.slug = "beats";
+    const project = buildScriptBase({
+      rawIdea: "A one-armed pitcher tries to make the majors.",
+      genre: "Comedy",
+      audienceFeeling: "hopeful and tense",
+      protagonist: "Stubborn one-armed pitcher",
+      surfaceWant: "become a professional baseball player",
+      stakes: "he loses the only dream he has left",
+      falseBelief: "asking for help makes him weak",
+      opposition: "better players who have two arms",
+      endingDirection: "He changes and wins",
+      structurePreference: "Classic 3-act spine",
+    });
+    project.rooms.beats = project.rooms.beats.replace(
+      /\n## Setup\n[^\n]+/,
+      "\n## Setup\nJoe shows up before dawn to a cracked public baseball diamond, taping a bat to his one good hand and running drills alone while two-armed high school players jog past and snicker. He tells his little brother John that scouts only care who works hardest, then proves it by diving for a grounder until his old stump sling bleeds.",
+    );
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+
+    render(<RoomEditorClient />);
+
+    const setup = (await screen.findByRole("textbox", { name: "Setup beat" })) as HTMLTextAreaElement;
+
+    expect(setup.rows).toBe(17);
   });
 
   it("shows needs-your-answer beat markers as tags instead of textarea text", async () => {
@@ -744,6 +774,85 @@ Rafa wants to hide the injury.
     });
   });
 
+  it("deletes a saved scene card when it is dropped on the trash target", async () => {
+    routeState.slug = "scenes";
+    const project = buildScriptBase({});
+    project.rooms.scenes = `# Scenes Room
+
+## Scene card template
+
+### Scene: [Short title]
+
+**Location / time:** INT./EXT. PLACE - DAY/NIGHT
+
+**Characters:**
+[Needs writing] Who is in the scene, and who has the most pressure on them?
+
+**Scene want:**
+[Needs writing] What does the active character want in this scene?
+
+**Opposition:**
+[Needs writing] What blocks them?
+
+**Turn:**
+[Needs writing] What changes by the end?
+
+**Button:**
+[Needs writing] What is the last image, line, or action?
+
+**Purpose:**
+Plot / character / theme / tension / setup / payoff
+
+## Saved scenes
+
+### Scene: First Pitch
+
+**Location / time:** EXT. FIELD - DAY
+
+**Characters:**
+Rafa, Scout
+
+**Scene want:**
+Rafa wants attention.
+
+---
+
+### Scene: Locker Room
+
+**Location / time:** INT. LOCKER ROOM - NIGHT
+
+**Characters:**
+Rafa, Mina
+
+**Scene want:**
+Rafa wants to hide the injury.
+
+## Scene list
+- First Pitch
+- Locker Room
+`;
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+
+    render(<RoomEditorClient />);
+
+    expect(screen.queryByRole("button", { name: "Delete dragged scene" })).toBeNull();
+
+    const lockerRoom = await screen.findByRole("button", { name: /Locker Room/ });
+    fireEvent.dragStart(lockerRoom);
+
+    const trashTarget = await screen.findByRole("button", { name: "Delete dragged scene" });
+    fireEvent.dragOver(trashTarget);
+    fireEvent.drop(trashTarget);
+
+    await waitFor(() => {
+      const storedProject = JSON.parse(window.localStorage.getItem(PROJECT_STORAGE_KEY) ?? "{}");
+      expect(storedProject.rooms.scenes).toContain("### Scene: First Pitch");
+      expect(storedProject.rooms.scenes).not.toContain("### Scene: Locker Room");
+      expect(storedProject.rooms.scenes).toContain("- First Pitch");
+      expect(storedProject.rooms.scenes).not.toContain("- Locker Room");
+    });
+  });
+
   it("edits script parameters through form controls while saving markdown in the background", async () => {
     routeState.slug = "script-parameters";
     const project = buildScriptBase({
@@ -831,5 +940,93 @@ Rafa wants to hide the injury.
 
     expect(screen.getByText("Dialogue density")).toBeTruthy();
     expect(screen.getByText("Voiceover / narration")).toBeTruthy();
+  });
+
+  it("gates Create the Script and points writers back to the first room it still needs", async () => {
+    routeState.slug = "create-script";
+    const project = buildScriptBase({
+      rawIdea: "A one-armed pitcher tries to make the majors.",
+      genre: "Comedy",
+      audienceFeeling: "hopeful and tense",
+      protagonist: "Stubborn one-armed pitcher",
+      surfaceWant: "become a professional baseball player",
+      stakes: "he loses the only dream he has left",
+      falseBelief: "asking for help makes him weak",
+      opposition: "better players who have two arms",
+      endingDirection: "He changes and wins",
+      structurePreference: "Classic 3-act spine",
+    });
+    project.rooms.premise = "# Premise Room\n\n## Stakes\nRafa loses the tryout.\n[needs your answer] What gets worse?";
+    project.rooms.characters = "# Characters Room\n\nRafa protects pride until Mina pressures him to ask for help.";
+    project.rooms.theme = "# Theme Room\n\nPressure proves adaptation is not surrender.";
+    project.rooms.beats = "# Beats Room\n\nOpening image, midpoint, all is lost, climax, final image.";
+    project.rooms.scenes = "# Scenes Room\n\n### Scene: Tryout Opens\nRafa wants one clean pitch.";
+    project.rooms["script-parameters"] = "# Script Parameters Room\n\nFeature film. PG-13 sports comedy.";
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+
+    render(<RoomEditorClient />);
+
+    await screen.findByRole("region", { name: "Create the Script draft gate" });
+    expect(screen.getByRole("heading", { name: "Create the Script" })).toBeTruthy();
+    const draftGoblin = screen.getByRole("img", { name: "Huge Create the Script goblin" });
+    expect(draftGoblin).toBeTruthy();
+    expect(draftGoblin.querySelector('[data-mascot-part="glasses"]')).toBeTruthy();
+    expect(draftGoblin.querySelector('[data-mascot-part="fang"]')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Please Oh Mighty Goblin. Write a draft." }));
+
+    const scriptParametersLinks = (await screen.findAllByRole("link", {
+      name: /Script Parameters - take me there/i,
+    })) as HTMLAnchorElement[];
+    expect(scriptParametersLinks.some((link) => link.getAttribute("href") === "/rooms/script-parameters")).toBe(true);
+    expect(screen.queryByRole("textbox", { name: "Create the Script markdown" })).toBeNull();
+  });
+
+  it("shows readiness meters and take-me-there buttons for unfinished Create the Script source rooms", async () => {
+    routeState.slug = "create-script";
+    const project = buildScriptBase({
+      rawIdea: "A one-armed pitcher tries to make the majors.",
+      genre: "Comedy",
+      audienceFeeling: "hopeful and tense",
+      protagonist: "Stubborn one-armed pitcher",
+      surfaceWant: "become a professional baseball player",
+      stakes: "he loses the only dream he has left",
+      falseBelief: "asking for help makes him weak",
+      opposition: "better players who have two arms",
+      endingDirection: "He changes and wins",
+      structurePreference: "Classic 3-act spine",
+    });
+    project.rooms.premise =
+      "# Premise Room\n\n## Raw idea\nRafa wants a tryout.\n\n## Protagonist\nRafa.\n\n## Surface want\nPitch well.\n\n## Stakes\nHe loses his last chance.";
+    project.rooms.characters =
+      "# Characters Room\n\n## Protagonist\nRafa.\n\n### Surface want\nPitch well.\n\n### Deeper need\nAccept help.\n\n### False belief\nHelp means weakness.\n\n### Flaw / defense mechanism\nHe jokes.\n\n### Pressure test\nHe gets one pitch.\n\n## Antagonist / opposition\nA skeptical coach.";
+    project.rooms.theme =
+      "# Theme Room\n\n## Theme question\nIs help weakness?\n\n## Starting belief\nRafa thinks it is.\n\n## Ending statement\nHelp is courage.";
+    project.rooms.beats =
+      "# Beats Room\n\n## Opening Image\nRafa tapes a glove.\n\n## Inciting Incident\nA scout calls.";
+    project.rooms.scenes = "# Scenes Room\n\n## Scene list\n- Tryout opens.";
+    project.rooms["script-parameters"] =
+      "# Script Parameters Room\n\n## Runtime / page target\nLength format: Feature film.\nTarget page count: 100 pages.\n";
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+
+    render(<RoomEditorClient />);
+
+    await screen.findByRole("region", { name: "Create the Script draft gate" });
+
+    expect(screen.getByRole("progressbar", { name: "Premise readiness" }).getAttribute("aria-valuenow")).toBe("4");
+    expect(screen.getByText("4 filled / 4 to go")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Premise - take me there" }).getAttribute("href")).toBe("/rooms/premise");
+
+    expect(screen.getByRole("progressbar", { name: "Beats readiness" }).getAttribute("aria-valuenow")).toBe("2");
+    expect(screen.getByText("2 filled / 5 to go")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Beats - take me there" }).getAttribute("href")).toBe("/rooms/beats");
+
+    expect(screen.getByRole("progressbar", { name: "Script Parameters readiness" }).getAttribute("aria-valuenow")).toBe(
+      "2",
+    );
+    expect(screen.getByText("2 filled / 17 to go")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Script Parameters - take me there" }).getAttribute("href")).toBe(
+      "/rooms/script-parameters",
+    );
   });
 });

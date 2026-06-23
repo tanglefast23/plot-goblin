@@ -10,6 +10,27 @@ export type StoryRoom = {
   prompts: string[];
 };
 
+export type ScriptReadinessIssue = {
+  reason: string;
+  room: StoryRoom;
+};
+
+export type ScriptRoomProgress = {
+  completed: number;
+  percent: number;
+  remaining: number;
+  room: StoryRoom;
+  total: number;
+};
+
+export type ScriptReadiness = {
+  blockedRooms: StoryRoom[];
+  missingRoom?: StoryRoom;
+  missingRooms: ScriptReadinessIssue[];
+  ready: boolean;
+  roomProgress: ScriptRoomProgress[];
+};
+
 export const structureModes = {
   default: "guided-three-act",
   allowCustomBeats: true,
@@ -97,6 +118,19 @@ export const storyRooms: StoryRoom[] = [
     ],
   },
   {
+    slug: "create-script",
+    title: "Create the Script",
+    status: "active",
+    markdownFile: "create-script.md",
+    purpose: "Summon the goblin to check whether the script has enough bones for a halfway decent draft.",
+    guidingQuestion: "Has the writer fed the goblin enough premise, character, theme, beats, scenes, and drafting rules?",
+    prompts: [
+      "Script Parameters must be completely filled out.",
+      "Premise, Characters, and Beats need the strongest story spine.",
+      "Theme and Scenes can be lighter, but they cannot be empty fog.",
+    ],
+  },
+  {
     slug: "relationships",
     title: "Relationships",
     status: "coming-soon",
@@ -143,10 +177,311 @@ export const storyRooms: StoryRoom[] = [
   },
 ];
 
+export const SCRIPT_SOURCE_ROOM_SLUGS = [
+  "script-parameters",
+  "premise",
+  "characters",
+  "theme",
+  "beats",
+  "scenes",
+] as const;
+
+const UNFINISHED_MARKER_PATTERN = /\[(?:needs your answer|needs answer|needs writing)\]/i;
+
+export const CREATE_SCRIPT_BLOCKED_MESSAGES = [
+  "I would love to write your screenplay, truly, but right now you have handed me fog in a hat. Feed me the {room} room first.",
+  "Magnificent. A draft request with the structural density of soup steam. The goblin requires {room} before committing crimes against cinema.",
+  "I checked the story pantry and found vibes, lint, and one frightened adjective. Go fill out {room} so this can become a movie instead of a haunted shrug.",
+  "Your confidence is adorable. Unfortunately, the screenplay machine runs on choices, consequences, and {room}, not wishing noises.",
+  "I can write nonsense immediately. I am gifted that way. But for a halfway decent script, the goblin demands {room}.",
+] as const;
+
+type MarkdownSection = {
+  body: string;
+  heading: string;
+  level: number;
+  ownBody: string;
+};
+
+const REQUIRED_SCRIPT_PARAMETER_LABELS = [
+  "Length format",
+  "Target page count",
+  "Current genre",
+  "Audience feeling",
+  "Tone words",
+  "Structure mode",
+  "Pacing bias",
+  "Scene length rule",
+  "Format",
+  "Dialogue density",
+  "Voiceover / narration",
+  "Target rating",
+  "No-go content",
+  "Cast size",
+  "Location limits",
+  "Time period / setting rules",
+  "Budget reality",
+  "Primary POV",
+  "Scene access",
+] as const;
+
+const PREMISE_REQUIRED_SECTIONS = [
+  ["Story promise", "Core promise"],
+  ["Raw idea"],
+  ["Protagonist"],
+  ["Surface want"],
+  ["Stakes"],
+  ["Opposition"],
+  ["Dramatic question"],
+  ["Polished logline", "Logline"],
+];
+
+const CHARACTER_REQUIRED_SECTIONS = [
+  ["Protagonist"],
+  ["Surface want"],
+  ["Deeper need"],
+  ["False belief"],
+  ["Flaw / defense mechanism"],
+  ["Pressure test"],
+  ["Antagonist / opposition"],
+];
+
+const THEME_REQUIRED_SECTIONS = [["Theme question"], ["Starting belief"], ["Ending statement"]];
+
+const BEAT_REQUIRED_SECTIONS = [
+  ["Opening Image"],
+  ["Inciting Incident"],
+  ["Act One Break"],
+  ["Midpoint"],
+  ["All Is Lost"],
+  ["Climax"],
+  ["Final Image"],
+];
+
+function headingLevel(line: string) {
+  return /^(#{1,6})\s+/.exec(line)?.[1].length ?? 0;
+}
+
+function normalizeHeading(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[`*_#]/g, "")
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function markdownSections(markdown: string): MarkdownSection[] {
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  const headingIndexes = lines.reduce<Array<{ index: number; level: number }>>((indexes, line, index) => {
+    const level = headingLevel(line);
+    if (level > 0) indexes.push({ index, level });
+    return indexes;
+  }, []);
+
+  return headingIndexes.map((heading, headingIndex) => {
+    let bodyEnd = lines.length;
+    let ownBodyEnd = lines.length;
+
+    for (let index = heading.index + 1; index < lines.length; index += 1) {
+      const nextLevel = headingLevel(lines[index]);
+      if (nextLevel === 0) continue;
+      if (ownBodyEnd === lines.length) ownBodyEnd = index;
+      if (nextLevel <= heading.level) {
+        bodyEnd = index;
+        break;
+      }
+    }
+
+    const nextHeading = headingIndexes[headingIndex + 1]?.index;
+    if (nextHeading !== undefined && ownBodyEnd === lines.length) ownBodyEnd = nextHeading;
+
+    return {
+      body: lines.slice(heading.index + 1, bodyEnd).join("\n").trim(),
+      heading: lines[heading.index].replace(/^#{1,6}\s+/, "").trim(),
+      level: heading.level,
+      ownBody: lines.slice(heading.index + 1, ownBodyEnd).join("\n").trim(),
+    };
+  });
+}
+
+function section(markdown: string, heading: string) {
+  const normalized = normalizeHeading(heading);
+  return markdownSections(markdown).find((candidate) => normalizeHeading(candidate.heading) === normalized);
+}
+
+function finishedText(value: string | undefined) {
+  if (!value || UNFINISHED_MARKER_PATTERN.test(value)) return false;
+
+  const cleaned = value
+    .replace(/^[-*\s]+/gm, "")
+    .replace(/\[(?:short title|protagonist|goal|stakes\/clock|central obstacle|hard choice)\]/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return cleaned.length >= 3;
+}
+
+function sectionGroupIsReady(markdown: string, headings: string[]) {
+  return headings.some((heading) => finishedText(section(markdown, heading)?.ownBody));
+}
+
+function firstMissingSection(markdown: string, sectionGroups: string[][]) {
+  return sectionGroups.find((headings) => !sectionGroupIsReady(markdown, headings))?.[0] ?? null;
+}
+
+function completedSectionGroups(markdown: string, sectionGroups: string[][]) {
+  return sectionGroups.filter((headings) => sectionGroupIsReady(markdown, headings)).length;
+}
+
+function lineValue(markdown: string, label: string) {
+  const match = new RegExp(`^${escapeRegExp(label)}:\\s*(.*)$`, "im").exec(markdown);
+  return match?.[1]?.trim() ?? "";
+}
+
+function lineIsReady(markdown: string, label: string) {
+  const value = lineValue(markdown, label);
+  if (!finishedText(value)) return false;
+  if (label === "Target page count") return /\d+/.test(value);
+  if (label === "Cast size") return /\d+/.test(value);
+  return true;
+}
+
+function firstMissingScriptParameter(markdown: string) {
+  return REQUIRED_SCRIPT_PARAMETER_LABELS.find((label) => !lineIsReady(markdown, label)) ?? null;
+}
+
+function completedScriptParameters(markdown: string) {
+  return REQUIRED_SCRIPT_PARAMETER_LABELS.filter((label) => lineIsReady(markdown, label)).length;
+}
+
+function hasReadySceneCard(markdown: string) {
+  return markdownSections(markdown)
+    .filter((candidate) => /^scene:/i.test(candidate.heading))
+    .some((candidate) => {
+      return !/\[short title\]/i.test(candidate.heading) && finishedText(`${candidate.heading}\n${candidate.body}`);
+    });
+}
+
+function sceneListIsReady(markdown: string) {
+  const sceneList = section(markdown, "Scene list")?.ownBody;
+  if (!sceneList || !finishedText(sceneList)) return false;
+
+  return sceneList
+    .split("\n")
+    .map((line) => line.replace(/^[-*\s]+/, "").trim())
+    .some((line) => line.length >= 3 && !UNFINISHED_MARKER_PATTERN.test(line));
+}
+
+function firstMissingReason(slug: (typeof SCRIPT_SOURCE_ROOM_SLUGS)[number], markdown: string) {
+  if (!markdown.trim()) return "Add usable story material.";
+
+  if (slug === "script-parameters") {
+    const missingParameter = firstMissingScriptParameter(markdown);
+    return missingParameter ? `Fill out ${missingParameter}.` : null;
+  }
+
+  if (slug === "premise") {
+    const missing = firstMissingSection(markdown, PREMISE_REQUIRED_SECTIONS);
+    return missing ? `Fill out ${missing}.` : null;
+  }
+
+  if (slug === "characters") {
+    const missing = firstMissingSection(markdown, CHARACTER_REQUIRED_SECTIONS);
+    return missing ? `Fill out ${missing}.` : null;
+  }
+
+  if (slug === "theme") {
+    const missing = firstMissingSection(markdown, THEME_REQUIRED_SECTIONS);
+    return missing ? `Fill out ${missing}.` : null;
+  }
+
+  if (slug === "beats") {
+    const missing = firstMissingSection(markdown, BEAT_REQUIRED_SECTIONS);
+    return missing ? `Fill out ${missing}.` : null;
+  }
+
+  if (slug === "scenes") {
+    return sceneListIsReady(markdown) || hasReadySceneCard(markdown) ? null : "Add a scene list item or usable scene card.";
+  }
+
+  return null;
+}
+
+function buildRoomProgress(
+  slug: (typeof SCRIPT_SOURCE_ROOM_SLUGS)[number],
+  room: StoryRoom,
+  markdown: string,
+): ScriptRoomProgress {
+  let completed = 0;
+  let total = 1;
+
+  if (slug === "script-parameters") {
+    completed = completedScriptParameters(markdown);
+    total = REQUIRED_SCRIPT_PARAMETER_LABELS.length;
+  } else if (slug === "premise") {
+    completed = completedSectionGroups(markdown, PREMISE_REQUIRED_SECTIONS);
+    total = PREMISE_REQUIRED_SECTIONS.length;
+  } else if (slug === "characters") {
+    completed = completedSectionGroups(markdown, CHARACTER_REQUIRED_SECTIONS);
+    total = CHARACTER_REQUIRED_SECTIONS.length;
+  } else if (slug === "theme") {
+    completed = completedSectionGroups(markdown, THEME_REQUIRED_SECTIONS);
+    total = THEME_REQUIRED_SECTIONS.length;
+  } else if (slug === "beats") {
+    completed = completedSectionGroups(markdown, BEAT_REQUIRED_SECTIONS);
+    total = BEAT_REQUIRED_SECTIONS.length;
+  } else if (slug === "scenes") {
+    completed = sceneListIsReady(markdown) || hasReadySceneCard(markdown) ? 1 : 0;
+  }
+
+  const remaining = Math.max(total - completed, 0);
+
+  return {
+    completed,
+    percent: total === 0 ? 100 : Math.round((completed / total) * 100),
+    remaining,
+    room,
+    total,
+  };
+}
+
 export function getActiveRooms() {
   return storyRooms.filter((room) => room.status === "active");
 }
 
 export function getComingSoonRooms() {
   return storyRooms.filter((room) => room.status === "coming-soon");
+}
+
+export function getScriptReadiness(rooms: Record<string, string>): ScriptReadiness {
+  const roomProgress = SCRIPT_SOURCE_ROOM_SLUGS.flatMap<ScriptRoomProgress>((slug) => {
+    const room = storyRooms.find((candidate) => candidate.slug === slug);
+    if (!room) return [];
+
+    return [buildRoomProgress(slug, room, rooms[slug] ?? "")];
+  });
+
+  const missingRooms = SCRIPT_SOURCE_ROOM_SLUGS.flatMap<ScriptReadinessIssue>((slug) => {
+    const room = storyRooms.find((candidate) => candidate.slug === slug);
+    if (!room) return [];
+
+    const markdown = rooms[slug] ?? "";
+    const reason = firstMissingReason(slug, markdown);
+
+    return reason ? [{ reason, room }] : [];
+  });
+  const blockedRooms = missingRooms.map((issue) => issue.room);
+
+  return {
+    blockedRooms,
+    missingRoom: blockedRooms[0],
+    missingRooms,
+    ready: blockedRooms.length === 0,
+    roomProgress,
+  };
 }
