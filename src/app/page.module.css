@@ -79,11 +79,13 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: 30px;
+  margin-top: 36px;
 }
 
 .primaryCta,
 .secondaryCta {
+  position: relative;
+  isolation: isolate;
   display: inline-flex;
   min-height: 48px;
   align-items: center;
@@ -101,9 +103,56 @@
 }
 
 .primaryCta {
-  border: 1px solid var(--goblin-night);
+  min-width: min(100%, 430px);
+  min-height: 96px;
+  padding: 0 42px;
+  border: 2px solid var(--goblin-night);
+  border-radius: 999px 62px 999px 74px;
   color: var(--goblin-night);
+  background:
+    radial-gradient(circle at 18% 34%, rgb(var(--goblin-mist-rgb) / 0.86) 0 10px, transparent 11px),
+    radial-gradient(circle at 35% 70%, rgb(var(--goblin-lichen-rgb) / 0.95) 0 18px, transparent 19px),
+    radial-gradient(circle at 66% 28%, rgb(var(--goblin-gold-rgb) / 0.82) 0 26px, transparent 27px),
+    radial-gradient(circle at 82% 66%, rgb(var(--goblin-moss-rgb) / 0.42) 0 17px, transparent 18px),
+    var(--goblin-gold);
+  box-shadow:
+    inset 0 -10px 0 rgb(var(--goblin-night-rgb) / 0.08),
+    0 18px 30px rgb(var(--goblin-night-rgb) / 0.16);
+  font-size: 1.2rem;
+  text-shadow: 0 1px 0 rgb(var(--goblin-mist-rgb) / 0.6);
+}
+
+.primaryCta::before,
+.primaryCta::after {
+  position: absolute;
+  z-index: -1;
+  border: 2px solid var(--goblin-night);
   background: var(--goblin-gold);
+  content: "";
+}
+
+.primaryCta::before {
+  top: -18px;
+  left: 44px;
+  width: 84px;
+  height: 48px;
+  border-radius: 999px 999px 48px 44px;
+  background:
+    radial-gradient(circle at 32% 44%, rgb(var(--goblin-lichen-rgb) / 0.88) 0 13px, transparent 14px),
+    var(--goblin-gold);
+  transform: rotate(-5deg);
+}
+
+.primaryCta::after {
+  right: 34px;
+  bottom: -17px;
+  width: 112px;
+  height: 42px;
+  border-radius: 42px 54px 999px 999px;
+  background:
+    radial-gradient(circle at 68% 50%, rgb(var(--goblin-mist-rgb) / 0.82) 0 10px, transparent 11px),
+    rgb(var(--goblin-lichen-rgb) / 0.94);
+  transform: rotate(3deg);
 }
 
 .secondaryCta {
@@ -114,18 +163,23 @@
 
 .primaryCta:hover,
 .secondaryCta:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px) rotate(-0.5deg);
 }
 
 .heroVisual {
   position: relative;
-  min-height: 510px;
+  display: flex;
+  min-height: 600px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
 }
 
 .goblinPoster {
-  position: absolute;
-  top: -44px;
-  right: -54px;
+  position: relative;
+  top: auto;
+  right: auto;
   width: min(620px, 112%);
   height: auto;
   overflow: visible;
@@ -174,12 +228,11 @@
 }
 
 .heroCard {
-  position: absolute;
-  right: 26px;
-  bottom: 26px;
-  z-index: 2;
+  position: relative;
+  z-index: 1;
   width: min(300px, 78%);
   padding: 22px;
+  text-align: center;
   background: rgb(var(--goblin-mist-rgb) / 0.92);
 }
 
@@ -382,11 +435,10 @@
   }
 
   .heroVisual {
-    min-height: 420px;
+    min-height: 520px;
   }
 
   .goblinPoster {
-    right: 0;
     width: min(560px, 100%);
   }
 
@@ -434,23 +486,28 @@
     font-size: 0.68rem;
   }
 
+  .primaryCta {
+    width: 100%;
+    min-width: 0;
+    min-height: 78px;
+    padding: 0 22px;
+    font-size: 0.96rem;
+  }
+
   .heroVisual {
-    min-height: 390px;
+    min-height: 520px;
+    gap: 18px;
     overflow: hidden;
   }
 
   .goblinPoster {
     top: 28px;
-    right: auto;
-    left: 24px;
+    left: auto;
     width: 330px;
     transform: none;
   }
 
   .heroCard {
-    right: auto;
-    bottom: 24px;
-    left: 42px;
     width: 250px;
     transform: none;
   }

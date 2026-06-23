@@ -37,10 +37,7 @@ export default function Home() {
             </p>
             <div className={styles.ctaRow}>
               <Link className={styles.primaryCta} href="/guided-setup">
-                Start setup
-              </Link>
-              <Link className={styles.secondaryCta} href="/rooms">
-                Open rooms
+                Feed the goblin
               </Link>
             </div>
           </div>
