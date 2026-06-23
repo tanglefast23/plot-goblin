@@ -1,9 +1,13 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { GuidedSetupClient } from "./GuidedSetupClient";
 import { guidedSetupQuestions } from "@/lib/guidedSetup";
+import { PROJECT_STORAGE_KEY } from "@/lib/projectStorage";
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  window.localStorage.clear();
+});
 
 describe("GuidedSetupClient", () => {
   it("lets the movie kind step combine multiple choices into one hybrid answer", () => {
@@ -30,5 +34,42 @@ describe("GuidedSetupClient", () => {
     const loglineButton = screen.getByRole("button", { name: /make it sound less/i });
 
     expect(loglineButton.className).toContain("attentionButton");
+  });
+
+  it("shows a saved logline confirmation after accepting a suggestion", () => {
+    render(<GuidedSetupClient />);
+
+    for (let questionIndex = 0; questionIndex < guidedSetupQuestions.length; questionIndex += 1) {
+      fireEvent.click(screen.getByRole("button", { name: /skip/i }));
+    }
+
+    fireEvent.click(screen.getByRole("button", { name: /make it sound less/i }));
+    const suggestion = screen.getByText(/When \[Needs answer\] must \[Needs answer\]/i).textContent ?? "";
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Accept this one" })[0]);
+
+    expect(screen.getByText("Accepted logline")).toBeTruthy();
+    expect(window.localStorage.getItem(PROJECT_STORAGE_KEY)).toContain(suggestion);
+  });
+
+  it("lets a later accepted suggestion replace the saved logline", async () => {
+    render(<GuidedSetupClient />);
+
+    for (let questionIndex = 0; questionIndex < guidedSetupQuestions.length; questionIndex += 1) {
+      fireEvent.click(screen.getByRole("button", { name: /skip/i }));
+    }
+
+    fireEvent.click(screen.getByRole("button", { name: /make it sound less/i }));
+    const suggestions = screen.getAllByText(/\[Needs answer\]/i).map((element) => element.textContent ?? "");
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Accept this one" })[0]);
+    await screen.findByText("Accepted logline");
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Accept this one" })[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText("Accepted logline").parentElement?.textContent).toContain(suggestions[1]);
+      expect(window.localStorage.getItem(PROJECT_STORAGE_KEY)).toContain(suggestions[1]);
+    });
   });
 });

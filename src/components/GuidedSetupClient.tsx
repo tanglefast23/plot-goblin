@@ -24,6 +24,17 @@ function optionIsSelected(value: string, option: string) {
   return splitSelectedOptions(value).some((piece) => piece.toLowerCase() === option.toLowerCase());
 }
 
+function getAcceptedLogline(project: ScriptBase) {
+  const match = project.rooms.premise.match(/## Polished logline\n([^\n]+)/);
+  const logline = match?.[1]?.trim() ?? "";
+
+  if (!logline || logline === "[Needs answer]" || logline.startsWith("[Needs writing]")) {
+    return "";
+  }
+
+  return logline;
+}
+
 export function GuidedSetupClient() {
   const [answers, setAnswers] = useState<SetupAnswers>({ structurePreference: "Classic 3-act spine" });
   const [step, setStep] = useState(0);
@@ -79,7 +90,10 @@ export function GuidedSetupClient() {
       ...completedProject,
       rooms: {
         ...completedProject.rooms,
-        premise: completedProject.rooms.premise.replace("## Polished logline\n[Needs answer]", `## Polished logline\n${logline}`),
+        premise: completedProject.rooms.premise.replace(
+          /## Polished logline\n[^\n]*/,
+          `## Polished logline\n${logline}`,
+        ),
       },
       updatedAt: new Date().toISOString(),
     };
@@ -88,6 +102,7 @@ export function GuidedSetupClient() {
   }
 
   if (completedProject) {
+    const acceptedLogline = getAcceptedLogline(completedProject);
     const suggestions = loglineSuggestions.length > 0 ? loglineSuggestions : [];
 
     return (
@@ -137,14 +152,25 @@ export function GuidedSetupClient() {
               Make it sound less like a parking ticket
             </button>
           </div>
-          {suggestions.map((suggestion) => (
-            <div className={styles.loglineSuggestion} key={suggestion}>
-              <p>{suggestion}</p>
-              <button className={styles.primaryButton} onClick={() => acceptLogline(suggestion)} type="button">
-                Accept this one
-              </button>
+          {acceptedLogline ? (
+            <div className={styles.acceptedLogline}>
+              <p className={styles.acceptedLabel}>Accepted logline</p>
+              <p>{acceptedLogline}</p>
+              <p className={styles.savedLine}>Saved to the Premise room.</p>
             </div>
-          ))}
+          ) : null}
+          {suggestions.map((suggestion) => {
+            const isAccepted = suggestion === acceptedLogline;
+
+            return (
+              <div className={styles.loglineSuggestion} key={suggestion}>
+                <p>{suggestion}</p>
+                <button className={styles.primaryButton} disabled={isAccepted} onClick={() => acceptLogline(suggestion)} type="button">
+                  {isAccepted ? "Accepted" : "Accept this one"}
+                </button>
+              </div>
+            );
+          })}
         </section>
 
         <HermesCowriter

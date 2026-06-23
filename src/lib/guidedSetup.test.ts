@@ -8,6 +8,8 @@ import {
 } from "./guidedSetup";
 
 describe("guided setup model", () => {
+  const needsWriting = "[Needs writing]";
+
   it("uses the locked nine-question setup with skip-friendly answers", () => {
     expect(guidedSetupQuestions.map((question) => question.id)).toEqual([
       "rawIdea",
@@ -40,6 +42,31 @@ describe("guided setup model", () => {
     expect(base.summary.needsAnswerCount).toBeGreaterThan(0);
   });
 
+  it("marks unfinished room prompts as needing writing", () => {
+    const base = buildScriptBase({
+      rawIdea: "A one-armed pitcher tries to make the majors.",
+      genre: "Comedy",
+      audienceFeeling: "hopeful and tense",
+      protagonist: "Stubborn one-armed pitcher",
+      surfaceWant: "become a professional baseball player",
+      stakes: "he loses the only dream he has left",
+      falseBelief: "asking for help makes him weak",
+      opposition: "better players who have two arms",
+      endingDirection: "He changes and wins",
+      structurePreference: "Classic 3-act spine",
+    });
+
+    expect(base.rooms.premise).toContain(`## Polished logline\n${needsWriting}`);
+    expect(base.rooms.characters).toContain(`### Deeper need\n${needsWriting}`);
+    expect(base.rooms.theme).toContain(`## Story proof\n${needsWriting}`);
+    expect(base.rooms.beats).toContain(
+      `## Debate / Refusal\n${needsWriting} Why they hesitate, dodge, rationalize, or choose badly.`,
+    );
+    expect(base.rooms.scenes).toContain(`**Scene want:**\n${needsWriting}`);
+    expect(base.rooms.beats).not.toContain(`## Setup\n${needsWriting}`);
+    expect(base.summary.needsAnswerCount).toBe(0);
+  });
+
   it("treats multiple movie kinds as a hybrid promise", () => {
     const genreQuestion = guidedSetupQuestions.find((question) => question.id === "genre");
     const base = buildScriptBase({
@@ -49,7 +76,9 @@ describe("guided setup model", () => {
 
     expect(genreQuestion?.multiple).toBe(true);
     expect(base.rooms.premise).toContain("A horror / romance hybrid built to make the audience feel dread and longing.");
-    expect(base.rooms.beats).toContain("The movie delivers the fun/terror/longing promised by Horror / Romance hybrid.");
+    expect(base.rooms.beats).toContain(
+      "[Needs writing] Which sequence delivers the fun/terror/longing promised by Horror / Romance hybrid?",
+    );
   });
 
   it("creates two user-confirmed logline suggestions without editing room markdown", () => {

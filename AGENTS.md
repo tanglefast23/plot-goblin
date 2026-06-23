@@ -23,7 +23,7 @@ The product should not become a generic blank markdown editor. It should guide t
 - Persistence: localStorage for MVP.
 - Rooms: editable markdown textareas.
 - Export: one giant markdown file first.
-- AI: local Hermes bridge first; no public unauthenticated AI endpoint.
+- AI: local Hermes bridge first; public Vercel relay only with Joe's access key, bridge token, and rate limits.
 - AI behavior: suggestions and helpfully annoying follow-up questions, not silent rewrites.
 
 ## Visual Direction

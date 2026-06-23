@@ -172,16 +172,34 @@ Joe wants an AI co-writer, but safely.
 Current chosen approach:
 
 ```txt
-Option A — Local Hermes bridge first
+Option A — Local Hermes bridge first, with a protected public relay when Joe explicitly enables it
 ```
 
 Meaning:
 
-- The public Vercel app should not expose an open AI endpoint.
-- Local development on Joe’s Mac can call Hermes locally.
-- The bridge should use Joe’s current Hermes default provider/model.
-- It should eventually support the current default model, e.g. GPT 5.5 fast/high if configured that way in Hermes.
-- Public Vercel + Hermes bridge may be explored later, but only with protection/rate limits.
+- Local development on Joe’s Mac can call Hermes directly.
+- The bridge uses Joe’s current Hermes default provider/model.
+- Public Vercel may call Joe’s Mac only through a protected bridge URL.
+- Public Vercel requires `PLOT_GOBLIN_AI_ACCESS_KEY` before it will relay a request.
+- The local Mac bridge requires `PLOT_GOBLIN_HERMES_BRIDGE_TOKEN` before it will run Hermes.
+- Both the Vercel route and the local bridge have simple per-minute in-memory rate limits.
+- The quick Cloudflare tunnel URL is temporary; if the tunnel restarts, update `PLOT_GOBLIN_HERMES_BRIDGE_URL` in Vercel and redeploy.
+
+Current bridge commands:
+
+```bash
+npm run bridge
+cloudflared tunnel --url http://127.0.0.1:8787 --no-autoupdate
+```
+
+Secret files on Joe’s Mac:
+
+```txt
+~/.hermes/secrets/plot-goblin-ai-access-key
+~/.hermes/secrets/plot-goblin-hermes-bridge-token
+```
+
+Do not commit or print those values.
 
 AI behavior should be:
 

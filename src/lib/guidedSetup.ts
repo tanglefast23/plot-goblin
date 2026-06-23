@@ -1,6 +1,7 @@
 import { getActiveRooms, getComingSoonRooms } from "./storyRooms";
 
 export const NEEDS_ANSWER = "[Needs answer]";
+export const NEEDS_WRITING = "[Needs writing]";
 
 export type SetupQuestionId =
   | "rawIdea"
@@ -167,6 +168,10 @@ function countNeedsAnswers(markdownByRoom: RoomMarkdown) {
   }, 0);
 }
 
+function writingPrompt(prompt: string) {
+  return `${NEEDS_WRITING} ${prompt}`;
+}
+
 export function buildScriptBase(answers: SetupAnswers, now = new Date()): ScriptBase {
   const rawIdea = answer(answers, "rawIdea");
   const genre = answer(answers, "genre");
@@ -204,7 +209,7 @@ ${sentence(opposition)}
 Can ${protagonist === NEEDS_ANSWER ? "the protagonist" : protagonist} ${surfaceWant === NEEDS_ANSWER ? "get what they want" : surfaceWant} before the cost becomes irreversible?
 
 ## Polished logline
-${NEEDS_ANSWER}
+${writingPrompt("Pick a polished logline from the setup summary, or write your own clean version.")}
 `,
     characters: `# Characters Room
 
@@ -215,16 +220,16 @@ ${sentence(protagonist)}
 ${sentence(surfaceWant)}
 
 ### Deeper need
-${NEEDS_ANSWER}
+${writingPrompt("What do they actually need to learn, accept, or risk?")}
 
 ### False belief
 ${sentence(falseBelief)}
 
 ### Flaw / defense mechanism
-${NEEDS_ANSWER}
+${writingPrompt("How do they protect the false belief when pressure rises?")}
 
 ### Pressure test
-${NEEDS_ANSWER}
+${writingPrompt("Which situation exposes the flaw where they cannot hide from it?")}
 
 ### Arc
 Start: ${falseBelief}
@@ -234,10 +239,10 @@ End: ${endingDirection}
 ${sentence(opposition)}
 
 ### Why are they right from their point of view?
-${NEEDS_ANSWER}
+${writingPrompt("Give the opposition a fair argument, not just a mustache.")}
 
 ## Key supporting characters
-- ${NEEDS_ANSWER}
+- ${writingPrompt("Name the helper, rival, mirror, or wildcard, then say what pressure they add.")}
 `,
     theme: `# Theme Room
 
@@ -251,7 +256,7 @@ ${sentence(falseBelief)}
 ${sentence(opposition)}
 
 ## Story proof
-${NEEDS_ANSWER}
+${writingPrompt("Which choices and consequences make the theme visible on screen?")}
 
 ## Ending statement
 ${sentence(endingDirection)}
@@ -261,46 +266,46 @@ ${sentence(endingDirection)}
 Hybrid default: ${structurePreference}. Rename, skip, add, or reorder beats when the story needs it.
 
 ## Opening Image
-A visual snapshot of ${protagonist === NEEDS_ANSWER ? "the protagonist" : protagonist} before pressure hits.
+${writingPrompt(`Replace this with a specific visual snapshot of ${protagonist === NEEDS_ANSWER ? "the protagonist" : protagonist} before pressure hits.`)}
 
 ## Setup
 Establish the world, the want (${surfaceWant}), the lie (${falseBelief}), and the cost of staying the same.
 
 ## Inciting Incident
-Something forces the protagonist toward ${surfaceWant}.
+${writingPrompt(`What specific event forces the protagonist toward ${surfaceWant}?`)}
 
 ## Debate / Refusal
-Why they hesitate, dodge, rationalize, or choose badly.
+${writingPrompt("Why they hesitate, dodge, rationalize, or choose badly.")}
 
 ## Act One Break
-They make a choice that locks them into the story.
+${writingPrompt("What choice locks them into the story?")}
 
 ## Promise of the Premise
-The movie delivers the fun/terror/longing promised by ${moviePromiseLabel(genre)}.
+${writingPrompt(`Which sequence delivers the fun/terror/longing promised by ${moviePromiseLabel(genre)}?`)}
 
 ## Midpoint
-A reveal, reversal, or false victory makes the old plan impossible.
+${writingPrompt("What reveal, reversal, or false victory makes the old plan impossible?")}
 
 ## Bad Guys Close In
-${opposition} tightens the trap.
+${writingPrompt(`How does ${opposition} tighten the trap?`)}
 
 ## All Is Lost
-The cost becomes personal, public, moral, or irreversible: ${stakes}
+${writingPrompt(`What moment makes the cost personal, public, moral, or irreversible: ${stakes}`)}
 
 ## Dark Night of the Soul
-The protagonist confronts the lie: ${falseBelief}
+${writingPrompt(`How does the protagonist confront the lie: ${falseBelief}`)}
 
 ## Act Three Break
-A new choice points toward the ending: ${endingDirection}
+${writingPrompt(`What new choice points toward the ending: ${endingDirection}`)}
 
 ## Climax
-The protagonist must choose under maximum pressure.
+${writingPrompt("What maximum-pressure choice proves who they have become?")}
 
 ## Final Image
-A visual answer to the opening image.
+${writingPrompt("What specific final image answers or twists the opening image?")}
 
 ## Custom beats
-- ${NEEDS_ANSWER}
+- ${writingPrompt("Add, rename, skip, or reorder beats once the spine starts fighting back.")}
 `,
     scenes: `# Scenes Room
 
@@ -311,18 +316,19 @@ A visual answer to the opening image.
 **Location / time:** INT./EXT. PLACE - DAY/NIGHT
 
 **Characters:**
+${writingPrompt("Who is in the scene, and who has the most pressure on them?")}
 
 **Scene want:**
-What does the active character want in this scene?
+${writingPrompt("What does the active character want in this scene?")}
 
 **Opposition:**
-What blocks them?
+${writingPrompt("What blocks them?")}
 
 **Turn:**
-What changes by the end: power, emotion, knowledge, relationship, stakes, or plan?
+${writingPrompt("What changes by the end: power, emotion, knowledge, relationship, stakes, or plan?")}
 
 **Button:**
-What is the last image, line, or action?
+${writingPrompt("What is the last image, line, or action?")}
 
 **Purpose:**
 Plot / character / theme / tension / setup / payoff
@@ -330,7 +336,7 @@ Plot / character / theme / tension / setup / payoff
 ---
 
 ## Scene list
-- ${NEEDS_ANSWER}
+- ${writingPrompt("Add the first real scene card here.")}
 `,
   };
 
@@ -343,7 +349,7 @@ Coming soon.
 ${room.purpose}
 
 ## Starter note
-${NEEDS_ANSWER}
+${writingPrompt("Save a note here once this room opens up.")}
 `;
   }
 
