@@ -32,4 +32,10 @@ describe("Hermes co-writer prompt", () => {
 
     expect(cleaned).toBe("What visible thing does he want?");
   });
+
+  it("strips known Hermes warnings when the marker is missing", () => {
+    const cleaned = cleanHermesOutput("Warning: Unknown toolsets: messaging\nWhat visible thing does he want?");
+
+    expect(cleaned).toBe("What visible thing does he want?");
+  });
 });

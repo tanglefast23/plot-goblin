@@ -11,14 +11,19 @@ function asJson(value: unknown) {
 }
 
 export function cleanHermesOutput(output: string) {
+  const normalized = output.replace(/\r\n/g, "\n").trim();
   const marker = "PLOT_GOBLIN_FINAL:";
-  const markerIndex = output.lastIndexOf(marker);
+  const markerIndex = normalized.lastIndexOf(marker);
 
-  if (markerIndex === -1) {
-    return output.trim();
+  if (markerIndex >= 0) {
+    return normalized.slice(markerIndex + marker.length).trim();
   }
 
-  return output.slice(markerIndex + marker.length).trim();
+  return normalized
+    .split("\n")
+    .filter((line) => !line.startsWith("Warning: Unknown toolsets:"))
+    .join("\n")
+    .trim();
 }
 
 export function buildCowriterPrompt(request: CowriterRequest) {
