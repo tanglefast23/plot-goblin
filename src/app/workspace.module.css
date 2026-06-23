@@ -73,8 +73,84 @@
   background: var(--goblin-gold);
 }
 
+.selectedOption {
+  border-color: var(--goblin-night);
+  background: rgb(var(--goblin-gold-rgb) / 0.78);
+}
+
+.attentionButton {
+  position: relative;
+  isolation: isolate;
+  border-color: rgb(var(--goblin-gold-rgb) / 0.88);
+  background: linear-gradient(180deg, rgb(var(--goblin-mist-rgb) / 0.94), rgb(var(--goblin-gold-rgb) / 0.36));
+  box-shadow:
+    0 0 0 4px rgb(var(--goblin-gold-rgb) / 0.16),
+    0 10px 26px rgb(var(--goblin-night-rgb) / 0.1);
+  animation: loglineAttentionGlow 3.8s ease-in-out infinite;
+}
+
+.attentionButton::after {
+  position: absolute;
+  z-index: -1;
+  inset: -6px;
+  border: 1px solid rgb(var(--goblin-gold-rgb) / 0.5);
+  border-radius: 999px;
+  opacity: 0.52;
+  pointer-events: none;
+  content: "";
+  animation: loglineAttentionRing 3.8s ease-in-out infinite;
+}
+
+.attentionButton:hover {
+  background: linear-gradient(180deg, rgb(var(--goblin-gold-rgb) / 0.62), rgb(var(--goblin-lichen-rgb) / 0.54));
+  box-shadow:
+    0 0 0 5px rgb(var(--goblin-gold-rgb) / 0.22),
+    0 14px 30px rgb(var(--goblin-night-rgb) / 0.13);
+}
+
 .ghostButton {
   background: transparent;
+}
+
+@keyframes loglineAttentionGlow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 4px rgb(var(--goblin-gold-rgb) / 0.12),
+      0 10px 24px rgb(var(--goblin-night-rgb) / 0.08);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 8px rgb(var(--goblin-gold-rgb) / 0.28),
+      0 16px 34px rgb(var(--goblin-night-rgb) / 0.14);
+  }
+}
+
+@keyframes loglineAttentionRing {
+  0%,
+  100% {
+    opacity: 0.32;
+    transform: scale(0.98);
+  }
+
+  50% {
+    opacity: 0.74;
+    transform: scale(1.03);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attentionButton,
+  .attentionButton::after {
+    animation: none;
+  }
+
+  .attentionButton {
+    box-shadow:
+      0 0 0 5px rgb(var(--goblin-gold-rgb) / 0.24),
+      0 10px 24px rgb(var(--goblin-night-rgb) / 0.08);
+  }
 }
 
 .dangerButton {

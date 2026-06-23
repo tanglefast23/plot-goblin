@@ -13,6 +13,17 @@ import {
 import { saveProject } from "@/lib/projectStorage";
 import { HermesCowriter } from "./HermesCowriter";
 
+function splitSelectedOptions(value: string) {
+  return value
+    .split(",")
+    .map((piece) => piece.trim())
+    .filter(Boolean);
+}
+
+function optionIsSelected(value: string, option: string) {
+  return splitSelectedOptions(value).some((piece) => piece.toLowerCase() === option.toLowerCase());
+}
+
 export function GuidedSetupClient() {
   const [answers, setAnswers] = useState<SetupAnswers>({ structurePreference: "Classic 3-act spine" });
   const [step, setStep] = useState(0);
@@ -29,7 +40,18 @@ export function GuidedSetupClient() {
   }, [answers, draftValue, question]);
 
   function selectOption(option: string) {
-    setDraftValue(option);
+    if (!question.multiple) {
+      setDraftValue(option);
+      return;
+    }
+
+    const currentPieces = splitSelectedOptions(selectedAnswer);
+    const isSelected = optionIsSelected(selectedAnswer, option);
+    const nextPieces = isSelected
+      ? currentPieces.filter((piece) => piece.toLowerCase() !== option.toLowerCase())
+      : [...currentPieces, option];
+
+    setDraftValue(nextPieces.join(", "));
   }
 
   function moveNext(value: string) {
@@ -108,7 +130,7 @@ export function GuidedSetupClient() {
           <p className={styles.nudge}>Working notes came first. Now you can ask for two cleaner options and accept one.</p>
           <div className={styles.actionRow}>
             <button
-              className={styles.secondaryButton}
+              className={`${styles.secondaryButton} ${styles.attentionButton}`}
               onClick={() => setLoglineSuggestions(createLoglineSuggestions(completedProject.answers))}
               type="button"
             >
@@ -158,11 +180,21 @@ export function GuidedSetupClient() {
       >
         {question.options ? (
           <div className={styles.optionRow}>
-            {question.options.map((option) => (
-              <button className={styles.secondaryButton} key={option} onClick={() => selectOption(option)} type="button">
-                {option}
-              </button>
-            ))}
+            {question.options.map((option) => {
+              const isSelected = question.multiple && optionIsSelected(selectedAnswer, option);
+
+              return (
+                <button
+                  aria-pressed={isSelected}
+                  className={`${styles.secondaryButton} ${isSelected ? styles.selectedOption : ""}`}
+                  key={option}
+                  onClick={() => selectOption(option)}
+                  type="button"
+                >
+                  {option}
+                </button>
+              );
+            })}
           </div>
         ) : null}
 

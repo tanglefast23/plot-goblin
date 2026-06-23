@@ -487,11 +487,21 @@
   }
 
   .primaryCta {
-    width: 100%;
+    width: min(100%, 330px);
     min-width: 0;
     min-height: 78px;
     padding: 0 22px;
     font-size: 0.96rem;
+  }
+
+  .primaryCta::before {
+    left: 34px;
+    width: 72px;
+  }
+
+  .primaryCta::after {
+    right: 18px;
+    width: 92px;
   }
 
   .heroVisual {

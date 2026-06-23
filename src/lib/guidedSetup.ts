@@ -23,6 +23,7 @@ export type SetupQuestion = {
   placeholder: string;
   allowSkip: true;
   options?: string[];
+  multiple?: true;
 };
 
 export type RoomMarkdown = Record<string, string>;
@@ -56,6 +57,7 @@ export const guidedSetupQuestions: SetupQuestion[] = [
     placeholder: "Thriller, comedy, drama, horror, romance, sci-fi...",
     allowSkip: true,
     options: ["Drama", "Comedy", "Thriller", "Horror", "Romance", "Action", "Sci-fi", "Fantasy", "Crime"],
+    multiple: true,
   },
   {
     id: "audienceFeeling",
@@ -134,6 +136,31 @@ function sentence(value: string) {
   return value.endsWith(".") || value.endsWith("!") || value.endsWith("?") ? value : `${value}.`;
 }
 
+function splitListAnswer(value: string) {
+  return value
+    .split(",")
+    .map((piece) => piece.trim())
+    .filter(Boolean);
+}
+
+function moviePromiseGenre(value: string) {
+  if (value === NEEDS_ANSWER) return value;
+
+  const genres = splitListAnswer(value);
+  if (genres.length < 2) return value.toLowerCase();
+
+  return `${genres.map((genre) => genre.toLowerCase()).join(" / ")} hybrid`;
+}
+
+function moviePromiseLabel(value: string) {
+  if (value === NEEDS_ANSWER) return value;
+
+  const genres = splitListAnswer(value);
+  if (genres.length < 2) return value;
+
+  return `${genres.join(" / ")} hybrid`;
+}
+
 function countNeedsAnswers(markdownByRoom: RoomMarkdown) {
   return Object.values(markdownByRoom).reduce((count, markdown) => {
     return count + [...markdown.matchAll(/\[Needs answer\]/g)].length;
@@ -159,7 +186,7 @@ export function buildScriptBase(answers: SetupAnswers, now = new Date()): Script
 ${sentence(rawIdea)}
 
 ## Story promise
-A ${genre.toLowerCase()} built to make the audience feel ${audienceFeeling.toLowerCase()}.
+A ${moviePromiseGenre(genre)} built to make the audience feel ${audienceFeeling.toLowerCase()}.
 
 ## Protagonist
 ${sentence(protagonist)}
@@ -249,7 +276,7 @@ Why they hesitate, dodge, rationalize, or choose badly.
 They make a choice that locks them into the story.
 
 ## Promise of the Premise
-The movie delivers the fun/terror/longing promised by ${genre}.
+The movie delivers the fun/terror/longing promised by ${moviePromiseLabel(genre)}.
 
 ## Midpoint
 A reveal, reversal, or false victory makes the old plan impossible.

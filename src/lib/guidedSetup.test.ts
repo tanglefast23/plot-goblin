@@ -40,6 +40,18 @@ describe("guided setup model", () => {
     expect(base.summary.needsAnswerCount).toBeGreaterThan(0);
   });
 
+  it("treats multiple movie kinds as a hybrid promise", () => {
+    const genreQuestion = guidedSetupQuestions.find((question) => question.id === "genre");
+    const base = buildScriptBase({
+      genre: "Horror, Romance",
+      audienceFeeling: "dread and longing",
+    });
+
+    expect(genreQuestion?.multiple).toBe(true);
+    expect(base.rooms.premise).toContain("A horror / romance hybrid built to make the audience feel dread and longing.");
+    expect(base.rooms.beats).toContain("The movie delivers the fun/terror/longing promised by Horror / Romance hybrid.");
+  });
+
   it("creates two user-confirmed logline suggestions without editing room markdown", () => {
     const suggestions = createLoglineSuggestions({
       protagonist: "Mina, an exhausted line cook",
