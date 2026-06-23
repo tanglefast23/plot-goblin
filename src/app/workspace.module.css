@@ -522,6 +522,10 @@
   margin-top: 22px;
 }
 
+.editorGrid > div {
+  min-width: 0;
+}
+
 .summaryBox,
 .guidanceBox,
 .loglineBox {
@@ -1332,15 +1336,19 @@
 
 .sceneBoardPanel {
   display: grid;
+  min-width: 0;
   gap: 14px;
 }
 
 .sceneStripShell {
   position: relative;
+  min-width: 0;
 }
 
 .sceneStrip {
   display: flex;
+  width: 100%;
+  max-width: 100%;
   min-height: 142px;
   gap: 12px;
   overflow-x: auto;
