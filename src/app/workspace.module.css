@@ -1,0 +1,397 @@
+.shell {
+  min-height: 100vh;
+  padding: 34px;
+  color: var(--foreground);
+  background:
+    linear-gradient(90deg, transparent 0, transparent calc(50% - 1px), rgb(var(--goblin-night-rgb) / 0.08) calc(50% - 1px), rgb(var(--goblin-night-rgb) / 0.08) 50%, transparent 50%),
+    linear-gradient(135deg, var(--goblin-mist) 0%, rgb(var(--goblin-lichen-rgb) / 0.42) 62%, rgb(var(--goblin-gold-rgb) / 0.22) 100%);
+}
+
+.inner {
+  width: min(1160px, 100%);
+  margin: 0 auto;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 28px;
+}
+
+.brand {
+  color: var(--goblin-night);
+  font-size: 0.7rem;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.linkButton,
+.secondaryButton,
+.primaryButton,
+.ghostButton,
+.dangerButton {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.18);
+  border-radius: 999px;
+  color: var(--goblin-night);
+  background: rgb(var(--goblin-mist-rgb) / 0.66);
+  font-size: 0.7rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    background-color 180ms ease;
+}
+
+.linkButton:hover,
+.secondaryButton:hover,
+.primaryButton:hover,
+.ghostButton:hover,
+.dangerButton:hover {
+  transform: translateY(-1px);
+}
+
+.primaryButton {
+  border-color: var(--goblin-night);
+  color: var(--goblin-night);
+  background: var(--goblin-gold);
+}
+
+.ghostButton {
+  background: transparent;
+}
+
+.dangerButton {
+  border-color: rgb(var(--goblin-gold-rgb) / 0.72);
+  background: rgb(var(--goblin-gold-rgb) / 0.24);
+}
+
+.heroPanel,
+.card,
+.editorPanel,
+.summaryPanel,
+.cowriterPanel {
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.16);
+  border-radius: 8px;
+  background: rgb(var(--goblin-mist-rgb) / 0.78);
+  box-shadow: 0 22px 54px rgb(var(--goblin-night-rgb) / 0.1);
+}
+
+.heroPanel {
+  position: relative;
+  overflow: hidden;
+  padding: 34px;
+}
+
+.heroPanel::after {
+  position: absolute;
+  right: -52px;
+  bottom: -72px;
+  width: 220px;
+  height: 180px;
+  border-radius: 80px 80px 26px 26px;
+  background:
+    radial-gradient(circle at 38% 50%, transparent 0 14px, var(--goblin-night) 15px 20px, transparent 21px),
+    radial-gradient(circle at 62% 50%, transparent 0 14px, var(--goblin-night) 15px 20px, transparent 21px),
+    var(--goblin-lichen);
+  opacity: 0.24;
+  content: "";
+}
+
+.heroPanel h1,
+.summaryPanel h1,
+.editorPanel h1 {
+  position: relative;
+  z-index: 1;
+  max-width: 880px;
+  color: var(--goblin-night);
+  font-size: 4.25rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 0.93;
+  text-transform: uppercase;
+}
+
+.lede {
+  position: relative;
+  z-index: 1;
+  max-width: 780px;
+  margin-top: 18px;
+  color: rgb(var(--goblin-night-rgb) / 0.76);
+  font-size: 1.02rem;
+  line-height: 1.58;
+}
+
+.stepMeta {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 18px;
+  color: var(--goblin-moss);
+  font-size: 0.7rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.questionForm {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 18px;
+  margin-top: 26px;
+}
+
+.questionForm label {
+  display: grid;
+  gap: 12px;
+  color: var(--goblin-night);
+  font-size: 0.78rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.textarea,
+.editorTextarea {
+  width: 100%;
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.2);
+  border-radius: 8px;
+  color: var(--goblin-night);
+  background: rgb(var(--goblin-mist-rgb) / 0.62);
+  box-shadow: inset 0 1px 0 rgb(var(--goblin-mist-rgb) / 0.86);
+  resize: vertical;
+}
+
+.textarea {
+  min-height: 180px;
+  padding: 18px;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.editorTextarea {
+  min-height: 68vh;
+  padding: 20px;
+  font-family: var(--font-geist-mono), "SFMono-Regular", Consolas, monospace;
+  font-size: 0.96rem;
+  line-height: 1.6;
+}
+
+.optionRow,
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.nudge,
+.savedLine,
+.exportHint {
+  color: rgb(var(--goblin-night-rgb) / 0.72);
+  line-height: 1.55;
+}
+
+.nudge strong {
+  color: var(--goblin-moss);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.card {
+  display: flex;
+  min-height: 260px;
+  flex-direction: column;
+  padding: 22px;
+}
+
+.cardMuted {
+  opacity: 0.44;
+  filter: grayscale(1);
+}
+
+.topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  color: var(--goblin-moss);
+  font-size: 0.66rem;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.topline code {
+  color: rgb(var(--goblin-night-rgb) / 0.62);
+  font-family: var(--font-geist-mono), "SFMono-Regular", Consolas, monospace;
+  font-size: 0.64rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.card h2,
+.card h3,
+.cowriterPanel h2,
+.summaryBox h2,
+.guidanceBox h2,
+.loglineBox h2 {
+  margin-bottom: 12px;
+  color: var(--goblin-night);
+  font-size: 1.55rem;
+  font-weight: 950;
+  line-height: 0.98;
+  text-transform: uppercase;
+}
+
+.card p {
+  color: rgb(var(--goblin-night-rgb) / 0.74);
+  font-size: 0.94rem;
+  line-height: 1.5;
+}
+
+.statusPill {
+  margin-top: auto;
+  padding-top: 20px;
+  color: var(--goblin-moss);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.summaryPanel,
+.editorPanel,
+.cowriterPanel {
+  padding: 30px;
+}
+
+.summaryGrid,
+.editorGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(320px, 0.45fr);
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.summaryBox,
+.guidanceBox,
+.loglineBox {
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.14);
+  border-radius: 8px;
+  padding: 18px;
+  background: rgb(var(--goblin-mist-rgb) / 0.58);
+}
+
+.summaryBox ul,
+.guidanceBox ul {
+  display: grid;
+  gap: 9px;
+  padding-left: 18px;
+  color: rgb(var(--goblin-night-rgb) / 0.8);
+  line-height: 1.45;
+}
+
+.loglineSuggestion {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 8px;
+  background: rgb(var(--goblin-lichen-rgb) / 0.32);
+  color: var(--goblin-night);
+  line-height: 1.5;
+}
+
+.cowriterPanel {
+  margin-top: 18px;
+}
+
+.cowriterOutput {
+  margin-top: 14px;
+  white-space: pre-wrap;
+  color: var(--goblin-night);
+  line-height: 1.55;
+}
+
+.errorText {
+  margin-top: 12px;
+  color: var(--goblin-night);
+  font-weight: 900;
+}
+
+@media (max-width: 1040px) {
+  .grid,
+  .summaryGrid,
+  .editorGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .heroPanel h1,
+  .summaryPanel h1,
+  .editorPanel h1 {
+    font-size: 3.2rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .shell {
+    padding: 22px 14px;
+    background:
+      linear-gradient(135deg, var(--goblin-mist) 0%, rgb(var(--goblin-lichen-rgb) / 0.42) 70%, rgb(var(--goblin-gold-rgb) / 0.22) 100%);
+  }
+
+  .topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .summaryGrid,
+  .editorGrid,
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .heroPanel,
+  .summaryPanel,
+  .editorPanel,
+  .cowriterPanel {
+    padding: 20px;
+  }
+
+  .heroPanel h1,
+  .summaryPanel h1,
+  .editorPanel h1 {
+    font-size: 2.35rem;
+  }
+
+  .linkButton,
+  .secondaryButton,
+  .primaryButton,
+  .ghostButton,
+  .dangerButton {
+    min-height: 40px;
+    padding: 0 14px;
+    font-size: 0.64rem;
+  }
+}

@@ -1,122 +1,240 @@
 .page {
   min-height: 100vh;
-  padding: 48px;
-  color: #191714;
+  color: var(--foreground);
   background:
-    radial-gradient(circle at top left, rgba(181, 81, 38, 0.16), transparent 34rem),
-    linear-gradient(135deg, #fbf4e8 0%, #f6ead8 46%, #eee1ce 100%);
+    linear-gradient(90deg, transparent 0, transparent calc(50% - 1px), rgb(var(--goblin-night-rgb) / 0.1) calc(50% - 1px), rgb(var(--goblin-night-rgb) / 0.1) 50%, transparent 50%),
+    linear-gradient(135deg, var(--goblin-mist) 0%, rgb(var(--goblin-lichen-rgb) / 0.46) 62%, rgb(var(--goblin-gold-rgb) / 0.26) 100%);
 }
 
 .hero,
 .panel,
 .roomsSection {
-  width: min(1180px, 100%);
+  width: min(1180px, calc(100% - 96px));
   margin: 0 auto;
 }
 
 .hero {
-  padding: 34px 0 28px;
+  min-height: calc(100vh - 102px);
+  display: grid;
+  align-content: center;
+  padding: 72px 0 58px;
 }
 
 .eyebrow,
 .kicker {
-  margin-bottom: 14px;
-  color: #9b3f1f;
-  font-size: 0.78rem;
-  font-weight: 800;
+  margin-bottom: 18px;
+  color: var(--goblin-moss);
+  font-size: 0.72rem;
+  font-weight: 950;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .heroGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
-  gap: 32px;
-  align-items: end;
+  grid-template-columns: minmax(0, 0.9fr) minmax(360px, 0.74fr);
+  gap: 54px;
+  align-items: center;
+}
+
+.heroCopy {
+  position: relative;
+  z-index: 2;
+}
+
+.hero h1,
+.sectionHeader h2 {
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-weight: 850;
+  letter-spacing: 0;
+  text-transform: uppercase;
 }
 
 .hero h1 {
-  max-width: 850px;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(3.4rem, 9vw, 7.4rem);
-  line-height: 0.89;
-  letter-spacing: -0.07em;
+  max-width: 780px;
+  font-size: 6.7rem;
+  line-height: 0.88;
+}
+
+.hero h1 span {
+  display: block;
+}
+
+.hero h1 strong,
+.sectionHeader h2 strong {
+  color: var(--goblin-night);
+  font-weight: 1000;
+  text-shadow: 0.018em 0 0 currentColor;
 }
 
 .lede {
-  max-width: 760px;
-  margin-top: 26px;
-  color: #4f463b;
-  font-size: clamp(1.15rem, 2vw, 1.45rem);
-  line-height: 1.5;
+  max-width: 650px;
+  margin-top: 28px;
+  color: rgb(var(--goblin-night-rgb) / 0.78);
+  font-size: 1.04rem;
+  line-height: 1.58;
+}
+
+.ctaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.primaryCta,
+.secondaryCta {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition:
+    transform 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.primaryCta {
+  border: 1px solid var(--goblin-night);
+  color: var(--goblin-night);
+  background: var(--goblin-gold);
+}
+
+.secondaryCta {
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.2);
+  color: var(--goblin-night);
+  background: rgb(var(--goblin-mist-rgb) / 0.64);
+}
+
+.primaryCta:hover,
+.secondaryCta:hover {
+  transform: translateY(-2px);
+}
+
+.heroVisual {
+  position: relative;
+  min-height: 510px;
+}
+
+.goblinPoster {
+  position: absolute;
+  top: -44px;
+  right: -54px;
+  width: min(620px, 112%);
+  height: auto;
+  overflow: visible;
+  filter: drop-shadow(0 34px 42px rgb(var(--goblin-night-rgb) / 0.16));
+}
+
+.posterHat,
+.posterFace,
+.posterEarLeft,
+.posterEarRight {
+  fill: var(--goblin-moss);
+}
+
+.posterFace {
+  fill: var(--goblin-lichen);
+}
+
+.posterGlasses,
+.posterSmirk {
+  fill: none;
+  stroke: var(--goblin-night);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 26;
+}
+
+.posterSmirk {
+  stroke-width: 14;
+}
+
+.posterTooth {
+  fill: var(--goblin-mist);
+  stroke: var(--goblin-night);
+  stroke-linejoin: round;
+  stroke-width: 8;
 }
 
 .heroCard,
 .panel,
 .roomCard,
 .soonCard {
-  border: 1px solid rgba(54, 43, 31, 0.13);
-  border-radius: 28px;
-  background: rgba(255, 252, 246, 0.74);
-  box-shadow: 0 24px 70px rgba(73, 53, 32, 0.08);
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.16);
+  border-radius: 8px;
+  background: rgb(var(--goblin-mist-rgb) / 0.78);
+  box-shadow: 0 22px 54px rgb(var(--goblin-night-rgb) / 0.1);
 }
 
 .heroCard {
-  padding: 24px;
+  position: absolute;
+  right: 26px;
+  bottom: 26px;
+  z-index: 2;
+  width: min(300px, 78%);
+  padding: 22px;
+  background: rgb(var(--goblin-mist-rgb) / 0.92);
 }
 
 .heroCard span,
 .questionBlock span {
   display: block;
   margin-bottom: 10px;
-  color: #a44723;
-  font-size: 0.76rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
+  color: var(--goblin-moss);
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .heroCard strong {
   display: block;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.75rem;
+  color: var(--goblin-night);
+  font-size: 1.3rem;
+  font-weight: 950;
   line-height: 1.05;
+  text-transform: uppercase;
 }
 
 .heroCard p {
-  margin-top: 18px;
-  color: #5f5346;
-  line-height: 1.55;
+  margin-top: 16px;
+  color: rgb(var(--goblin-night-rgb) / 0.74);
+  font-size: 0.94rem;
+  line-height: 1.45;
 }
 
 .panel {
-  margin-top: 28px;
-  padding: 30px;
+  padding: 34px;
 }
 
 .sectionHeader {
-  max-width: 720px;
+  max-width: 760px;
 }
 
 .sectionHeader h2 {
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(2rem, 4vw, 3.5rem);
-  line-height: 0.98;
-  letter-spacing: -0.045em;
+  font-size: 3.15rem;
+  line-height: 0.96;
 }
 
 .hybridGrid {
   display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(280px, 0.75fr);
-  gap: 28px;
-  margin-top: 26px;
+  grid-template-columns: minmax(0, 0.9fr) minmax(320px, 0.72fr);
+  gap: 34px;
+  margin-top: 28px;
 }
 
 .hybridGrid p,
 .structurePrinciple {
-  color: #554b40;
+  color: rgb(var(--goblin-night-rgb) / 0.78);
   font-size: 1rem;
-  line-height: 1.65;
+  line-height: 1.64;
 }
 
 .hybridGrid p + p {
@@ -132,45 +250,49 @@
 
 .beatList li {
   display: flex;
+  min-height: 42px;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
-  border: 1px solid rgba(58, 46, 34, 0.11);
+  padding: 10px 16px;
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.12);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.52);
-  color: #302a24;
-  font-weight: 700;
+  background: rgb(var(--goblin-mist-rgb) / 0.56);
+  color: var(--goblin-night);
+  font-size: 0.88rem;
+  font-weight: 850;
   counter-increment: beat;
 }
 
 .beatList li::before {
   content: counter(beat, decimal-leading-zero);
-  color: #b4512b;
-  font-size: 0.72rem;
+  color: var(--goblin-moss);
+  font-size: 0.68rem;
+  font-weight: 950;
   letter-spacing: 0.08em;
 }
 
 .structurePrinciple {
-  margin-top: 24px;
+  margin-top: 26px;
   padding-top: 22px;
-  border-top: 1px solid rgba(58, 46, 34, 0.11);
-  font-weight: 700;
+  border-top: 1px solid rgb(var(--goblin-night-rgb) / 0.12);
+  font-weight: 850;
 }
 
 .roomsSection {
-  margin-top: 56px;
+  margin-top: 72px;
 }
 
-.roomGrid {
+.roomGrid,
+.comingSoonGrid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
-  margin-top: 24px;
+  margin-top: 26px;
 }
 
 .roomCard {
   display: flex;
-  min-height: 460px;
+  min-height: 440px;
   flex-direction: column;
   padding: 22px;
 }
@@ -180,48 +302,52 @@
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  margin-bottom: 26px;
-  color: #a44723;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  margin-bottom: 24px;
+  color: var(--goblin-moss);
+  font-size: 0.66rem;
+  font-weight: 950;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
 .roomTopline code {
-  color: #6e6256;
+  color: rgb(var(--goblin-night-rgb) / 0.62);
   font-family: var(--font-geist-mono), "SFMono-Regular", Consolas, monospace;
-  font-size: 0.7rem;
+  font-size: 0.64rem;
   letter-spacing: 0;
   text-transform: none;
 }
 
 .roomCard h3,
 .soonCard h3 {
-  margin-bottom: 12px;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.75rem;
-  line-height: 1;
-  letter-spacing: -0.035em;
+  margin-bottom: 14px;
+  color: var(--goblin-night);
+  font-size: 1.6rem;
+  font-weight: 950;
+  line-height: 0.98;
+  text-transform: uppercase;
 }
 
 .roomCard p,
 .soonCard p {
-  color: #584e43;
-  line-height: 1.55;
+  color: rgb(var(--goblin-night-rgb) / 0.72);
+  font-size: 0.94rem;
+  line-height: 1.52;
 }
 
 .questionBlock {
   margin: 20px 0;
   padding: 16px;
-  border-radius: 18px;
-  background: rgba(155, 63, 31, 0.08);
+  border-radius: 8px;
+  background: rgb(var(--goblin-lichen-rgb) / 0.3);
 }
 
 .questionBlock strong {
   display: block;
-  font-size: 0.95rem;
-  line-height: 1.35;
+  color: var(--goblin-night);
+  font-size: 0.92rem;
+  font-weight: 900;
+  line-height: 1.32;
 }
 
 .roomCard ul {
@@ -229,22 +355,15 @@
   gap: 10px;
   margin-top: auto;
   padding-left: 18px;
-  color: #463d34;
-  font-size: 0.93rem;
+  color: rgb(var(--goblin-night-rgb) / 0.78);
+  font-size: 0.88rem;
   line-height: 1.38;
-}
-
-.comingSoonGrid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 16px;
-  margin-top: 24px;
 }
 
 .soonCard {
   min-height: 210px;
   padding: 20px;
-  opacity: 0.45;
+  opacity: 0.44;
   filter: grayscale(1);
 }
 
@@ -252,10 +371,23 @@
   margin-bottom: 28px;
 }
 
-@media (max-width: 1050px) {
+@media (max-width: 1100px) {
+  .hero h1 {
+    font-size: 5.2rem;
+  }
+
   .heroGrid,
   .hybridGrid {
     grid-template-columns: 1fr;
+  }
+
+  .heroVisual {
+    min-height: 420px;
+  }
+
+  .goblinPoster {
+    right: 0;
+    width: min(560px, 100%);
   }
 
   .roomGrid,
@@ -270,15 +402,83 @@
 
 @media (max-width: 680px) {
   .page {
-    padding: 24px 16px;
+    background:
+      linear-gradient(135deg, var(--goblin-mist) 0%, rgb(var(--goblin-lichen-rgb) / 0.46) 70%, rgb(var(--goblin-gold-rgb) / 0.22) 100%);
+  }
+
+  .hero,
+  .panel,
+  .roomsSection {
+    width: calc(100% - 28px);
   }
 
   .hero {
-    padding-top: 18px;
+    min-height: auto;
+    padding: 42px 0 34px;
+  }
+
+  .hero h1 {
+    font-size: 3.45rem;
+  }
+
+  .lede {
+    max-width: 320px;
+    font-size: 0.98rem;
+    overflow-wrap: break-word;
+  }
+
+  .primaryCta,
+  .secondaryCta {
+    min-height: 44px;
+    padding: 0 18px;
+    font-size: 0.68rem;
+  }
+
+  .heroVisual {
+    min-height: 390px;
+    overflow: hidden;
+  }
+
+  .goblinPoster {
+    top: 28px;
+    right: auto;
+    left: 24px;
+    width: 330px;
+    transform: none;
+  }
+
+  .heroCard {
+    right: auto;
+    bottom: 24px;
+    left: 42px;
+    width: 250px;
+    transform: none;
   }
 
   .panel {
-    padding: 22px;
+    overflow: hidden;
+    padding: 20px;
+  }
+
+  .sectionHeader,
+  .hybridGrid p,
+  .structurePrinciple {
+    max-width: 300px;
+  }
+
+  .sectionHeader h2 {
+    max-width: 300px;
+    font-size: 1.85rem;
+    overflow-wrap: break-word;
+  }
+
+  .hybridGrid {
+    gap: 24px;
+  }
+
+  .beatList li {
+    width: 100%;
+    min-width: 0;
   }
 
   .roomGrid,

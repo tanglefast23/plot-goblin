@@ -1,0 +1,94 @@
+.mascotBar {
+  color: var(--foreground);
+  border-bottom: 1px solid rgb(var(--goblin-night-rgb) / 0.14);
+  background: rgb(var(--goblin-mist-rgb) / 0.7);
+}
+
+.inner {
+  display: grid;
+  width: min(1180px, calc(100% - 96px));
+  min-height: 72px;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 24px;
+  margin: 0 auto;
+}
+
+.nav {
+  display: flex;
+  gap: 18px;
+}
+
+.nav a,
+.name,
+.tease {
+  color: var(--goblin-night);
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: center;
+}
+
+.goblin {
+  width: 52px;
+  height: auto;
+  filter: drop-shadow(0 10px 14px rgb(var(--goblin-night-rgb) / 0.14));
+}
+
+.hat,
+.ear {
+  fill: var(--goblin-moss);
+}
+
+.face {
+  fill: var(--goblin-lichen);
+}
+
+.glasses,
+.smirk {
+  fill: none;
+  stroke: var(--goblin-night);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 6;
+}
+
+.smirk {
+  stroke-width: 4;
+}
+
+.tease {
+  justify-self: end;
+}
+
+@media (max-width: 680px) {
+  .inner {
+    width: min(100% - 28px, 1180px);
+    min-height: 70px;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+  }
+
+  .nav {
+    display: none;
+  }
+
+  .brand {
+    justify-self: start;
+  }
+
+  .goblin {
+    width: 44px;
+  }
+
+  .tease {
+    display: none;
+  }
+}

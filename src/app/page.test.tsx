@@ -34,7 +34,7 @@ describe("Plot Goblin homepage", () => {
   it("explains the hybrid structure choice", () => {
     render(<Home />);
 
-    expect(screen.getByText(/guided three-act defaults/i)).toBeDefined();
+    expect(screen.getByRole("heading", { name: /guided three-act defaults/i })).toBeDefined();
     expect(screen.getByText(/customize, rename, skip, or add beats/i)).toBeDefined();
   });
 });

@@ -1,6 +1,16 @@
 :root {
-  --background: #fbf4e8;
-  --foreground: #191714;
+  --goblin-night: #313e3f;
+  --goblin-night-rgb: 49 62 63;
+  --goblin-moss: #567554;
+  --goblin-moss-rgb: 86 117 84;
+  --goblin-lichen: #9abd85;
+  --goblin-lichen-rgb: 154 189 133;
+  --goblin-mist: #e2e8e3;
+  --goblin-mist-rgb: 226 232 227;
+  --goblin-gold: #e7ce7c;
+  --goblin-gold-rgb: 231 206 124;
+  --background: var(--goblin-mist);
+  --foreground: var(--goblin-night);
 }
 
 html {
@@ -17,7 +27,7 @@ body {
   min-height: 100%;
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
