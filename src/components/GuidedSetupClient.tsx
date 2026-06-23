@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import styles from "@/app/workspace.module.css";
 import {
   buildScriptBase,
@@ -59,7 +59,9 @@ export function GuidedSetupClient() {
   const answerBoxRef = useRef<HTMLTextAreaElement>(null);
 
   const question = guidedSetupQuestions[step];
-  const progress = `${Math.min(step + 1, guidedSetupQuestions.length)} / ${guidedSetupQuestions.length}`;
+  const stepNumber = Math.min(step + 1, guidedSetupQuestions.length);
+  const progress = `${stepNumber} / ${guidedSetupQuestions.length}`;
+  const progressFraction = stepNumber / guidedSetupQuestions.length;
 
   const answerPathAnswers = useMemo(() => {
     return question ? { ...answers, [question.id]: draftValue.trim() } : answers;
@@ -256,88 +258,101 @@ export function GuidedSetupClient() {
   return (
     <section className={styles.heroPanel}>
       <p className={styles.stepMeta}>Script Setup Goblin · {progress}</p>
-      <h1>{question.title}</h1>
-      <p className={styles.lede}>{question.goblinNudge}</p>
-
-      <form
-        className={styles.questionForm}
-        onSubmit={(event) => {
-          event.preventDefault();
-          moveNext();
-        }}
+      <div
+        aria-label="Setup progress"
+        aria-valuemax={guidedSetupQuestions.length}
+        aria-valuemin={0}
+        aria-valuenow={stepNumber}
+        className={styles.progressTrack}
+        role="progressbar"
+        style={{ "--progress": progressFraction } as CSSProperties}
       >
-        {question.options ? (
-          <div className={styles.optionRow}>
-            {question.options.map((option) => {
-              const isSelected = question.multiple && optionIsSelected(draftValue, option);
+        <span className={styles.progressFill} />
+      </div>
+      <div className={styles.stepBody} key={step}>
+        <h1>{question.title}</h1>
+        <p className={styles.lede}>{question.goblinNudge}</p>
+
+        <form
+          className={styles.questionForm}
+          onSubmit={(event) => {
+            event.preventDefault();
+            moveNext();
+          }}
+        >
+          {question.options ? (
+            <div className={styles.optionRow}>
+              {question.options.map((option) => {
+                const isSelected = question.multiple && optionIsSelected(draftValue, option);
+
+                return (
+                  <button
+                    aria-pressed={isSelected}
+                    className={`${styles.secondaryButton} ${isSelected ? styles.selectedOption : ""}`}
+                    key={option}
+                    onClick={() => selectOption(option)}
+                    type="button"
+                  >
+                    {option}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+
+          <label>
+            Your answer
+            <textarea
+              className={styles.textarea}
+              onChange={(event) => setDraftValue(event.target.value)}
+              onKeyDown={handleAnswerKeyDown}
+              placeholder={question.placeholder}
+              ref={answerBoxRef}
+              value={draftValue}
+            />
+          </label>
+
+          <p className={styles.nudge}>
+            <strong>Skip rule:</strong> allowed. Cowardly, but allowed. Skipped answers become [needs your answer] goblin guesses.
+          </p>
+
+          <div className={styles.actionRow}>
+            {step > 0 ? (
+              <button className={styles.ghostButton} onClick={moveBack} type="button">
+                Back
+              </button>
+            ) : null}
+            <button className={styles.primaryButton} type="submit">
+              {step >= guidedSetupQuestions.length - 1 ? "Create script base" : "Next"}
+            </button>
+            <button className={styles.ghostButton} onClick={skipQuestion} type="button">
+              Skip, cowardly but allowed
+            </button>
+          </div>
+
+          <nav aria-label="Answer path" className={styles.answerPath}>
+            {guidedSetupQuestions.map((setupQuestion, index) => {
+              const answer = answerPathAnswers[setupQuestion.id]?.trim();
+              const isCurrentStep = index === step;
 
               return (
                 <button
-                  aria-pressed={isSelected}
-                  className={`${styles.secondaryButton} ${isSelected ? styles.selectedOption : ""}`}
-                  key={option}
-                  onClick={() => selectOption(option)}
+                  aria-current={isCurrentStep ? "step" : undefined}
+                  aria-label={`Go to answer ${index + 1}: ${setupQuestion.title}`}
+                  className={`${styles.answerPathButton} ${isCurrentStep ? styles.currentAnswerPathButton : ""}`}
+                  key={setupQuestion.id}
+                  onClick={() => jumpToAnswer(index)}
                   type="button"
                 >
-                  {option}
+                  <span>{index + 1}</span>
+                  <strong>{answerPathLabels[setupQuestion.id]}</strong>
+                  <small>{answer ? "Answered" : "Blank"}</small>
                 </button>
               );
             })}
-          </div>
-        ) : null}
-
-        <label>
-          Your answer
-          <textarea
-            className={styles.textarea}
-            onChange={(event) => setDraftValue(event.target.value)}
-            onKeyDown={handleAnswerKeyDown}
-            placeholder={question.placeholder}
-            ref={answerBoxRef}
-            value={draftValue}
-          />
-        </label>
-
-        <p className={styles.nudge}>
-          <strong>Skip rule:</strong> allowed. Cowardly, but allowed. Skipped answers become [needs your answer] goblin guesses.
-        </p>
-
-        <div className={styles.actionRow}>
-          {step > 0 ? (
-            <button className={styles.ghostButton} onClick={moveBack} type="button">
-              Back
-            </button>
-          ) : null}
-          <button className={styles.primaryButton} type="submit">
-            {step >= guidedSetupQuestions.length - 1 ? "Create script base" : "Next"}
-          </button>
-          <button className={styles.ghostButton} onClick={skipQuestion} type="button">
-            Skip, cowardly but allowed
-          </button>
-        </div>
-
-        <nav aria-label="Answer path" className={styles.answerPath}>
-          {guidedSetupQuestions.map((setupQuestion, index) => {
-            const answer = answerPathAnswers[setupQuestion.id]?.trim();
-            const isCurrentStep = index === step;
-
-            return (
-              <button
-                aria-current={isCurrentStep ? "step" : undefined}
-                aria-label={`Go to answer ${index + 1}: ${setupQuestion.title}`}
-                className={`${styles.answerPathButton} ${isCurrentStep ? styles.currentAnswerPathButton : ""}`}
-                key={setupQuestion.id}
-                onClick={() => jumpToAnswer(index)}
-                type="button"
-              >
-                <span>{index + 1}</span>
-                <strong>{answerPathLabels[setupQuestion.id]}</strong>
-                <small>{answer ? "Answered" : "Blank"}</small>
-              </button>
-            );
-          })}
-        </nav>
-      </form>
+          </nav>
+        </form>
+      </div>
     </section>
   );
 }

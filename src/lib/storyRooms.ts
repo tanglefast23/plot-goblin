@@ -17,6 +17,7 @@ export type ScriptReadinessIssue = {
 
 export type ScriptRoomProgress = {
   completed: number;
+  missingRequirements: string[];
   percent: number;
   remaining: number;
   room: StoryRoom;
@@ -123,11 +124,12 @@ export const storyRooms: StoryRoom[] = [
     status: "active",
     markdownFile: "create-script.md",
     purpose: "Summon the goblin to check whether the script has enough bones for a halfway decent draft.",
-    guidingQuestion: "Has the writer fed the goblin enough premise, character, theme, beats, scenes, and drafting rules?",
+    guidingQuestion: "Has the writer fed the goblin enough premise, character, theme, beats, and drafting rules?",
     prompts: [
       "Script Parameters must be completely filled out.",
       "Premise, Characters, and Beats need the strongest story spine.",
-      "Theme and Scenes can be lighter, but they cannot be empty fog.",
+      "Theme can be lighter, but it cannot be empty fog.",
+      "Scenes are useful later, but they are not required to start a draft.",
     ],
   },
   {
@@ -183,7 +185,6 @@ export const SCRIPT_SOURCE_ROOM_SLUGS = [
   "characters",
   "theme",
   "beats",
-  "scenes",
 ] as const;
 
 const UNFINISHED_MARKER_PATTERN = /\[(?:needs your answer|needs answer|needs writing)\]/i;
@@ -242,7 +243,6 @@ const CHARACTER_REQUIRED_SECTIONS = [
   ["Deeper need"],
   ["False belief"],
   ["Flaw / defense mechanism"],
-  ["Pressure test"],
   ["Antagonist / opposition"],
 ];
 
@@ -359,22 +359,12 @@ function completedScriptParameters(markdown: string) {
   return REQUIRED_SCRIPT_PARAMETER_LABELS.filter((label) => lineIsReady(markdown, label)).length;
 }
 
-function hasReadySceneCard(markdown: string) {
-  return markdownSections(markdown)
-    .filter((candidate) => /^scene:/i.test(candidate.heading))
-    .some((candidate) => {
-      return !/\[short title\]/i.test(candidate.heading) && finishedText(`${candidate.heading}\n${candidate.body}`);
-    });
+function missingScriptParameters(markdown: string) {
+  return REQUIRED_SCRIPT_PARAMETER_LABELS.filter((label) => !lineIsReady(markdown, label));
 }
 
-function sceneListIsReady(markdown: string) {
-  const sceneList = section(markdown, "Scene list")?.ownBody;
-  if (!sceneList || !finishedText(sceneList)) return false;
-
-  return sceneList
-    .split("\n")
-    .map((line) => line.replace(/^[-*\s]+/, "").trim())
-    .some((line) => line.length >= 3 && !UNFINISHED_MARKER_PATTERN.test(line));
+function missingSectionGroups(markdown: string, sectionGroups: string[][]) {
+  return sectionGroups.filter((headings) => !sectionGroupIsReady(markdown, headings)).map((headings) => headings[0]);
 }
 
 function firstMissingReason(slug: (typeof SCRIPT_SOURCE_ROOM_SLUGS)[number], markdown: string) {
@@ -405,10 +395,6 @@ function firstMissingReason(slug: (typeof SCRIPT_SOURCE_ROOM_SLUGS)[number], mar
     return missing ? `Fill out ${missing}.` : null;
   }
 
-  if (slug === "scenes") {
-    return sceneListIsReady(markdown) || hasReadySceneCard(markdown) ? null : "Add a scene list item or usable scene card.";
-  }
-
   return null;
 }
 
@@ -418,31 +404,36 @@ function buildRoomProgress(
   markdown: string,
 ): ScriptRoomProgress {
   let completed = 0;
+  let missingRequirements: string[] = [];
   let total = 1;
 
   if (slug === "script-parameters") {
     completed = completedScriptParameters(markdown);
+    missingRequirements = missingScriptParameters(markdown);
     total = REQUIRED_SCRIPT_PARAMETER_LABELS.length;
   } else if (slug === "premise") {
     completed = completedSectionGroups(markdown, PREMISE_REQUIRED_SECTIONS);
+    missingRequirements = missingSectionGroups(markdown, PREMISE_REQUIRED_SECTIONS);
     total = PREMISE_REQUIRED_SECTIONS.length;
   } else if (slug === "characters") {
     completed = completedSectionGroups(markdown, CHARACTER_REQUIRED_SECTIONS);
+    missingRequirements = missingSectionGroups(markdown, CHARACTER_REQUIRED_SECTIONS);
     total = CHARACTER_REQUIRED_SECTIONS.length;
   } else if (slug === "theme") {
     completed = completedSectionGroups(markdown, THEME_REQUIRED_SECTIONS);
+    missingRequirements = missingSectionGroups(markdown, THEME_REQUIRED_SECTIONS);
     total = THEME_REQUIRED_SECTIONS.length;
   } else if (slug === "beats") {
     completed = completedSectionGroups(markdown, BEAT_REQUIRED_SECTIONS);
+    missingRequirements = missingSectionGroups(markdown, BEAT_REQUIRED_SECTIONS);
     total = BEAT_REQUIRED_SECTIONS.length;
-  } else if (slug === "scenes") {
-    completed = sceneListIsReady(markdown) || hasReadySceneCard(markdown) ? 1 : 0;
   }
 
   const remaining = Math.max(total - completed, 0);
 
   return {
     completed,
+    missingRequirements,
     percent: total === 0 ? 100 : Math.round((completed / total) * 100),
     remaining,
     room,

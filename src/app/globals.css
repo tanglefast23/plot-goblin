@@ -11,6 +11,68 @@
   --goblin-gold-rgb: 231 206 124;
   --background: var(--goblin-mist);
   --foreground: var(--goblin-night);
+
+  /* Motion: confident deceleration curves, never bounce/elastic. */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Shared, transform/opacity-only keyframes (GPU-friendly). */
+@keyframes goblinRise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes goblinFade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* A restrained tactile pop for confirming a choice — slight, not springy. */
+@keyframes goblinPop {
+  0% {
+    transform: scale(0.96);
+  }
+
+  55% {
+    transform: scale(1.03);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Goblin acknowledges you with a quick tilt — used on hover only. */
+@keyframes goblinWiggle {
+  0% {
+    transform: rotate(0) scale(1);
+  }
+
+  35% {
+    transform: rotate(-6deg) scale(1.06);
+  }
+
+  70% {
+    transform: rotate(4deg) scale(1.04);
+  }
+
+  100% {
+    transform: rotate(0) scale(1);
+  }
 }
 
 html {
@@ -48,4 +110,16 @@ input,
 textarea,
 select {
   font: inherit;
+}
+
+/* Accessibility: respect users who ask the OS to reduce motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

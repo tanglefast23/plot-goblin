@@ -76,7 +76,9 @@ describe("guided setup model", () => {
     expect(base.rooms.premise).toContain(`## Polished logline\n${needsYourAnswer} When Stubborn one-armed pitcher must`);
     expect(base.rooms.characters).toContain(`### Deeper need\n${needsYourAnswer}`);
     expect(base.rooms.theme).toContain(`## Story proof\n${needsYourAnswer}`);
-    expect(base.rooms.beats).toContain(`## Debate / Refusal\n${needsYourAnswer} Stubborn one-armed pitcher hesitates`);
+    expect(base.rooms.beats).toContain(
+      `## Debate / Refusal\n${needsYourAnswer} Show why the protagonist hesitates, rationalizes, or tries the wrong safer path.`,
+    );
     expect(base.rooms.scenes).toContain(`**Scene want:**\n${needsYourAnswer}`);
     expect(base.rooms.beats).not.toContain(`## Setup\n${needsYourAnswer}`);
     expect(base.summary.needsAnswerCount).toBeGreaterThan(0);
@@ -105,6 +107,34 @@ describe("guided setup model", () => {
     expect(Object.values(base.rooms).join("\n")).not.toContain("[Needs answer]");
   });
 
+  it("uses beat-purpose prompts instead of repeating setup answers on beat stickies", () => {
+    const storyFacts = {
+      genre: "Comedy",
+      audienceFeeling: "hopeful and tense",
+      protagonist: "Joe, a determined one-armed pitcher",
+      surfaceWant: "become a professional baseball player",
+      stakes: "he loses the only dream he has left",
+      falseBelief: "determination and hard work is enough to be a pro baseball player",
+      opposition: "the fact that they only have one arm and baseball needs 2",
+      endingDirection: "He changes and wins",
+    };
+    const base = buildScriptBase({
+      rawIdea: "A one-armed pitcher tries to make the majors.",
+      ...storyFacts,
+      structurePreference: "Classic 3-act spine",
+    });
+
+    expect(base.rooms.beats).toContain(
+      "## Opening Image\n[needs your answer] Describe the first visual snapshot: who, where, and what feels normal before the story applies pressure.",
+    );
+    expect(base.rooms.beats).toContain(
+      "## Bad Guys Close In\n[needs your answer] Let pressure pile up from rivals, flaws, consequences, and the clock until escape routes close and the protagonist cannot dodge the lie anymore.",
+    );
+    for (const fact of Object.values(storyFacts)) {
+      expect(base.rooms.beats).not.toContain(fact);
+    }
+  });
+
   it("treats multiple movie kinds as a hybrid promise", () => {
     const genreQuestion = guidedSetupQuestions.find((question) => question.id === "genre");
     const base = buildScriptBase({
@@ -115,7 +145,7 @@ describe("guided setup model", () => {
     expect(genreQuestion?.multiple).toBe(true);
     expect(base.rooms.premise).toContain("A horror / romance hybrid built to make the audience feel dread and longing.");
     expect(base.rooms.beats).toContain(
-      "[needs your answer] Build a sequence that delivers the Horror / Romance hybrid promise and makes the audience feel dread and longing.",
+      "[needs your answer] Write the sequence that proves the movie's core promise: the fun, dread, longing, awe, or tension the audience came for.",
     );
   });
 

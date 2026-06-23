@@ -251,9 +251,6 @@ function createRoomGuesses(answers: SetupAnswers) {
   const stakes = answerPhrase(answers, "stakes");
   const falseBelief = answerPhrase(answers, "falseBelief");
   const opposition = answerPhrase(answers, "opposition");
-  const endingDirection = answerPhrase(answers, "endingDirection");
-  const genreLabel = moviePromiseLabel(answerPhrase(answers, "genre"));
-  const audienceFeeling = answerPhrase(answers, "audienceFeeling");
   const effortLie = effortBased(falseBelief);
   const deeperNeed = effortLie
     ? `They may need to accept that effort alone is not enough and adapt before the stakes become real: ${clause(stakes)}`
@@ -273,18 +270,18 @@ function createRoomGuesses(answers: SetupAnswers) {
       : `${opposition} may be right because they expose the cost of ${protagonist} chasing ${surfaceWant} while believing ${falseBelief}`,
     supportingCharacter: `Name a helper, rival, or mirror who pressures ${protagonist} to confront ${falseBelief}`,
     storyProof: `Show choices where ${protagonist} pursues ${surfaceWant}, pays ${stakes}, and learns whether ${falseBelief} can survive pressure`,
-    openingImage: `Show ${protagonist} chasing ${surfaceWant} before pressure exposes ${falseBelief}`,
-    incitingIncident: `An event makes ${surfaceWant} urgent and impossible to ignore`,
-    debate: `${protagonist} hesitates because ${falseBelief} still feels safer than change`,
-    actOneBreak: `${protagonist} commits to ${surfaceWant} even though ${opposition} makes the cost real`,
-    promise: `Build a sequence that delivers the ${genreLabel} promise and makes the audience feel ${audienceFeeling}`,
-    midpoint: `A reveal or reversal proves the old plan for ${surfaceWant} will not survive`,
-    badGuysCloseIn: `${opposition} tightens the trap until ${protagonist} cannot dodge the lie anymore`,
-    allIsLost: `Make the cost feel personal, public, moral, or irreversible: ${stakes}`,
-    darkNight: `${protagonist} finally names the damage caused by believing ${falseBelief}`,
-    actThreeBreak: `A new choice points toward ${endingDirection}`,
-    climax: `${protagonist} makes the hardest choice and proves what has changed`,
-    finalImage: `Echo the opening image, but show how ${protagonist} has changed`,
+    openingImage: `Describe the first visual snapshot: who, where, and what feels normal before the story applies pressure`,
+    incitingIncident: `Name the event that disrupts normal life and makes inaction impossible`,
+    debate: `Show why the protagonist hesitates, rationalizes, or tries the wrong safer path`,
+    actOneBreak: `Make the protagonist choose the visible goal, cross into the main story, and accept that the cost is now real`,
+    promise: `Write the sequence that proves the movie's core promise: the fun, dread, longing, awe, or tension the audience came for`,
+    midpoint: `Create the reveal, reversal, false victory, or false defeat that makes the old plan impossible`,
+    badGuysCloseIn: `Let pressure pile up from rivals, flaws, consequences, and the clock until escape routes close and the protagonist cannot dodge the lie anymore`,
+    allIsLost: `Write the moment where the cost lands as personal, public, moral, or seemingly irreversible`,
+    darkNight: `Show the quiet aftermath where the protagonist has to face the lie, wound, or mistake`,
+    actThreeBreak: `Name the new choice or plan that sends the story into its final movement`,
+    climax: `Describe the maximum-pressure choice that proves what has changed`,
+    finalImage: `Create the closing visual that answers, twists, or contrasts the opening image`,
     sceneCharacters: `${protagonist}, plus whoever can apply the most pressure in this moment`,
     sceneWant: `${protagonist} wants a concrete step toward ${surfaceWant}`,
     sceneOpposition: `${opposition} blocks the scene goal or makes the cost sharper`,
@@ -395,7 +392,7 @@ Hybrid default: ${structurePreference}. Rename, skip, add, or reorder beats when
 ${writingPrompt(roomGuesses.openingImage)}
 
 ## Setup
-Establish the world, the want (${surfaceWant}), the lie (${falseBelief}), and the cost of staying the same.
+Establish the ordinary world, core want, false belief, relationships, and cost of staying the same.
 
 ## Inciting Incident
 ${writingPrompt(roomGuesses.incitingIncident)}
@@ -512,7 +509,7 @@ Treat these as strict rules when generating script pages.
 `,
     "create-script": `# Create the Script Room
 
-This room checks whether the first six rooms contain enough story material for a tailored screenplay draft.
+This room checks whether the core story rooms contain enough material for a tailored screenplay draft.
 
 ## Draft request
 Press the goblin button when you believe the script has enough bones.
@@ -522,7 +519,7 @@ Press the goblin button when you believe the script has enough bones.
 - Premise and Characters must be strong enough to define the story spine.
 - Theme must name the central question and ending direction.
 - Beats must cover the major pressure turns.
-- Scenes must include at least a starter scene list or usable scene card.
+- Scenes can help later, but they are not required to start a draft.
 `,
   };
 

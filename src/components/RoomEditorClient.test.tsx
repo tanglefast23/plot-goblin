@@ -422,7 +422,7 @@ describe("RoomEditorClient", () => {
     await waitFor(() => {
       const storedProject = JSON.parse(window.localStorage.getItem(PROJECT_STORAGE_KEY) ?? "{}");
       expect(storedProject.rooms.beats).toContain("## Opening Image\nA locker room wall of tryout flyers.");
-      expect(storedProject.rooms.beats).toContain("## Setup\nEstablish the world");
+      expect(storedProject.rooms.beats).toContain("## Setup\nEstablish the ordinary world");
     });
   });
 
@@ -495,13 +495,15 @@ describe("RoomEditorClient", () => {
     expect(screen.getByLabelText("Climax needs your answer").textContent).toContain("Needs your answer");
     expect(screen.getByLabelText("Final Image needs your answer").textContent).toContain("Needs your answer");
     expect(openingImage.value).not.toContain("[needs your answer]");
-    expect(openingImage.value).toMatch(/^Show Stubborn one-armed pitcher/);
+    expect(openingImage.value).toMatch(/^Describe the first visual snapshot/);
     expect(setup.value).not.toContain("[needs your answer]");
-    expect(setup.value).toContain("Establish the world");
+    expect(setup.value).toContain("Establish the ordinary world");
 
     await waitFor(() => {
       const storedProject = JSON.parse(window.localStorage.getItem(PROJECT_STORAGE_KEY) ?? "{}");
-      expect(storedProject.rooms.beats).toContain("## Opening Image\n[needs your answer] Show Stubborn");
+      expect(storedProject.rooms.beats).toContain(
+        "## Opening Image\n[needs your answer] Describe the first visual snapshot",
+      );
     });
 
     fireEvent.change(openingImage, { target: { value: "A locker room wall of tryout flyers." } });
@@ -602,7 +604,7 @@ describe("RoomEditorClient", () => {
     const requestBody = JSON.parse((fetchSpy.mock.calls[0]?.[1] as RequestInit).body as string);
     expect(requestBody.mode).toBe("beat");
     expect(requestBody.beat).toBe("Opening Image");
-    expect(requestBody.beatMarkdown).toContain("Show Stubborn one-armed pitcher");
+    expect(requestBody.beatMarkdown).toContain("Describe the first visual snapshot");
     expect(requestBody.markdown).toContain("## premise.md");
     expect(requestBody.markdown).toContain("## characters.md");
     expect(requestBody.markdown).toContain("## beats.md");
@@ -747,6 +749,64 @@ describe("RoomEditorClient", () => {
       expect(storedProject.rooms.scenes).toContain("## Saved scenes");
       expect(storedProject.rooms.scenes).toContain("### Scene: Tryout Opens");
       expect(storedProject.rooms.scenes).toContain("- Tryout Opens");
+    });
+  });
+
+  it("populates ordered scene cards from the beat sheet", async () => {
+    routeState.slug = "scenes";
+    const project = buildScriptBase({
+      rawIdea: "A one-armed pitcher tries to make the majors.",
+      genre: "Comedy",
+      audienceFeeling: "hopeful and tense",
+      protagonist: "Stubborn one-armed pitcher",
+      surfaceWant: "become a professional baseball player",
+      stakes: "he loses the only dream he has left",
+      falseBelief: "asking for help makes him weak",
+      opposition: "better players who have two arms",
+      endingDirection: "He changes and wins",
+      structurePreference: "Classic 3-act spine",
+    });
+    project.rooms.beats = `# Beats Room
+
+## Opening Image
+Rafa tapes a cracked glove to his one good hand before the gates open.
+
+## Midpoint
+A scout offers one private pitch, but only if Rafa admits he needs a catcher.
+
+## Final Image
+Rafa takes the mound with Mina beside him and throws without hiding the sling.
+`;
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+
+    render(<RoomEditorClient />);
+
+    await screen.findByRole("region", { name: "Scene cards" });
+    expect(screen.getByRole("img", { name: "Large scene goblin mascot" })).toBeTruthy();
+    expect(
+      screen.getByText(/auto-populates scene cards from your Beats page, if any/i),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Ask the goblin to populate scenes" }));
+
+    const openingScene = await screen.findByRole("button", { name: /Opening Image/ });
+    const midpointScene = screen.getByRole("button", { name: /Midpoint/ });
+    const finalScene = screen.getByRole("button", { name: /Final Image/ });
+
+    expect(openingScene.compareDocumentPosition(midpointScene) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(midpointScene.compareDocumentPosition(finalScene) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    await waitFor(() => {
+      const storedProject = JSON.parse(window.localStorage.getItem(PROJECT_STORAGE_KEY) ?? "{}");
+      expect(storedProject.rooms.scenes.indexOf("### Scene: Opening Image")).toBeLessThan(
+        storedProject.rooms.scenes.indexOf("### Scene: Midpoint"),
+      );
+      expect(storedProject.rooms.scenes.indexOf("### Scene: Midpoint")).toBeLessThan(
+        storedProject.rooms.scenes.indexOf("### Scene: Final Image"),
+      );
+      expect(storedProject.rooms.scenes).toContain("Make the scene want concrete from this beat: Rafa tapes");
+      expect(storedProject.rooms.scenes).toContain("**Purpose:**\nBeat: Opening Image");
+      expect(storedProject.rooms.scenes).toContain("- Opening Image\n- Midpoint\n- Final Image");
     });
   });
 
@@ -1081,5 +1141,60 @@ Rafa wants to hide the injury.
     expect(screen.getByRole("link", { name: "Script Parameters - take me there" }).getAttribute("href")).toBe(
       "/rooms/script-parameters",
     );
+  });
+
+  it("removes Script Parameters from guidance once required drafting rules are filled", async () => {
+    routeState.slug = "create-script";
+    const project = buildScriptBase({
+      rawIdea: "A one-armed pitcher tries to make the majors.",
+      genre: "Comedy",
+      audienceFeeling: "hopeful and tense",
+      protagonist: "Stubborn one-armed pitcher",
+      surfaceWant: "become a professional baseball player",
+      stakes: "he loses the only dream he has left",
+      falseBelief: "asking for help makes him weak",
+      opposition: "better players who have two arms",
+      endingDirection: "He changes and wins",
+      structurePreference: "Classic 3-act spine",
+    });
+    project.rooms.premise =
+      "# Premise Room\n\n## Raw idea\nRafa wants a tryout.\n\n## Protagonist\nRafa.\n\n## Surface want\nPitch well.\n\n## Stakes\nHe loses his last chance.";
+    project.rooms["script-parameters"] =
+      "# Script Parameters Room\n\n## Runtime / page target\nLength format: Feature film.\nTarget page count: 100 pages.\n\n## Genre / movie promise\nCurrent genre: Sports comedy.\nAudience feeling: Hopeful and tense.\nTone words: Warm, sharp, underdog funny.\n\n## Structure and pacing\nStructure mode: Classic 3-act spine.\nPacing bias: Lean and fast.\nScene length rule: Short and punchy.\n\n## Format rules\nFormat: Standard spec screenplay format.\nDialogue density: Naturalistic.\nVoiceover / narration: No voiceover.\n\n## Rating and boundaries\nTarget rating: PG-13.\nNo-go content: No graphic gore.\n\n## Production constraints\nCast size: 6 major speaking roles.\nLocation limits: Baseball fields, diner, tiny apartment.\nTime period / setting rules: Modern day minor-league town.\nBudget reality: Cheap.\n\n## Point of view\nPrimary POV: Rafa.\nScene access: Stay close.\n";
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+
+    render(<RoomEditorClient />);
+
+    await screen.findByRole("region", { name: "Create the Script draft gate" });
+
+    expect(screen.queryByRole("link", { name: "Script Parameters - take me there" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Premise - take me there" }).getAttribute("href")).toBe("/rooms/premise");
+  });
+
+  it("names the exact Script Parameter fields still missing at eighty-nine percent", async () => {
+    routeState.slug = "create-script";
+    const project = buildScriptBase({
+      rawIdea: "A one-armed pitcher tries to make the majors.",
+      genre: "Comedy",
+      audienceFeeling: "hopeful and tense",
+      protagonist: "Stubborn one-armed pitcher",
+      surfaceWant: "become a professional baseball player",
+      stakes: "he loses the only dream he has left",
+      falseBelief: "asking for help makes him weak",
+      opposition: "better players who have two arms",
+      endingDirection: "He changes and wins",
+      structurePreference: "Classic 3-act spine",
+    });
+    project.rooms["script-parameters"] =
+      "# Script Parameters Room\n\n## Runtime / page target\nScreen time guess: roughly 100 minutes.\n\n## Genre / movie promise\nCurrent genre: Sports comedy.\nAudience feeling: Hopeful and tense.\nTone words: Warm, sharp, underdog funny.\n\n## Structure and pacing\nStructure mode: Classic 3-act spine.\nPacing bias: Lean and fast.\nScene length rule: Short and punchy.\n\n## Format rules\nFormat: Standard spec screenplay format.\nDialogue density: Naturalistic.\nVoiceover / narration: No voiceover.\n\n## Rating and boundaries\nTarget rating: PG-13.\nNo-go content: No graphic gore.\n\n## Production constraints\nCast size: 6 major speaking roles.\nLocation limits: Baseball fields, diner, tiny apartment.\nTime period / setting rules: Modern day minor-league town.\nBudget reality: Cheap.\n\n## Point of view\nPrimary POV: Rafa.\nScene access: Stay close.\n";
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+
+    render(<RoomEditorClient />);
+
+    await screen.findByRole("region", { name: "Create the Script draft gate" });
+
+    expect(screen.getByText("89%")).toBeTruthy();
+    expect(screen.getByText("17 filled / 2 to go")).toBeTruthy();
+    expect(screen.getByText("Still needs: Length format, Target page count")).toBeTruthy();
   });
 });

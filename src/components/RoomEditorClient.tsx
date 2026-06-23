@@ -644,65 +644,80 @@ const DEFAULT_BEAT_PROMPT_PATTERNS_BY_HEADING: Record<string, RegExp[]> = {
   "opening image": [
     /^Replace this with a specific visual snapshot before pressure hits\.$/i,
     /^Show .+ before pressure exposes .+\.$/i,
+    /^Describe the first visual snapshot: who, where, and what feels normal before the story applies pressure\.$/i,
   ],
-  setup: [/^Establish the world, (?:the )?want\b.*\b(?:lie|cost of staying the same)\b/i],
+  setup: [
+    /^Establish the world, (?:the )?want\b.*\b(?:lie|cost of staying the same)\b/i,
+    /^Establish the ordinary world, core want, false belief, relationships, and cost of staying the same\.$/i,
+  ],
   "inciting incident": [
     /^What specific event forces the protagonist toward the want\?$/i,
     /^Something forces the protagonist toward\b/i,
     /^An event makes .+ urgent and impossible to ignore\.$/i,
+    /^Name the event that disrupts normal life and makes inaction impossible\.$/i,
   ],
   "debate / refusal": [
     /^Why they hesitate, dodge, rationalize, or choose badly\.$/i,
     /^a protagonist whose want exposes the wound they keep protecting\b/i,
     /^.+ hesitates because .+ still feels safer than change\.$/i,
+    /^Show why the protagonist hesitates, rationalizes, or tries the wrong safer path\.$/i,
   ],
   "act one break": [
     /^What choice locks them into the story\?$/i,
     /^They make a choice that locks them into the story\.$/i,
     /^.+ commits to .+ even though .+ makes the cost real\.$/i,
+    /^Make the protagonist choose the visible goal, cross into the main story, and accept that the cost is now real\.$/i,
   ],
   "promise of the premise": [
     /^Which sequence delivers the fun\/terror\/longing promised by the genre\?$/i,
     /^The movie delivers the fun\/terror\/longing promised by\b/i,
     /^Build a sequence that delivers the .+ promise and makes the audience feel .+\.$/i,
+    /^Write the sequence that proves the movie's core promise: the fun, dread, longing, awe, or tension the audience came for\.$/i,
   ],
   midpoint: [
     /^What reveal, reversal, or false victory makes the old plan impossible\?$/i,
     /^A reveal, reversal, or false victory makes the old plan impossible\.$/i,
     /^A reveal or reversal proves the old plan for .+ will not survive\.$/i,
+    /^Create the reveal, reversal, false victory, or false defeat that makes the old plan impossible\.$/i,
   ],
   "bad guys close in": [
     /^How does the opposition tighten the trap\?$/i,
     /^.+ tightens the trap(?: until .+)?\.$/i,
+    /^Let pressure pile up from rivals, flaws, consequences, and the clock until escape routes close and the protagonist cannot dodge the lie anymore\.$/i,
   ],
   "all is lost": [
     /^What moment makes the cost personal, public, moral, or irreversible\?$/i,
     /^The worst version of the cost lands\.$/i,
     /^The cost becomes personal, public, moral, or irreversible\b/i,
     /^Make the cost feel personal, public, moral, or irreversible: .+$/i,
+    /^Write the moment where the cost lands as personal, public, moral, or seemingly irreversible\.$/i,
   ],
   "dark night of the soul": [
     /^How does the protagonist confront the lie\?$/i,
     /^The protagonist confronts the lie:/i,
     /^The protagonist faces the lie\b/i,
     /^.+ finally names the damage caused by believing .+\.$/i,
+    /^Show the quiet aftermath where the protagonist has to face the lie, wound, or mistake\.$/i,
   ],
   "act three break": [
     /^What new choice points toward the ending\?$/i,
     /^They make a new choice\b/i,
     /^A new choice points toward .+$/i,
+    /^Name the new choice or plan that sends the story into its final movement\.$/i,
   ],
   climax: [
     /^What maximum-pressure choice proves who they have become\?$/i,
     /^The maximum-pressure choice\b/i,
     /^The protagonist must choose under maximum pressure\.$/i,
     /^.+ makes the hardest choice and proves what has changed\.$/i,
+    /^Describe the maximum-pressure choice that proves what has changed\.$/i,
   ],
   "final image": [
     /^What specific final image answers or twists the opening image\?$/i,
     /^A final image answers or twists the opening image\.$/i,
     /^A visual answer to the opening image\.$/i,
     /^Echo the opening image\b/i,
+    /^Create the closing visual that answers, twists, or contrasts the opening image\.$/i,
   ],
   "custom beats": [
     /^Add custom beats\.$/i,
@@ -739,6 +754,49 @@ function beatNoteRows(body: string) {
   const explicitLines = body.split("\n").length;
   const estimatedWrappedLines = Math.ceil(body.length / 21);
   return Math.min(17, Math.max(4, explicitLines + estimatedWrappedLines));
+}
+
+function cleanBeatSceneText(body: string) {
+  return body
+    .replace(BEAT_PLACEHOLDER_PATTERN, "")
+    .replace(BEAT_NEEDS_MARKER_PATTERN, "")
+    .replace(/^\s*[-*]\s+/gm, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function beatSceneCard(section: BeatSection, index: number) {
+  const heading = section.heading.trim() || `Beat ${index + 1}`;
+  const beatText = cleanBeatSceneText(section.body);
+
+  return `### Scene: ${heading}
+
+**Location / time:** INT./EXT. PLACE - DAY/NIGHT
+
+**Characters:**
+${NEEDS_WRITING} Who is in this beat's scene, and who can apply the most pressure?
+
+**Scene want:**
+Make the scene want concrete from this beat: ${beatText}
+
+**Opposition:**
+${NEEDS_WRITING} What blocks the goal inside this beat?
+
+**Turn:**
+By the end, this beat has changed: ${beatText}
+
+**Button:**
+${NEEDS_WRITING} End on an image, line, or action that pushes into the next beat.
+
+**Purpose:**
+Beat: ${heading}`;
+}
+
+function sceneCardsFromBeats(beatsMarkdown: string) {
+  return parseRoomSections(beatsMarkdown).sections
+    .filter((section) => section.heading.trim().toLowerCase() !== "custom beats")
+    .filter((section) => cleanBeatSceneText(section.body).length > 0)
+    .map(beatSceneCard);
 }
 
 type GuidedRoomEditorProps = {
@@ -1130,6 +1188,61 @@ type SceneBoardProps = {
   markdown: string;
   onMarkdownChange: (markdown: string) => void;
 };
+
+type ScenePopulationGuidanceProps = {
+  beatsMarkdown: string;
+  scenesMarkdown: string;
+  onScenesMarkdownChange: (markdown: string) => void;
+};
+
+function ScenePopulationGuidance({
+  beatsMarkdown,
+  scenesMarkdown,
+  onScenesMarkdownChange,
+}: ScenePopulationGuidanceProps) {
+  const beatSceneCards = useMemo(() => sceneCardsFromBeats(beatsMarkdown), [beatsMarkdown]);
+  const [populateStatus, setPopulateStatus] = useState("");
+  const canPopulate = beatSceneCards.length > 0;
+
+  function populateScenesFromBeats() {
+    if (!canPopulate) return;
+
+    playGoblinSquashSound();
+    onScenesMarkdownChange(formatScenesMarkdown(scenesMarkdown, beatSceneCards));
+    setPopulateStatus(
+      beatSceneCards.length === 1
+        ? "1 scene placed in the timeline."
+        : `${beatSceneCards.length} scenes placed in the timeline.`,
+    );
+  }
+
+  return (
+    <div className={styles.scenePopulatePanel}>
+      <div aria-label="Large scene goblin mascot" className={styles.scenePopulateGoblin} role="img">
+        <span className={styles.scenePopulateGoblinGlasses} data-mascot-part="glasses" />
+        <span className={styles.scenePopulateGoblinMouth} />
+        <span className={styles.scenePopulateGoblinFang} data-mascot-part="fang" />
+        <span className={styles.scenePopulateGoblinQuill} />
+      </div>
+      <button
+        className={`${styles.primaryButton} ${styles.scenePopulateButton} ${styles.goblinSuggestButton}`}
+        disabled={!canPopulate}
+        onClick={populateScenesFromBeats}
+        type="button"
+      >
+        Ask the goblin to populate scenes
+      </button>
+      <p className={styles.scenePopulateHelp}>
+        Auto-populates scene cards from your Beats page, if any, then places them in the scene timeline in that order.
+      </p>
+      {populateStatus ? (
+        <p className={styles.scenePopulateStatus} role="status">
+          {populateStatus}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 function SceneBoard({ firstSceneRef, markdown, onMarkdownChange }: SceneBoardProps) {
   const sceneCards = useMemo(() => parseSavedSceneCards(markdown), [markdown]);
@@ -1545,8 +1658,8 @@ function CreateScriptRoom({ markdown, onMarkdownChange, project }: CreateScriptR
         <p className={styles.stepMeta}>Draft checkpoint</p>
         <h2>Summon the goblin when the script has bones.</h2>
         <p>
-          The goblin checks the first six rooms before drafting. If the story is still underfed, it points to the room
-          that needs work instead of inventing your movie for you.
+          The goblin checks the core story rooms and draft rules before drafting. If the story is still underfed, it
+          points to the room that needs work instead of inventing your movie for you.
         </p>
       </div>
 
@@ -1621,6 +1734,11 @@ function CreateScriptGuidanceMeters({ roomProgress }: { roomProgress: ScriptRoom
               Take me there
             </Link>
           </div>
+          {progress.missingRequirements.length > 0 ? (
+            <small className={styles.guidanceMeterMissing}>
+              Still needs: {progress.missingRequirements.join(", ")}
+            </small>
+          ) : null}
         </div>
       ))}
     </div>
@@ -1950,6 +2068,12 @@ export function RoomEditorClient() {
           <p className={styles.nudge}>{room.guidingQuestion}</p>
           {room.slug === "create-script" ? (
             <CreateScriptGuidanceMeters roomProgress={createScriptRoomProgress} />
+          ) : room.slug === "scenes" ? (
+            <ScenePopulationGuidance
+              beatsMarkdown={project.rooms.beats ?? ""}
+              scenesMarkdown={markdown}
+              onScenesMarkdownChange={setMarkdown}
+            />
           ) : (
             <ul>
               {room.prompts.map((prompt) => (

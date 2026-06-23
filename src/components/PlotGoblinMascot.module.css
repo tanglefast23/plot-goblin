@@ -48,6 +48,12 @@
   width: 52px;
   height: auto;
   filter: drop-shadow(0 10px 14px rgb(var(--goblin-night-rgb) / 0.14));
+  transform-origin: 50% 80%;
+}
+
+/* The goblin gives a quick mischievous tilt when you reach for the logo. */
+.brand:hover .goblin {
+  animation: goblinWiggle 600ms var(--ease-out-quart);
 }
 
 .hat,

@@ -96,6 +96,87 @@ describe("story room model", () => {
     expect(readiness.blockedRooms).toEqual([]);
     expect(readiness.missingRooms).toEqual([]);
   });
+
+  it("keeps Script Parameters in the meter when tone and no-go are blank", () => {
+    const readiness = getScriptReadiness({
+      premise: completePremise,
+      characters: completeCharacters,
+      theme: completeTheme,
+      beats: completeBeats,
+      scenes: completeScenes,
+      "script-parameters": completeScriptParameters
+        .replace("Tone words: Warm, sharp, underdog funny.", "Tone words: [needs your answer]")
+        .replace("No-go content: No graphic injury.", "No-go content: [needs your answer]"),
+    });
+
+    expect(readiness.ready).toBe(false);
+    expect(readiness.missingRooms[0]?.reason).toBe("Fill out Tone words.");
+    expect(readiness.roomProgress.find((progress) => progress.room.slug === "script-parameters")).toEqual(
+      expect.objectContaining({
+        completed: 17,
+        missingRequirements: ["Tone words", "No-go content"],
+        percent: 89,
+        remaining: 2,
+        total: 19,
+      }),
+    );
+  });
+
+  it("reports the exact Script Parameter labels still missing", () => {
+    const readiness = getScriptReadiness({
+      premise: completePremise,
+      characters: completeCharacters,
+      theme: completeTheme,
+      beats: completeBeats,
+      scenes: completeScenes,
+      "script-parameters": completeScriptParameters
+        .replace("Length format: Feature film.\n", "")
+        .replace("Target page count: 100 pages.\n", ""),
+    });
+
+    expect(readiness.ready).toBe(false);
+    expect(readiness.roomProgress.find((progress) => progress.room.slug === "script-parameters")).toEqual(
+      expect.objectContaining({
+        completed: 17,
+        missingRequirements: ["Length format", "Target page count"],
+        percent: 89,
+        remaining: 2,
+        total: 19,
+      }),
+    );
+  });
+
+  it("does not keep Characters in the meter when only the pressure test is blank", () => {
+    const readiness = getScriptReadiness({
+      premise: completePremise,
+      characters: completeCharacters.replace("He gets one televised pitch where effort alone cannot save him.", "[needs your answer]"),
+      theme: completeTheme,
+      beats: completeBeats,
+      scenes: completeScenes,
+      "script-parameters": completeScriptParameters,
+    });
+
+    expect(readiness.ready).toBe(true);
+    expect(readiness.missingRooms).toEqual([]);
+    expect(readiness.roomProgress.find((progress) => progress.room.slug === "characters")).toEqual(
+      expect.objectContaining({ completed: 6, percent: 100, remaining: 0, total: 6 }),
+    );
+  });
+
+  it("does not require Scenes before Create the Script can draft", () => {
+    const readiness = getScriptReadiness({
+      premise: completePremise,
+      characters: completeCharacters,
+      theme: completeTheme,
+      beats: completeBeats,
+      scenes: "# Scenes Room\n\n[needs your answer]",
+      "script-parameters": completeScriptParameters,
+    });
+
+    expect(readiness.ready).toBe(true);
+    expect(readiness.missingRooms).toEqual([]);
+    expect(readiness.roomProgress.map((progress) => progress.room.slug)).not.toContain("scenes");
+  });
 });
 
 const completePremise = `# Premise Room

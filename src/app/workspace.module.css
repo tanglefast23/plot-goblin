@@ -85,6 +85,17 @@
 .selectedOption {
   border-color: var(--goblin-night);
   background: rgb(var(--goblin-gold-rgb) / 0.78);
+  animation: goblinPop 220ms var(--ease-out-quart);
+}
+
+/* Tactile press feedback for every pill button in the workspace. */
+.linkButton:active,
+.secondaryButton:active,
+.primaryButton:active,
+.ghostButton:active,
+.dangerButton:active {
+  transform: translateY(0) scale(0.97);
+  transition-duration: 90ms;
 }
 
 .attentionButton {
@@ -219,6 +230,31 @@
   text-transform: uppercase;
 }
 
+/* Setup-complete payoff: the goblin's verdict arrives as one orchestrated reveal. */
+.summaryPanel {
+  animation: goblinRise 440ms var(--ease-out-expo) both;
+}
+
+.summaryPanel > .stepMeta {
+  animation: goblinRise 420ms var(--ease-out-quint) 80ms both;
+}
+
+.summaryPanel > h1 {
+  animation: goblinRise 460ms var(--ease-out-quint) 160ms both;
+}
+
+.summaryGrid {
+  animation: goblinRise 480ms var(--ease-out-quint) 280ms both;
+}
+
+.loglineBox {
+  animation: goblinRise 480ms var(--ease-out-quint) 400ms both;
+}
+
+.summaryPanel > .actionRow {
+  animation: goblinRise 480ms var(--ease-out-quint) 520ms both;
+}
+
 .lede {
   position: relative;
   z-index: 1;
@@ -238,6 +274,40 @@
   font-weight: 950;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+/* Duolingo-style progress: a thin track that fills as the writer advances. */
+.progressTrack {
+  position: relative;
+  z-index: 1;
+  height: 10px;
+  margin-bottom: 24px;
+  border-radius: 999px;
+  background: rgb(var(--goblin-night-rgb) / 0.12);
+  overflow: hidden;
+}
+
+.progressFill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--goblin-moss), var(--goblin-gold));
+  transform: scaleX(var(--progress, 0));
+  transform-origin: left center;
+  transition: transform 520ms var(--ease-out-expo);
+}
+
+/* Each question slides up as it arrives (replayed via React key on step). */
+.stepBody > h1 {
+  animation: goblinRise 380ms var(--ease-out-quint) both;
+}
+
+.stepBody > .lede {
+  animation: goblinRise 380ms var(--ease-out-quint) 70ms both;
+}
+
+.stepBody > .questionForm {
+  animation: goblinRise 440ms var(--ease-out-quint) 130ms both;
 }
 
 .questionForm {
@@ -504,6 +574,13 @@
   color: rgb(var(--goblin-night-rgb) / 0.68);
   font-size: 0.72rem;
   font-weight: 850;
+}
+
+.guidanceMeterMissing {
+  color: rgb(var(--goblin-night-rgb) / 0.64);
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.35;
 }
 
 .guidanceMeterTrack {
@@ -1708,6 +1785,121 @@
   border-radius: 8px;
   padding: 18px;
   background: rgb(var(--goblin-mist-rgb) / 0.54);
+}
+
+.scenePopulatePanel {
+  display: grid;
+  justify-items: start;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.scenePopulateGoblin {
+  position: relative;
+  width: min(100%, 250px);
+  aspect-ratio: 1.18;
+  justify-self: center;
+  margin: 8px 0 4px;
+  border-radius: 88px 88px 24px 24px;
+  background: var(--goblin-lichen);
+  box-shadow:
+    inset 0 1px 0 rgb(var(--goblin-mist-rgb) / 0.54),
+    0 20px 38px rgb(var(--goblin-night-rgb) / 0.12);
+}
+
+.scenePopulateGoblin::before,
+.scenePopulateGoblin::after {
+  position: absolute;
+  top: 24%;
+  width: 26%;
+  height: 24%;
+  background: var(--goblin-moss);
+  content: "";
+}
+
+.scenePopulateGoblin::before {
+  left: -16%;
+  clip-path: polygon(100% 0, 0 50%, 100% 100%);
+}
+
+.scenePopulateGoblin::after {
+  right: -16%;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+.scenePopulateGoblinGlasses {
+  position: absolute;
+  top: 33%;
+  left: 21%;
+  width: 58%;
+  height: 28%;
+  background:
+    linear-gradient(var(--goblin-night), var(--goblin-night)) 50% 54% / 16% 10% no-repeat,
+    radial-gradient(circle, transparent 0 28%, var(--goblin-night) 29% 39%, transparent 40%) left center / 47% 100% no-repeat,
+    radial-gradient(circle, transparent 0 28%, var(--goblin-night) 29% 39%, transparent 40%) right center / 47% 100% no-repeat;
+}
+
+.scenePopulateGoblinMouth {
+  position: absolute;
+  top: 60%;
+  left: 37%;
+  width: 32%;
+  height: 18%;
+  border-bottom: 7px solid var(--goblin-night);
+  border-radius: 999px;
+  transform: rotate(-3deg);
+}
+
+.scenePopulateGoblinFang {
+  position: absolute;
+  top: 71%;
+  left: 48%;
+  width: 10%;
+  height: 18%;
+  background: var(--goblin-mist);
+  clip-path: polygon(0 0, 100% 0, 52% 100%);
+}
+
+.scenePopulateGoblinQuill {
+  position: absolute;
+  right: 3%;
+  bottom: 5%;
+  width: 10%;
+  height: 42%;
+  border-radius: 999px;
+  background: var(--goblin-night);
+  transform: rotate(37deg);
+}
+
+.scenePopulateGoblinQuill::before {
+  position: absolute;
+  top: -20%;
+  left: -80%;
+  width: 190%;
+  height: 48%;
+  border-radius: 70% 0 70% 0;
+  background: var(--goblin-gold);
+  content: "";
+}
+
+.scenePopulateButton {
+  width: 100%;
+  min-height: 48px;
+  white-space: normal;
+}
+
+.scenePopulateHelp,
+.scenePopulateStatus {
+  color: rgb(var(--goblin-night-rgb) / 0.72);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.scenePopulateStatus {
+  border-left: 4px solid var(--goblin-gold);
+  padding-left: 10px;
+  color: var(--goblin-night);
+  font-weight: 850;
 }
 
 .scriptGatePanel {

@@ -30,6 +30,43 @@
   text-transform: uppercase;
 }
 
+/* Hero page-load choreography: one orchestrated cascade, top to bottom. */
+.hero .eyebrow,
+.heroCopy h1 span,
+.lede,
+.ctaRow,
+.heroVisual {
+  animation: goblinRise 620ms var(--ease-out-quint) both;
+}
+
+.hero .eyebrow {
+  animation-delay: 40ms;
+}
+
+.heroCopy h1 span:nth-child(1) {
+  animation-delay: 140ms;
+}
+
+.heroCopy h1 span:nth-child(2) {
+  animation-delay: 240ms;
+}
+
+.heroCopy h1 span:nth-child(3) {
+  animation-delay: 340ms;
+}
+
+.lede {
+  animation-delay: 460ms;
+}
+
+.ctaRow {
+  animation-delay: 560ms;
+}
+
+.heroVisual {
+  animation: goblinRise 760ms var(--ease-out-expo) 300ms both;
+}
+
 .heroGrid {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(360px, 0.74fr);
@@ -166,6 +203,7 @@
   justify-content: center;
   padding: 24px;
   background: rgb(var(--goblin-night-rgb) / 0.42);
+  animation: goblinFade 180ms var(--ease-out-quart) both;
 }
 
 .modalDialog {
@@ -177,6 +215,7 @@
   padding: 28px;
   background: var(--goblin-mist);
   box-shadow: 0 28px 60px rgb(var(--goblin-night-rgb) / 0.28);
+  animation: goblinRise 280ms var(--ease-out-expo) both;
 }
 
 .modalHeader {
@@ -347,6 +386,13 @@
 .primaryCta:hover,
 .secondaryCta:hover {
   transform: translateY(-3px) rotate(-0.5deg);
+}
+
+/* Tactile press: button gives under the cursor, then springs back on release. */
+.primaryCta:active,
+.secondaryCta:active {
+  transform: translateY(-1px) scale(0.97);
+  transition-duration: 90ms;
 }
 
 .heroVisual {
@@ -531,6 +577,15 @@
   min-height: 440px;
   flex-direction: column;
   padding: 22px;
+  transition:
+    transform 220ms var(--ease-out-quart),
+    box-shadow 220ms var(--ease-out-quart);
+}
+
+/* Cards lift toward the reader on hover — the page feels reachable. */
+.roomCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 30px 64px rgb(var(--goblin-night-rgb) / 0.16);
 }
 
 .roomTopline {
