@@ -748,6 +748,8 @@ type GuidedRoomEditorProps = {
 function guidedFieldSuggestionMarkdown(title: string, field: GuidedRoomField, fullMarkdown: string) {
   return [
     `Selected ${title} field: ${field.heading}`,
+    `Write the actual content for the ${field.heading} field, specific to THIS script — not a description of what the field is for.`,
+    "If the current text below is an instruction or placeholder, fulfill it with specifics drawn from the other rooms; do not paraphrase it.",
     "Suggest exactly one replacement for this field only.",
     `Return one numbered option using this format: 1. ${field.heading}: Replacement text.`,
     "",
@@ -1025,22 +1027,12 @@ function BeatsCorkBoard({ firstNoteRef, markdown, onMarkdownChange, project }: B
                   needsAnswer ? styles.beatStickyNeedsAnswer : ""
                 }`}
               >
-                {needsAnswer ? (
-                  <span aria-label={`${section.heading} needs your answer`} className={styles.beatNeedsTag}>
-                    Needs your answer
-                  </span>
-                ) : null}
-                <div className={styles.beatStickyHeader}>
-                  <label className={styles.beatStickyNumber} htmlFor={titleId}>
-                    {String(index + 1).padStart(2, "0")}
-                  </label>
-                  <input
-                    aria-label={`Beat title for ${section.heading}`}
-                    className={styles.beatTitleInput}
-                    id={titleId}
-                    onChange={(event) => renameBeat(index, event.target.value)}
-                    value={section.heading}
-                  />
+                <div className={styles.beatStickyTop}>
+                  {needsAnswer ? (
+                    <span aria-label={`${section.heading} needs your answer`} className={styles.beatNeedsTag}>
+                      Needs your answer
+                    </span>
+                  ) : null}
                   <span className={styles.suggestionButtonCluster}>
                     <button
                       aria-label={`Goblin Suggest for ${section.heading}`}
@@ -1055,6 +1047,18 @@ function BeatsCorkBoard({ firstNoteRef, markdown, onMarkdownChange, project }: B
                     </button>
                     <SuggestionGoblin label={section.heading} state={suggestion?.mascotState} />
                   </span>
+                </div>
+                <div className={styles.beatStickyHeader}>
+                  <label className={styles.beatStickyNumber} htmlFor={titleId}>
+                    {String(index + 1).padStart(2, "0")}
+                  </label>
+                  <input
+                    aria-label={`Beat title for ${section.heading}`}
+                    className={styles.beatTitleInput}
+                    id={titleId}
+                    onChange={(event) => renameBeat(index, event.target.value)}
+                    value={section.heading}
+                  />
                 </div>
                 <textarea
                   aria-label={`${section.heading} beat`}

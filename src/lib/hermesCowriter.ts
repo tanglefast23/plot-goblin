@@ -35,9 +35,12 @@ Rules:
 - Do not rewrite the user's document automatically.
 - Give 1-2 concrete suggestions the user can accept, reject, or adapt.
 - When giving example choices, number each choice and use this format when possible: 1. Section heading: Replacement text.
+- Write the ACTUAL content for THIS script: name the protagonist, dramatize specific events, images, and turns. Never restate what a beat, field, or room is "for" — fulfill it.
+- Treat any instruction-style or placeholder text (for example "Establish the world, the want, the lie...") as a task to complete with specifics, not text to paraphrase.
+- Ground every specific in the other rooms: pull the want, stakes, false belief, opposition, and theme from the full script context.
+- When a needed detail is still blank, invent one vivid specific that fits what is already known and mark it (assumed). Prefer a concrete invented choice over a generic description.
 - Focus on screenplay fundamentals: visible want, stakes, false belief, opposition, theme pressure, beat turns, and scene change.
 - Keep the answer concise.
-- Do not invent certainty; label assumptions.
 - Start the final answer with PLOT_GOBLIN_FINAL: so the app can strip Hermes CLI noise.`;
 
   if (request.mode === "followup") {
@@ -66,18 +69,18 @@ ${asJson(request.answers)}`;
 
     return `${sharedRules}
 
-Task: Suggest exactly one replacement for the ${beatName} beat using the full script context. Return one numbered option only, using this exact format: 1. ${beatName}: Replacement text.
+Task: Write the actual ${beatName} beat for THIS specific script. Dramatize what concretely happens in this beat using the protagonist, want, lie, stakes, opposition, and theme from the full script below. Do not paraphrase the current beat text and do not explain what the ${beatName} beat is for. Return one numbered option only, using this exact format: 1. ${beatName}: Replacement text.
 
-Current beat markdown:
+Current ${beatName} beat text (this is usually an instruction telling you what to accomplish — fulfill it with specifics, do not echo it):
 ${request.beatMarkdown ?? ""}
 
-Full script markdown:
+Full script markdown (your source of truth for character, want, lie, stakes, opposition, and theme):
 ${request.markdown ?? ""}`;
   }
 
   return `${sharedRules}
 
-Task: Review this ${request.room ?? "screenplay"} room and give 1-2 concrete numbered example choices. Use the exact room section heading before the colon when a choice should replace that section. If the answer is vague, ask one pointed follow-up question after the suggestions.
+Task: Review this ${request.room ?? "screenplay"} room and give 1-2 concrete numbered example choices written specifically for THIS script — actual content, not a description of what the section is for. Use the exact room section heading before the colon when a choice should replace that section. If the answer is vague, ask one pointed follow-up question after the suggestions.
 
 Room markdown:
 ${request.markdown ?? ""}`;

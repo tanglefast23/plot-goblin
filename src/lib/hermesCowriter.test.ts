@@ -14,6 +14,15 @@ describe("Hermes co-writer prompt", () => {
     expect(prompt).toContain("1-2 concrete suggestions");
     expect(prompt).toContain("Section heading: Replacement text");
     expect(prompt).toContain("Premise");
+    expect(prompt).toContain("specifically for THIS script");
+  });
+
+  it("tells the goblin to write content, not redescribe the section", () => {
+    const prompt = buildCowriterPrompt({ mode: "room", room: "Premise", markdown: "# Premise" });
+
+    expect(prompt).toContain("Write the ACTUAL content for THIS script");
+    expect(prompt).toContain("Never restate what a beat, field, or room is");
+    expect(prompt).toContain("Treat any instruction-style or placeholder text");
   });
 
   it("can ask one helpfully annoying follow-up question", () => {
@@ -34,7 +43,8 @@ describe("Hermes co-writer prompt", () => {
       markdown: "# Plot Goblin Export\n\n## premise.md\n\nA one-armed pitcher tries to make the majors.",
     });
 
-    expect(prompt).toContain("Suggest exactly one replacement for the Midpoint beat");
+    expect(prompt).toContain("Write the actual Midpoint beat for THIS specific script");
+    expect(prompt).toContain("do not explain what the Midpoint beat is for");
     expect(prompt).toContain("Rafa wins a local tryout but still refuses help.");
     expect(prompt).toContain("Full script markdown");
     expect(prompt).toContain("## premise.md");

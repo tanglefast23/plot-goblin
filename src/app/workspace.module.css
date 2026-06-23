@@ -515,6 +515,7 @@
   gap: 10px;
   width: min(100%, 330px);
   min-height: 154px;
+  margin-top: 50px;
   padding: 16px;
   border: 1px solid rgb(var(--goblin-night-rgb) / 0.24);
   border-radius: 6px;
@@ -563,14 +564,29 @@
 }
 
 .beatStickyNeedsAnswer {
-  margin-top: 30px;
+  margin-top: 92px;
+}
+
+.beatStickyTop {
+  position: absolute;
+  bottom: 100%;
+  left: 12px;
+  right: 12px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  margin-bottom: 4px;
+  pointer-events: none;
+}
+
+.beatStickyTop > * {
+  pointer-events: auto;
 }
 
 .beatNeedsTag {
-  position: absolute;
-  z-index: 4;
-  top: -32px;
-  left: 16px;
+  position: relative;
   display: inline-flex;
   min-height: 28px;
   align-items: center;
@@ -578,7 +594,7 @@
   border: 1px solid rgb(var(--goblin-gold-rgb) / 0.92);
   border-radius: 999px 6px 6px 999px;
   color: var(--goblin-night);
-  background: linear-gradient(180deg, rgb(var(--goblin-gold-rgb) / 0.98), rgb(var(--goblin-mist-rgb) / 0.88));
+  background: var(--goblin-gold);
   box-shadow:
     0 0 0 4px rgb(var(--goblin-gold-rgb) / 0.18),
     0 9px 18px rgb(var(--goblin-night-rgb) / 0.18),
@@ -652,7 +668,7 @@
 
 .beatStickyHeader {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 8px;
   padding-top: 8px;
@@ -729,12 +745,6 @@
     radial-gradient(circle at 62% 24%, rgb(var(--goblin-mist-rgb) / 0.76) 0 1.6px, transparent 2.4px),
     radial-gradient(circle at 82% 66%, rgb(var(--goblin-lichen-rgb) / 0.95) 0 2.6px, transparent 3.4px),
     var(--goblin-moss);
-  box-shadow:
-    inset 0 2px 0 rgb(var(--goblin-mist-rgb) / 0.38),
-    inset 0 -5px 0 rgb(var(--goblin-night-rgb) / 0.2),
-    0 4px 0 rgb(var(--goblin-night-rgb) / 0.24),
-    0 9px 16px rgb(var(--goblin-night-rgb) / 0.18);
-  text-shadow: 0 1px 0 rgb(var(--goblin-night-rgb) / 0.32);
   transform-origin: 50% 82%;
 }
 
@@ -755,22 +765,12 @@
 .goblinSuggestButton:focus-visible {
   border-color: var(--goblin-night);
   filter: saturate(1.1);
-  transform: translateY(-1px) scale(1.02);
-  box-shadow:
-    inset 0 2px 0 rgb(var(--goblin-mist-rgb) / 0.44),
-    inset 0 -5px 0 rgb(var(--goblin-night-rgb) / 0.2),
-    0 5px 0 rgb(var(--goblin-night-rgb) / 0.26),
-    0 12px 20px rgb(var(--goblin-night-rgb) / 0.2);
+  transform: scale(1.02);
 }
 
 .goblinSuggestButton:active:not(:disabled),
 .goblinSuggestButtonSquashed {
   animation: goblinSuggestSquash 260ms cubic-bezier(0.2, 1.4, 0.34, 1) both;
-  box-shadow:
-    inset 0 5px 8px rgb(var(--goblin-night-rgb) / 0.28),
-    inset 0 -2px 0 rgb(var(--goblin-mist-rgb) / 0.18),
-    0 1px 0 rgb(var(--goblin-night-rgb) / 0.28),
-    0 5px 10px rgb(var(--goblin-night-rgb) / 0.16);
 }
 
 .goblinSuggestButton:active:not(:disabled)::after,
@@ -825,8 +825,8 @@
   gap: 7px;
 }
 
-.beatStickyHeader .suggestionButtonCluster {
-  min-width: 136px;
+.beatStickyTop .suggestionButtonCluster {
+  flex: 0 0 auto;
 }
 
 .suggestionGoblin {
@@ -841,7 +841,7 @@
   transform-origin: 50% 82%;
 }
 
-.beatStickyHeader .suggestionGoblin {
+.beatStickyTop .suggestionGoblin {
   width: 36px;
   height: 36px;
   flex-basis: 36px;
