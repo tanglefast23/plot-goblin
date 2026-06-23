@@ -12,6 +12,7 @@ describe("Hermes co-writer prompt", () => {
     expect(prompt).toContain("Do not rewrite the user's document automatically");
     expect(prompt).toContain("Start the final answer with PLOT_GOBLIN_FINAL:");
     expect(prompt).toContain("1-2 concrete suggestions");
+    expect(prompt).toContain("Section heading: Replacement text");
     expect(prompt).toContain("Premise");
   });
 
@@ -23,6 +24,21 @@ describe("Hermes co-writer prompt", () => {
 
     expect(prompt).toContain("Ask exactly one follow-up question");
     expect(prompt).toContain("helpfully annoying");
+  });
+
+  it("asks for one beat replacement using full script context", () => {
+    const prompt = buildCowriterPrompt({
+      mode: "beat",
+      beat: "Midpoint",
+      beatMarkdown: "Rafa wins a local tryout but still refuses help.",
+      markdown: "# Plot Goblin Export\n\n## premise.md\n\nA one-armed pitcher tries to make the majors.",
+    });
+
+    expect(prompt).toContain("Suggest exactly one replacement for the Midpoint beat");
+    expect(prompt).toContain("Rafa wins a local tryout but still refuses help.");
+    expect(prompt).toContain("Full script markdown");
+    expect(prompt).toContain("## premise.md");
+    expect(prompt).toContain("1. Midpoint: Replacement text");
   });
 
   it("strips Hermes CLI noise when a final marker exists", () => {

@@ -17,7 +17,7 @@ function jsonResponse(body: unknown, status = 200, headers?: HeadersInit) {
 function isCowriterRequest(value: unknown): value is CowriterRequest {
   if (!value || typeof value !== "object") return false;
   const mode = (value as { mode?: unknown }).mode;
-  return mode === "followup" || mode === "suggestions" || mode === "room";
+  return mode === "followup" || mode === "suggestions" || mode === "room" || mode === "beat";
 }
 
 function bridgeUrl() {

@@ -10,7 +10,7 @@ afterEach(() => {
 });
 
 describe("RoomsDashboardClient", () => {
-  it("labels seeded rooms with unfinished prompts as needing writing", async () => {
+  it("labels seeded rooms with editable guesses as needing your answers", async () => {
     const project = buildScriptBase({
       rawIdea: "A one-armed pitcher tries to make the majors.",
       genre: "Comedy",
@@ -27,6 +27,6 @@ describe("RoomsDashboardClient", () => {
 
     render(<RoomsDashboardClient />);
 
-    expect((await screen.findAllByText("Needs writing")).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText("Needs your answers")).length).toBeGreaterThan(0);
   });
 });

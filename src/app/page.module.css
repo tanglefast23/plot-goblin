@@ -42,6 +42,121 @@
   z-index: 2;
 }
 
+.accessPanel {
+  display: grid;
+  gap: 14px;
+  width: min(650px, 100%);
+  margin-bottom: 28px;
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.18);
+  border-radius: 8px;
+  padding: 16px;
+  background: rgb(var(--goblin-mist-rgb) / 0.8);
+  box-shadow: 0 16px 34px rgb(var(--goblin-night-rgb) / 0.08);
+}
+
+.accessPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.accessPanelHeader p,
+.accessPanelHeader span,
+.accessKeyLabel {
+  color: var(--goblin-moss);
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.accessPanelHeader span {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.18);
+  border-radius: 999px;
+  padding: 0 10px;
+  color: var(--goblin-night);
+  background: rgb(var(--goblin-gold-rgb) / 0.34);
+  white-space: nowrap;
+}
+
+.accessPanelHeader span[data-mode="local"] {
+  background: rgb(var(--goblin-lichen-rgb) / 0.36);
+}
+
+.accessControls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.accessKeyLabel {
+  display: grid;
+  gap: 8px;
+}
+
+.accessKeyInput {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.2);
+  border-radius: 999px;
+  padding: 0 14px;
+  color: var(--goblin-night);
+  background: rgb(var(--goblin-mist-rgb) / 0.78);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 750;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.accessActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.accessSaveButton,
+.accessLocalButton {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.2);
+  border-radius: 999px;
+  padding: 0 14px;
+  color: var(--goblin-night);
+  background: rgb(var(--goblin-mist-rgb) / 0.68);
+  font: inherit;
+  font-size: 0.66rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background-color 180ms ease,
+    transform 180ms ease;
+}
+
+.accessSaveButton {
+  border-color: var(--goblin-night);
+  background: var(--goblin-gold);
+}
+
+.accessLocalButton {
+  background: rgb(var(--goblin-lichen-rgb) / 0.32);
+}
+
+.accessSaveButton:hover,
+.accessLocalButton:hover {
+  transform: translateY(-1px);
+}
+
 .hero h1,
 .sectionHeader h2 {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
@@ -338,7 +453,7 @@
 .roomGrid,
 .comingSoonGrid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(172px, 1fr));
   gap: 16px;
   margin-top: 26px;
 }
@@ -477,6 +592,29 @@
     max-width: 320px;
     font-size: 0.98rem;
     overflow-wrap: break-word;
+  }
+
+  .accessPanel {
+    margin-bottom: 22px;
+    padding: 14px;
+  }
+
+  .accessPanelHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .accessControls {
+    grid-template-columns: 1fr;
+  }
+
+  .accessActions {
+    justify-content: stretch;
+  }
+
+  .accessSaveButton,
+  .accessLocalButton {
+    flex: 1 1 150px;
   }
 
   .primaryCta,

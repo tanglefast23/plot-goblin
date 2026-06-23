@@ -1,5 +1,6 @@
 import Link from "next/link";
 import styles from "./PlotGoblinMascot.module.css";
+import { RoomNavMenu } from "./RoomNavMenu";
 
 export function PlotGoblinMascot() {
   return (
@@ -7,7 +8,7 @@ export function PlotGoblinMascot() {
       <div className={styles.inner}>
         <nav className={styles.nav} aria-label="Primary navigation">
           <Link href="/guided-setup">Setup</Link>
-          <Link href="/rooms">Rooms</Link>
+          <RoomNavMenu buttonClassName={styles.navButton} />
         </nav>
 
         <Link className={styles.brand} href="/">

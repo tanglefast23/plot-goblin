@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import styles from "@/app/workspace.module.css";
-import { buildExportMarkdown, NEEDS_ANSWER, NEEDS_WRITING, type ScriptBase } from "@/lib/guidedSetup";
+import { buildExportMarkdown, LEGACY_NEEDS_ANSWER, NEEDS_ANSWER, NEEDS_WRITING, type ScriptBase } from "@/lib/guidedSetup";
 import { clearProject, ensureProject } from "@/lib/projectStorage";
 import { getActiveRooms, getComingSoonRooms } from "@/lib/storyRooms";
 
@@ -61,9 +61,9 @@ export function RoomsDashboardClient() {
         <div className={styles.grid}>
           {activeRooms.map((room, index) => {
             const markdown = project?.rooms[room.slug] ?? "";
-            const needsAnswer = markdown.includes(NEEDS_ANSWER);
+            const needsAnswer = markdown.includes(NEEDS_ANSWER) || markdown.includes(LEGACY_NEEDS_ANSWER);
             const needsWriting = markdown.includes(NEEDS_WRITING);
-            const statusLabel = needsAnswer ? "Needs answers" : needsWriting ? "Needs writing" : "Seeded";
+            const statusLabel = needsAnswer ? "Needs your answers" : needsWriting ? "Needs writing" : "Seeded";
             return (
               <Link className={styles.card} href={`/rooms/${room.slug}`} key={room.slug}>
                 <div className={styles.topline}>

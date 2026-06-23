@@ -7,6 +7,8 @@ import {
   buildScriptBase,
   createLoglineSuggestions,
   guidedSetupQuestions,
+  NEEDS_ANSWER,
+  NEEDS_WRITING,
   type ScriptBase,
   type SetupAnswers,
 } from "@/lib/guidedSetup";
@@ -28,7 +30,7 @@ function getAcceptedLogline(project: ScriptBase) {
   const match = project.rooms.premise.match(/## Polished logline\n([^\n]+)/);
   const logline = match?.[1]?.trim() ?? "";
 
-  if (!logline || logline === "[Needs answer]" || logline.startsWith("[Needs writing]")) {
+  if (!logline || logline.startsWith(NEEDS_ANSWER) || logline.startsWith("[Needs answer]") || logline.startsWith(NEEDS_WRITING)) {
     return "";
   }
 
@@ -235,7 +237,7 @@ export function GuidedSetupClient() {
         </label>
 
         <p className={styles.nudge}>
-          <strong>Skip rule:</strong> allowed. Cowardly, but allowed. Skipped answers become [Needs answer].
+          <strong>Skip rule:</strong> allowed. Cowardly, but allowed. Skipped answers become [needs your answer] goblin guesses.
         </p>
 
         <div className={styles.actionRow}>

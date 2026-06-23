@@ -1,6 +1,8 @@
 export type CowriterRequest = {
-  mode: "followup" | "suggestions" | "room";
+  mode: "followup" | "suggestions" | "room" | "beat";
   room?: string;
+  beat?: string;
+  beatMarkdown?: string;
   markdown?: string;
   answers?: Record<string, unknown>;
   summary?: Record<string, unknown>;
@@ -32,6 +34,7 @@ export function buildCowriterPrompt(request: CowriterRequest) {
 Rules:
 - Do not rewrite the user's document automatically.
 - Give 1-2 concrete suggestions the user can accept, reject, or adapt.
+- When giving example choices, number each choice and use this format when possible: 1. Section heading: Replacement text.
 - Focus on screenplay fundamentals: visible want, stakes, false belief, opposition, theme pressure, beat turns, and scene change.
 - Keep the answer concise.
 - Do not invent certainty; label assumptions.
@@ -58,9 +61,23 @@ Current answers:
 ${asJson(request.answers)}`;
   }
 
+  if (request.mode === "beat") {
+    const beatName = request.beat ?? "selected";
+
+    return `${sharedRules}
+
+Task: Suggest exactly one replacement for the ${beatName} beat using the full script context. Return one numbered option only, using this exact format: 1. ${beatName}: Replacement text.
+
+Current beat markdown:
+${request.beatMarkdown ?? ""}
+
+Full script markdown:
+${request.markdown ?? ""}`;
+  }
+
   return `${sharedRules}
 
-Task: Review this ${request.room ?? "screenplay"} room and give 1-2 concrete suggestions. If the answer is vague, ask one pointed follow-up question after the suggestions.
+Task: Review this ${request.room ?? "screenplay"} room and give 1-2 concrete numbered example choices. Use the exact room section heading before the colon when a choice should replace that section. If the answer is vague, ask one pointed follow-up question after the suggestions.
 
 Room markdown:
 ${request.markdown ?? ""}`;

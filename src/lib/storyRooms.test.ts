@@ -7,13 +7,14 @@ import {
 } from "./storyRooms";
 
 describe("story room model", () => {
-  it("starts with the five MVP rooms in the writing flow order", () => {
+  it("starts with the active writing rooms in flow order", () => {
     expect(getActiveRooms().map((room) => room.slug)).toEqual([
       "premise",
       "characters",
       "theme",
       "beats",
       "scenes",
+      "script-parameters",
     ]);
   });
 

@@ -44,7 +44,7 @@ describe("GuidedSetupClient", () => {
     }
 
     fireEvent.click(screen.getByRole("button", { name: /make it sound less/i }));
-    const suggestion = screen.getByText(/When \[Needs answer\] must \[Needs answer\]/i).textContent ?? "";
+    const suggestion = screen.getByText(/When a protagonist whose want exposes/i).textContent ?? "";
 
     fireEvent.click(screen.getAllByRole("button", { name: "Accept this one" })[0]);
 
@@ -60,7 +60,10 @@ describe("GuidedSetupClient", () => {
     }
 
     fireEvent.click(screen.getByRole("button", { name: /make it sound less/i }));
-    const suggestions = screen.getAllByText(/\[Needs answer\]/i).map((element) => element.textContent ?? "");
+    const suggestions = [
+      screen.getByText(/When a protagonist whose want exposes/i).textContent ?? "",
+      screen.getByText(/^a protagonist whose want exposes/i).textContent ?? "",
+    ];
 
     fireEvent.click(screen.getAllByRole("button", { name: "Accept this one" })[0]);
     await screen.findByText("Accepted logline");

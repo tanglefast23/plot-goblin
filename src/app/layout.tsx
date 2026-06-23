@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Plot Goblin",
-  description: "A funny screenplay structure helper for taming premises, characters, themes, beats, and scenes.",
+  description: "A funny screenplay structure helper for taming premises, characters, themes, beats, scenes, and draft rules.",
 };
 
 export default function RootLayout({

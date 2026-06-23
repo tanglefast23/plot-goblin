@@ -1,4 +1,4 @@
-import { buildScriptBase, NEEDS_WRITING, type ScriptBase } from "./guidedSetup";
+import { buildScriptBase, LEGACY_NEEDS_ANSWER, NEEDS_ANSWER, NEEDS_WRITING, type ScriptBase } from "./guidedSetup";
 
 export const PROJECT_STORAGE_KEY = "plot-goblin-current-script";
 
@@ -38,7 +38,85 @@ const LEGACY_ROOM_PROMPTS = [
   "What is the last image, line, or action?",
 ];
 
-function migrateRoomMarkdown(markdown: string) {
+type Section = {
+  heading: string;
+  level: number;
+  bodyStart: number;
+  bodyEnd: number;
+};
+
+function headingLevel(line: string) {
+  return /^(#{1,6})\s+/.exec(line)?.[1].length ?? 0;
+}
+
+function collectSections(lines: string[]) {
+  const sections: Section[] = [];
+
+  lines.forEach((line, index) => {
+    const level = headingLevel(line);
+    if (level === 0) return;
+
+    let bodyEnd = lines.length;
+    for (let nextIndex = index + 1; nextIndex < lines.length; nextIndex += 1) {
+      const nextLevel = headingLevel(lines[nextIndex]);
+      if (nextLevel > 0 && nextLevel <= level) {
+        bodyEnd = nextIndex;
+        break;
+      }
+    }
+
+    sections.push({ heading: line.trim(), level, bodyStart: index + 1, bodyEnd });
+  });
+
+  return sections;
+}
+
+function unfinishedLine(line: string) {
+  const normalized = line
+    .trim()
+    .replace(/^-\s*/, "")
+    .replace(/^Start:\s*/, "")
+    .replace(/^End:\s*/, "")
+    .trim();
+
+  return (
+    normalized === LEGACY_NEEDS_ANSWER ||
+    normalized === NEEDS_ANSWER ||
+    normalized.startsWith(`${LEGACY_NEEDS_ANSWER} `) ||
+    normalized.startsWith(`${NEEDS_ANSWER} `) ||
+    normalized.startsWith(`${NEEDS_WRITING} `)
+  );
+}
+
+function sectionCanBeAutofilled(lines: string[]) {
+  const meaningfulLines = lines.map((line) => line.trim()).filter(Boolean);
+  return meaningfulLines.length > 0 && meaningfulLines.every(unfinishedLine);
+}
+
+function replaceUnfinishedSections(markdown: string, generatedMarkdown: string) {
+  const lines = markdown.split("\n");
+  const generatedLines = generatedMarkdown.split("\n");
+  const generatedSections = new Map(
+    collectSections(generatedLines).map((section) => [
+      section.heading,
+      generatedLines.slice(section.bodyStart, section.bodyEnd),
+    ]),
+  );
+
+  for (const section of collectSections(lines).reverse()) {
+    const replacement = generatedSections.get(section.heading);
+    if (!replacement || replacement.length === 0) continue;
+
+    const currentBody = lines.slice(section.bodyStart, section.bodyEnd);
+    if (!sectionCanBeAutofilled(currentBody)) continue;
+
+    lines.splice(section.bodyStart, section.bodyEnd - section.bodyStart, ...replacement);
+  }
+
+  return lines.join("\n");
+}
+
+function migrateRoomMarkdown(markdown: string, generatedMarkdown: string) {
   let migrated = markdown;
 
   for (const prompt of LEGACY_ROOM_PROMPTS) {
@@ -54,14 +132,22 @@ function migrateRoomMarkdown(markdown: string) {
   migrated = migrated.replaceAll("Start:\nEnd:", `Start: ${NEEDS_WRITING}\nEnd: ${NEEDS_WRITING}`);
   migrated = migrated.replaceAll("Start: \nEnd: ", `Start: ${NEEDS_WRITING}\nEnd: ${NEEDS_WRITING}`);
 
-  return migrated;
+  return replaceUnfinishedSections(migrated, generatedMarkdown);
 }
 
 function migrateProject(project: ScriptBase) {
   let changed = false;
+  const generatedRooms = buildScriptBase(project.answers).rooms;
+  const roomSlugs = Array.from(new Set([...Object.keys(generatedRooms), ...Object.keys(project.rooms)]));
   const rooms = Object.fromEntries(
-    Object.entries(project.rooms).map(([slug, markdown]) => {
-      const migrated = migrateRoomMarkdown(markdown);
+    roomSlugs.map((slug) => {
+      const markdown = project.rooms[slug];
+      if (markdown === undefined) {
+        changed = true;
+        return [slug, generatedRooms[slug] ?? ""];
+      }
+
+      const migrated = migrateRoomMarkdown(markdown, generatedRooms[slug] ?? markdown);
       if (migrated !== markdown) changed = true;
       return [slug, migrated];
     }),

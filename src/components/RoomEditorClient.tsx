@@ -110,7 +110,7 @@ function cowriterRequestHeaders() {
   return headers;
 }
 
-type AudioContextFactory = (new () => AudioContext) | (() => AudioContext);
+type AudioContextFactory = new () => AudioContext;
 type BrowserAudioWindow = Window & typeof globalThis & { AudioContext?: AudioContextFactory; webkitAudioContext?: AudioContextFactory };
 
 function createGoblinPopAudioContext() {
@@ -119,11 +119,7 @@ function createGoblinPopAudioContext() {
   const AudioContextCtor = audioWindow.AudioContext ?? audioWindow.webkitAudioContext;
   if (!AudioContextCtor) return null;
 
-  try {
-    return (AudioContextCtor as () => AudioContext)();
-  } catch {
-    return new (AudioContextCtor as new () => AudioContext)();
-  }
+  return new AudioContextCtor();
 }
 
 function playGoblinSquashSound() {
@@ -174,6 +170,10 @@ function playGoblinSquashSound() {
     wetGain.connect(masterGain);
     wetNoise.start(now);
     wetNoise.stop(now + duration);
+
+    window.setTimeout(() => {
+      void audioContext.close().catch(() => undefined);
+    }, 420);
   } catch {
     // Browser audio can be unavailable, blocked, or disabled.
   }
@@ -219,6 +219,7 @@ function useSuggestionStates() {
   }
 
   function beginSuggestion(index: number) {
+    playGoblinSquashSound();
     const mascotCycle = (cyclesRef.current[index] ?? 0) + 1;
     cyclesRef.current[index] = mascotCycle;
     clearMascotTimer(index);
@@ -229,7 +230,6 @@ function useSuggestionStates() {
   function finishSuggestion(index: number, mascotCycle: number, patch: Pick<SuggestionState, "error" | "text">) {
     if (cyclesRef.current[index] !== mascotCycle) return;
 
-    playGoblinSquashSound();
     clearMascotTimer(index);
     updateSuggestion(index, { ...patch, isLoading: false, mascotCycle, mascotState: "happy" });
     hideTimersRef.current[index] = window.setTimeout(() => {
@@ -872,7 +872,9 @@ function GuidedRoomEditor({ firstFieldRef, markdown, onMarkdownChange, project, 
                 <span className={styles.suggestionButtonCluster}>
                   <button
                     aria-label={`Goblin Suggest for ${field.heading}`}
-                    className={`${styles.fieldSuggestButton} ${styles.goblinSuggestButton}`}
+                    className={`${styles.fieldSuggestButton} ${styles.goblinSuggestButton} ${
+                      suggestion?.isLoading ? styles.goblinSuggestButtonSquashed : ""
+                    }`}
                     disabled={suggestion?.isLoading}
                     onClick={() => suggestField(index, field)}
                     type="button"
@@ -909,7 +911,9 @@ function GuidedRoomEditor({ firstFieldRef, markdown, onMarkdownChange, project, 
                   </button>
                   <button
                     aria-label={`Another suggestion for ${field.heading}`}
-                    className={`${styles.fieldUseSuggestionButton} ${styles.goblinSuggestButton}`}
+                    className={`${styles.fieldUseSuggestionButton} ${styles.goblinSuggestButton} ${
+                      suggestion.isLoading ? styles.goblinSuggestButtonSquashed : ""
+                    }`}
                     disabled={suggestion.isLoading}
                     onClick={() => suggestField(index, field)}
                     type="button"
@@ -1040,7 +1044,9 @@ function BeatsCorkBoard({ firstNoteRef, markdown, onMarkdownChange, project }: B
                   <span className={styles.suggestionButtonCluster}>
                     <button
                       aria-label={`Goblin Suggest for ${section.heading}`}
-                      className={`${styles.beatSuggestButton} ${styles.goblinSuggestButton}`}
+                      className={`${styles.beatSuggestButton} ${styles.goblinSuggestButton} ${
+                        suggestion?.isLoading ? styles.goblinSuggestButtonSquashed : ""
+                      }`}
                       disabled={suggestion?.isLoading}
                       onClick={() => suggestBeat(index, section)}
                       type="button"
@@ -1074,7 +1080,9 @@ function BeatsCorkBoard({ firstNoteRef, markdown, onMarkdownChange, project }: B
                       </button>
                       <button
                         aria-label={`Another suggestion for ${section.heading}`}
-                        className={`${styles.beatUseSuggestionButton} ${styles.goblinSuggestButton}`}
+                        className={`${styles.beatUseSuggestionButton} ${styles.goblinSuggestButton} ${
+                          suggestion.isLoading ? styles.goblinSuggestButtonSquashed : ""
+                        }`}
                         disabled={suggestion.isLoading}
                         onClick={() => suggestBeat(index, section)}
                         type="button"

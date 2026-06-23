@@ -240,7 +240,9 @@ describe("RoomEditorClient", () => {
       sampleRate: 44100,
       state: "running",
     };
-    const AudioContextMock = vi.fn(() => audioContext);
+    const AudioContextMock = vi.fn(function AudioContextMock() {
+      return audioContext;
+    });
     Object.defineProperty(window, "AudioContext", {
       configurable: true,
       value: AudioContextMock,
@@ -249,19 +251,21 @@ describe("RoomEditorClient", () => {
     render(<RoomEditorClient />);
 
     await screen.findByRole("region", { name: "Premise questions" });
-    fireEvent.click(await screen.findByRole("button", { name: "Goblin Suggest for Stakes" }));
+    const stakesSuggestButton = await screen.findByRole("button", { name: "Goblin Suggest for Stakes" });
+    fireEvent.click(stakesSuggestButton);
 
-    await screen.findByText(/whole team loses/i);
+    expect(stakesSuggestButton.className).toContain("goblinSuggestButtonSquashed");
     expect(AudioContextMock).toHaveBeenCalledTimes(1);
     expect(oscillatorStart).toHaveBeenCalledTimes(1);
     expect(bufferStart).toHaveBeenCalledTimes(1);
+    await screen.findByText(/whole team loses/i);
 
     fireEvent.click(screen.getByRole("button", { name: "Another suggestion for Stakes" }));
 
-    await screen.findByText(/tryout door closes/i);
     expect(AudioContextMock).toHaveBeenCalledTimes(2);
     expect(oscillatorStart).toHaveBeenCalledTimes(2);
     expect(bufferStart).toHaveBeenCalledTimes(2);
+    await screen.findByText(/tryout door closes/i);
   });
 
   it("edits character room fields while saving markdown in the background", async () => {

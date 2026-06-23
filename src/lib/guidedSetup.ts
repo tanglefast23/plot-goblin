@@ -1,6 +1,7 @@
 import { getActiveRooms, getComingSoonRooms } from "./storyRooms";
 
-export const NEEDS_ANSWER = "[Needs answer]";
+export const NEEDS_ANSWER = "[needs your answer]";
+export const LEGACY_NEEDS_ANSWER = "[Needs answer]";
 export const NEEDS_WRITING = "[Needs writing]";
 
 export type SetupQuestionId =
@@ -127,14 +128,65 @@ export const guidedSetupQuestions: SetupQuestion[] = [
   },
 ];
 
-function answer(answers: SetupAnswers, key: SetupQuestionId) {
+function providedAnswer(answers: SetupAnswers, key: SetupQuestionId) {
   const value = answers[key]?.trim();
-  return value && value.length > 0 ? value : NEEDS_ANSWER;
+  return value && value.length > 0 ? value : null;
 }
 
 function sentence(value: string) {
-  if (value === NEEDS_ANSWER) return value;
   return value.endsWith(".") || value.endsWith("!") || value.endsWith("?") ? value : `${value}.`;
+}
+
+function needsYourAnswer(guess: string) {
+  return `${NEEDS_ANSWER} ${sentence(guess.trim())}`;
+}
+
+function setupGuess(answers: SetupAnswers, key: SetupQuestionId) {
+  const protagonist = providedAnswer(answers, "protagonist") ?? "the protagonist";
+  const want = providedAnswer(answers, "surfaceWant") ?? "get what they want";
+  const stakes = providedAnswer(answers, "stakes") ?? "the cost becomes personal";
+  const falseBelief = providedAnswer(answers, "falseBelief") ?? "getting the visible goal will fix the deeper problem";
+  const genre = providedAnswer(answers, "genre")?.toLowerCase() ?? "";
+
+  switch (key) {
+    case "rawIdea":
+      return `${protagonist} chases ${want} before ${stakes}`;
+    case "genre":
+      if (genre) return genre;
+      if (/laugh|funny|comic|joke/i.test(providedAnswer(answers, "audienceFeeling") ?? "")) return "Comedy";
+      if (/dread|terror|fear|scare/i.test(providedAnswer(answers, "audienceFeeling") ?? "")) return "Horror";
+      return "character-driven drama";
+    case "audienceFeeling":
+      if (/comedy|comic/i.test(genre)) return "hopeful, funny, and tense";
+      if (/horror|thriller/i.test(genre)) return "dread and suspense";
+      return "tension and catharsis";
+    case "protagonist":
+      return "a protagonist whose want exposes the wound they keep protecting";
+    case "surfaceWant":
+      return "win the visible goal that would prove they matter";
+    case "stakes":
+      return `They lose the chance to ${want} and have to face what that dream was protecting`;
+    case "falseBelief":
+      return falseBelief;
+    case "opposition":
+      return providedAnswer(answers, "opposition") ?? "a force with a good reason to stop them";
+    case "endingDirection":
+      return `${protagonist} changes by confronting the lie that ${falseBelief}`;
+    case "structurePreference":
+      return "Classic 3-act spine";
+  }
+}
+
+function answer(answers: SetupAnswers, key: SetupQuestionId) {
+  return providedAnswer(answers, key) ?? needsYourAnswer(setupGuess(answers, key));
+}
+
+function answerPhrase(answers: SetupAnswers, key: SetupQuestionId) {
+  return providedAnswer(answers, key) ?? setupGuess(answers, key);
+}
+
+function answerWasProvided(answers: SetupAnswers, key: SetupQuestionId) {
+  return providedAnswer(answers, key) !== null;
 }
 
 function splitListAnswer(value: string) {
@@ -164,25 +216,87 @@ function moviePromiseLabel(value: string) {
 
 function countNeedsAnswers(markdownByRoom: RoomMarkdown) {
   return Object.values(markdownByRoom).reduce((count, markdown) => {
-    return count + [...markdown.matchAll(/\[Needs answer\]/g)].length;
+    return count + [...markdown.matchAll(/\[(?:Needs answer|needs your answer|Needs writing)\]/g)].length;
   }, 0);
 }
 
-function writingPrompt(prompt: string) {
-  return `${NEEDS_WRITING} ${prompt}`;
+function writingPrompt(guess: string) {
+  return needsYourAnswer(guess);
+}
+
+function clause(value: string) {
+  const trimmed = value.trim().replace(/[.!?]+$/, "");
+  return trimmed.charAt(0).toLowerCase() + trimmed.slice(1);
+}
+
+function effortBased(falseBelief: string) {
+  return /effort|hard work|try harder|work harder/i.test(falseBelief);
+}
+
+function createRoomGuesses(answers: SetupAnswers) {
+  const protagonist = answerPhrase(answers, "protagonist");
+  const surfaceWant = answerPhrase(answers, "surfaceWant");
+  const stakes = answerPhrase(answers, "stakes");
+  const falseBelief = answerPhrase(answers, "falseBelief");
+  const opposition = answerPhrase(answers, "opposition");
+  const endingDirection = answerPhrase(answers, "endingDirection");
+  const genreLabel = moviePromiseLabel(answerPhrase(answers, "genre"));
+  const audienceFeeling = answerPhrase(answers, "audienceFeeling");
+  const effortLie = effortBased(falseBelief);
+  const deeperNeed = effortLie
+    ? `They may need to accept that effort alone is not enough and adapt before the stakes become real: ${clause(stakes)}`
+    : `They may need to challenge the belief that ${falseBelief} and choose a truer way to pursue ${surfaceWant}`;
+
+  return {
+    polishedLogline: `When ${protagonist} must ${surfaceWant}, ${opposition} pushes them toward failure: ${clause(stakes)}`,
+    deeperNeed,
+    flawDefense: effortLie
+      ? `They double down on effort even when adaptation, vulnerability, or help would serve the real goal: ${surfaceWant}`
+      : `They protect the belief that ${falseBelief} by choosing control, denial, or avoidance when pressure rises`,
+    pressureTest: effortLie
+      ? `Force them into a moment where effort cannot beat the obstacle and the stakes become real: ${clause(stakes)}`
+      : `Put them in a situation where chasing ${surfaceWant} makes the lie impossible to hide`,
+    oppositionArgument: effortLie
+      ? `${opposition} may be right that limits, talent, or reality cannot be beaten by wanting the goal badly enough`
+      : `${opposition} may be right because they expose the cost of ${protagonist} chasing ${surfaceWant} while believing ${falseBelief}`,
+    supportingCharacter: `Name a helper, rival, or mirror who pressures ${protagonist} to confront ${falseBelief}`,
+    storyProof: `Show choices where ${protagonist} pursues ${surfaceWant}, pays ${stakes}, and learns whether ${falseBelief} can survive pressure`,
+    openingImage: `Show ${protagonist} chasing ${surfaceWant} before pressure exposes ${falseBelief}`,
+    incitingIncident: `An event makes ${surfaceWant} urgent and impossible to ignore`,
+    debate: `${protagonist} hesitates because ${falseBelief} still feels safer than change`,
+    actOneBreak: `${protagonist} commits to ${surfaceWant} even though ${opposition} makes the cost real`,
+    promise: `Build a sequence that delivers the ${genreLabel} promise and makes the audience feel ${audienceFeeling}`,
+    midpoint: `A reveal or reversal proves the old plan for ${surfaceWant} will not survive`,
+    badGuysCloseIn: `${opposition} tightens the trap until ${protagonist} cannot dodge the lie anymore`,
+    allIsLost: `Make the cost feel personal, public, moral, or irreversible: ${stakes}`,
+    darkNight: `${protagonist} finally names the damage caused by believing ${falseBelief}`,
+    actThreeBreak: `A new choice points toward ${endingDirection}`,
+    climax: `${protagonist} makes the hardest choice and proves what has changed`,
+    finalImage: `Echo the opening image, but show how ${protagonist} has changed`,
+    sceneCharacters: `${protagonist}, plus whoever can apply the most pressure in this moment`,
+    sceneWant: `${protagonist} wants a concrete step toward ${surfaceWant}`,
+    sceneOpposition: `${opposition} blocks the scene goal or makes the cost sharper`,
+    sceneTurn: `By the end, power, emotion, or the plan shifts closer to ${stakes}`,
+    sceneButton: `End on an image, line, or action that makes the next scene harder to avoid`,
+    firstScene: `Open with a scene that makes ${surfaceWant} visible before ${opposition} fully arrives`,
+  };
 }
 
 export function buildScriptBase(answers: SetupAnswers, now = new Date()): ScriptBase {
   const rawIdea = answer(answers, "rawIdea");
-  const genre = answer(answers, "genre");
-  const audienceFeeling = answer(answers, "audienceFeeling");
+  const genre = answerPhrase(answers, "genre");
+  const audienceFeeling = answerPhrase(answers, "audienceFeeling");
   const protagonist = answer(answers, "protagonist");
   const surfaceWant = answer(answers, "surfaceWant");
   const stakes = answer(answers, "stakes");
   const falseBelief = answer(answers, "falseBelief");
   const opposition = answer(answers, "opposition");
   const endingDirection = answer(answers, "endingDirection");
-  const structurePreference = answer(answers, "structurePreference") === NEEDS_ANSWER ? "Classic 3-act spine" : answer(answers, "structurePreference");
+  const protagonistPhrase = answerPhrase(answers, "protagonist");
+  const surfaceWantPhrase = answerPhrase(answers, "surfaceWant");
+  const falseBeliefPhrase = answerPhrase(answers, "falseBelief");
+  const structurePreference = providedAnswer(answers, "structurePreference") ?? "Classic 3-act spine";
+  const roomGuesses = createRoomGuesses(answers);
 
   const rooms: RoomMarkdown = {
     premise: `# Premise Room
@@ -206,10 +320,10 @@ ${sentence(stakes)}
 ${sentence(opposition)}
 
 ## Dramatic question
-Can ${protagonist === NEEDS_ANSWER ? "the protagonist" : protagonist} ${surfaceWant === NEEDS_ANSWER ? "get what they want" : surfaceWant} before the cost becomes irreversible?
+Can ${protagonistPhrase} ${surfaceWantPhrase} before the cost becomes irreversible?
 
 ## Polished logline
-${writingPrompt("Pick a polished logline from the setup summary, or write your own clean version.")}
+${writingPrompt(roomGuesses.polishedLogline)}
 `,
     characters: `# Characters Room
 
@@ -220,16 +334,16 @@ ${sentence(protagonist)}
 ${sentence(surfaceWant)}
 
 ### Deeper need
-${writingPrompt("What do they actually need to learn, accept, or risk?")}
+${writingPrompt(roomGuesses.deeperNeed)}
 
 ### False belief
 ${sentence(falseBelief)}
 
 ### Flaw / defense mechanism
-${writingPrompt("How do they protect the false belief when pressure rises?")}
+${writingPrompt(roomGuesses.flawDefense)}
 
 ### Pressure test
-${writingPrompt("Which situation exposes the flaw where they cannot hide from it?")}
+${writingPrompt(roomGuesses.pressureTest)}
 
 ### Arc
 Start: ${falseBelief}
@@ -239,15 +353,15 @@ End: ${endingDirection}
 ${sentence(opposition)}
 
 ### Why are they right from their point of view?
-${writingPrompt("Give the opposition a fair argument, not just a mustache.")}
+${writingPrompt(roomGuesses.oppositionArgument)}
 
 ## Key supporting characters
-- ${writingPrompt("Name the helper, rival, mirror, or wildcard, then say what pressure they add.")}
+- ${writingPrompt(roomGuesses.supportingCharacter)}
 `,
     theme: `# Theme Room
 
 ## Theme question
-If ${falseBelief === NEEDS_ANSWER ? "the protagonist's lie" : falseBelief}, what does the story prove through pressure and consequence?
+If ${falseBeliefPhrase}, what does the story prove through pressure and consequence?
 
 ## Starting belief
 ${sentence(falseBelief)}
@@ -256,7 +370,7 @@ ${sentence(falseBelief)}
 ${sentence(opposition)}
 
 ## Story proof
-${writingPrompt("Which choices and consequences make the theme visible on screen?")}
+${writingPrompt(roomGuesses.storyProof)}
 
 ## Ending statement
 ${sentence(endingDirection)}
@@ -266,46 +380,46 @@ ${sentence(endingDirection)}
 Hybrid default: ${structurePreference}. Rename, skip, add, or reorder beats when the story needs it.
 
 ## Opening Image
-${writingPrompt(`Replace this with a specific visual snapshot of ${protagonist === NEEDS_ANSWER ? "the protagonist" : protagonist} before pressure hits.`)}
+${writingPrompt(roomGuesses.openingImage)}
 
 ## Setup
 Establish the world, the want (${surfaceWant}), the lie (${falseBelief}), and the cost of staying the same.
 
 ## Inciting Incident
-${writingPrompt(`What specific event forces the protagonist toward ${surfaceWant}?`)}
+${writingPrompt(roomGuesses.incitingIncident)}
 
 ## Debate / Refusal
-${writingPrompt("Why they hesitate, dodge, rationalize, or choose badly.")}
+${writingPrompt(roomGuesses.debate)}
 
 ## Act One Break
-${writingPrompt("What choice locks them into the story?")}
+${writingPrompt(roomGuesses.actOneBreak)}
 
 ## Promise of the Premise
-${writingPrompt(`Which sequence delivers the fun/terror/longing promised by ${moviePromiseLabel(genre)}?`)}
+${writingPrompt(roomGuesses.promise)}
 
 ## Midpoint
-${writingPrompt("What reveal, reversal, or false victory makes the old plan impossible?")}
+${writingPrompt(roomGuesses.midpoint)}
 
 ## Bad Guys Close In
-${writingPrompt(`How does ${opposition} tighten the trap?`)}
+${writingPrompt(roomGuesses.badGuysCloseIn)}
 
 ## All Is Lost
-${writingPrompt(`What moment makes the cost personal, public, moral, or irreversible: ${stakes}`)}
+${writingPrompt(roomGuesses.allIsLost)}
 
 ## Dark Night of the Soul
-${writingPrompt(`How does the protagonist confront the lie: ${falseBelief}`)}
+${writingPrompt(roomGuesses.darkNight)}
 
 ## Act Three Break
-${writingPrompt(`What new choice points toward the ending: ${endingDirection}`)}
+${writingPrompt(roomGuesses.actThreeBreak)}
 
 ## Climax
-${writingPrompt("What maximum-pressure choice proves who they have become?")}
+${writingPrompt(roomGuesses.climax)}
 
 ## Final Image
-${writingPrompt("What specific final image answers or twists the opening image?")}
+${writingPrompt(roomGuesses.finalImage)}
 
 ## Custom beats
-- ${writingPrompt("Add, rename, skip, or reorder beats once the spine starts fighting back.")}
+- ${writingPrompt("Add, rename, skip, or reorder beats once this spine starts fighting back")}
 `,
     scenes: `# Scenes Room
 
@@ -316,19 +430,19 @@ ${writingPrompt("What specific final image answers or twists the opening image?"
 **Location / time:** INT./EXT. PLACE - DAY/NIGHT
 
 **Characters:**
-${writingPrompt("Who is in the scene, and who has the most pressure on them?")}
+${writingPrompt(roomGuesses.sceneCharacters)}
 
 **Scene want:**
-${writingPrompt("What does the active character want in this scene?")}
+${writingPrompt(roomGuesses.sceneWant)}
 
 **Opposition:**
-${writingPrompt("What blocks them?")}
+${writingPrompt(roomGuesses.sceneOpposition)}
 
 **Turn:**
-${writingPrompt("What changes by the end: power, emotion, knowledge, relationship, stakes, or plan?")}
+${writingPrompt(roomGuesses.sceneTurn)}
 
 **Button:**
-${writingPrompt("What is the last image, line, or action?")}
+${writingPrompt(roomGuesses.sceneButton)}
 
 **Purpose:**
 Plot / character / theme / tension / setup / payoff
@@ -336,7 +450,53 @@ Plot / character / theme / tension / setup / payoff
 ---
 
 ## Scene list
-- ${writingPrompt("Add the first real scene card here.")}
+- ${writingPrompt(roomGuesses.firstScene)}
+`,
+    "script-parameters": `# Script Parameters Room
+
+These are the rules an AI draft must obey when it generates screenplay pages from the other rooms. Change any line that is wrong before asking for pages.
+
+## Runtime / page target
+${writingPrompt("Choose short film, feature film, or really long feature, then drag the page target if needed")}
+- Short film: roughly 5-30 pages.
+- Feature film: roughly 90-110 pages.
+- Really long feature: roughly 120-150 pages.
+
+## Genre / movie promise
+Current genre: ${sentence(moviePromiseLabel(genre))}
+Audience feeling: ${sentence(audienceFeeling)}
+Change this here if the script should obey a different promise than setup picked.
+
+## Structure and pacing
+Structure mode: ${sentence(structurePreference)}
+Pacing bias: ${writingPrompt("Choose lean and fast, slow-burn, chaptered, ensemble, contained thriller, or another rhythm")}
+Scene length rule: ${writingPrompt("Name whether scenes should be short and punchy, talky and patient, or mixed")}
+
+## Format rules
+Format: Standard spec screenplay format.
+Dialogue density: ${writingPrompt("Choose sparse, naturalistic, heightened, joke-dense, poetic, or another dialogue lane")}
+Voiceover / narration: ${writingPrompt("Allowed only if you explicitly say so here")}
+
+## Rating and boundaries
+Target rating: ${writingPrompt("Choose G, PG, PG-13, R, NC-17, or your own boundary")}
+No-go content: ${writingPrompt("List anything the AI should avoid inventing or showing")}
+
+## Production constraints
+Cast size: ${writingPrompt("How many major speaking roles can the script support?")}
+Location limits: ${writingPrompt("Contained, road movie, globe-trotting, one location, or specific places")}
+Time period / setting rules: ${writingPrompt("What era, location, technology level, or world rules cannot change?")}
+Budget reality: ${writingPrompt("Cheap, medium, expensive, animated, impossible dream, or other")}
+
+## Point of view
+Primary POV: ${writingPrompt("Whose experience should drive most scenes?")}
+Scene access: ${writingPrompt("Can scenes happen without the protagonist, or should the script stay close?")}
+
+## AI drafting rules
+Treat these as strict rules when generating script pages.
+- Use the other rooms as source material, but do not contradict this room.
+- Do not silently rewrite premise, character arc, theme, beats, or scenes to make drafting easier.
+- If a required parameter is missing, ask a follow-up question instead of inventing a major constraint.
+- One screenplay page roughly equals one minute of screen time unless this room says otherwise.
 `,
   };
 
@@ -349,29 +509,32 @@ Coming soon.
 ${room.purpose}
 
 ## Starter note
-${writingPrompt("Save a note here once this room opens up.")}
+${writingPrompt(`Save one useful note for the ${room.title} room once it opens up`)}
 `;
   }
 
   const needsAnswerCount = countNeedsAnswers(rooms);
   const strongestKnownPieces = [rawIdea, protagonist, surfaceWant, stakes, falseBelief].filter(
-    (piece) => piece !== NEEDS_ANSWER,
+    (_piece, index) => {
+      const keys: SetupQuestionId[] = ["rawIdea", "protagonist", "surfaceWant", "stakes", "falseBelief"];
+      return answerWasProvided(answers, keys[index]);
+    },
   );
   const goblinWarnings = [
-    surfaceWant === NEEDS_ANSWER ? "The goblin still needs a visible surface want." : null,
-    stakes === NEEDS_ANSWER ? "The goblin smells weak stakes. Feed it consequences." : null,
-    falseBelief === NEEDS_ANSWER ? "The protagonist's lie is missing. The theme is starving." : null,
+    !answerWasProvided(answers, "surfaceWant") ? "The goblin guessed a visible surface want. Confirm it before trusting it." : null,
+    !answerWasProvided(answers, "stakes") ? "The goblin guessed the stakes. Feed it real consequences." : null,
+    !answerWasProvided(answers, "falseBelief") ? "The goblin guessed the protagonist's lie. Theme still needs your answer." : null,
   ].filter(Boolean) as string[];
 
   const timestamp = now.toISOString();
   return {
     rooms,
     summary: {
-      title: rawIdea === NEEDS_ANSWER ? "Untitled Goblin Snack" : rawIdea,
+      title: answerWasProvided(answers, "rawIdea") ? rawIdea : "Untitled Goblin Snack",
       oneLine:
-        rawIdea === NEEDS_ANSWER
+        !answerWasProvided(answers, "rawIdea")
           ? "The story exists, but the goblin wants a premise."
-          : `${rawIdea} The current spine follows ${protagonist} chasing ${surfaceWant}.`,
+          : `${rawIdea} The current spine follows ${protagonistPhrase} chasing ${surfaceWantPhrase}.`,
       needsAnswerCount,
       strongestKnownPieces,
       goblinWarnings,
@@ -383,14 +546,14 @@ ${writingPrompt("Save a note here once this room opens up.")}
 }
 
 export function createLoglineSuggestions(answers: SetupAnswers) {
-  const protagonist = answer(answers, "protagonist");
-  const want = answer(answers, "surfaceWant");
-  const stakes = answer(answers, "stakes");
-  const opposition = answer(answers, "opposition");
-  const falseBelief = answer(answers, "falseBelief");
+  const protagonist = answerPhrase(answers, "protagonist");
+  const want = answerPhrase(answers, "surfaceWant");
+  const stakes = clause(answerPhrase(answers, "stakes"));
+  const opposition = answerPhrase(answers, "opposition");
+  const falseBelief = answerPhrase(answers, "falseBelief");
 
   return [
-    `When ${protagonist} must ${want}, ${opposition} forces them to risk ${stakes}.`,
+    `When ${protagonist} must ${want}, ${opposition} forces them to act before ${stakes}.`,
     `${protagonist} must ${want} before ${stakes}, but winning means confronting the lie that ${falseBelief}.`,
   ];
 }

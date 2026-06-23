@@ -2,7 +2,7 @@
 
 **Plot Goblin is a funny, helpfully annoying screenplay development website.**
 
-It helps a writer turn a messy movie idea into a usable story spine before they start writing pages: premise, protagonist, stakes, theme, beats, and scenes.
+It helps a writer turn a messy movie idea into a usable story spine before they start writing pages: premise, protagonist, stakes, theme, beats, scenes, and draft parameters.
 
 This README is the canonical project brief. Read it before making product, copy, design, architecture, or implementation decisions.
 
@@ -23,7 +23,7 @@ Plot Goblin should help users:
 3. Clarify protagonist, want, stakes, opposition, and false belief.
 4. Produce a stronger logline.
 5. Build a flexible beat spine.
-6. Move into editable screenplay work rooms.
+6. Move into editable screenplay work rooms with strict draft parameters.
 7. Export their work as markdown.
 8. Eventually get AI co-writer feedback from local Hermes.
 
@@ -78,7 +78,7 @@ Users can still skip directly to rooms, but the recommended path should be guide
 Locked decisions from our product discussion:
 
 - Setup questions may be skipped.
-- Skipped answers become `[Needs answer]`.
+- Skipped answers become `[needs your answer]` goblin guesses that the writer can confirm or replace.
 - After setup, show a summary page first: “Here is what the goblin thinks your movie is.”
 - Working notes come first.
 - Polished logline comes second.
@@ -117,6 +117,7 @@ Characters
 Theme
 Beats
 Scenes
+Script Parameters
 ```
 
 Coming-soon rooms should remain visible but greyed out:

@@ -84,6 +84,19 @@ export const storyRooms: StoryRoom[] = [
     ],
   },
   {
+    slug: "script-parameters",
+    title: "Script Parameters",
+    status: "active",
+    markdownFile: "script-parameters.md",
+    purpose: "Set the strict drafting rules: length, genre, tone, rating, format, structure, and production boundaries.",
+    guidingQuestion: "What rules must the script obey before it writes a single slugline?",
+    prompts: [
+      "How long is it: short, feature, or really long, and what page target should it hit?",
+      "What genre, rating, tone, and audience promise must stay locked?",
+      "What constraints shape the pages: cast, locations, time period, POV, language, or no-go content?",
+    ],
+  },
+  {
     slug: "relationships",
     title: "Relationships",
     status: "coming-soon",

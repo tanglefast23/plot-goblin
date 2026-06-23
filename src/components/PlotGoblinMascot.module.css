@@ -20,6 +20,7 @@
 }
 
 .nav a,
+.navButton,
 .name,
 .tease {
   color: var(--goblin-night);
@@ -27,6 +28,13 @@
   font-weight: 950;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.navButton {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
 }
 
 .brand {
