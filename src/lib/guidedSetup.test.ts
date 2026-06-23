@@ -142,6 +142,7 @@ describe("guided setup model", () => {
     expect(exported).toContain("## premise.md");
     expect(exported).toContain("## scenes.md");
     expect(exported).toContain("## script-parameters.md");
+    expect(exported).toContain("## create-script.md");
     expect(exported).toContain("A detective investigates a murder on the moon.");
   });
 });

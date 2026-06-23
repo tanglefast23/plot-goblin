@@ -1,11 +1,19 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
-import Home from "./page";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACCESS_KEY_STORAGE_KEY, ACCESS_MODE_STORAGE_KEY } from "@/lib/cowriterAccess";
+
+const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn() }));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: pushMock }),
+}));
+
+import Home from "./page";
 
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
+  pushMock.mockClear();
 });
 
 describe("Plot Goblin homepage", () => {
@@ -30,6 +38,7 @@ describe("Plot Goblin homepage", () => {
     expect(within(activeRooms).getByText("Beats")).toBeDefined();
     expect(within(activeRooms).getByText("Scenes")).toBeDefined();
     expect(within(activeRooms).getByText("Script Parameters")).toBeDefined();
+    expect(within(activeRooms).getByText("Create the Script")).toBeDefined();
 
     const comingSoon = screen.getByLabelText("Coming soon work rooms");
     expect(within(comingSoon).getByText("Relationships")).toBeDefined();
@@ -43,25 +52,70 @@ describe("Plot Goblin homepage", () => {
     expect(screen.getByText(/customize, rename, skip, or add beats/i)).toBeDefined();
   });
 
-  it("asks for AI access before setup and lets local users skip the public key", () => {
+  it("keeps AI access out of the initial view until the goblin is fed", () => {
     render(<Home />);
 
-    const accessPanel = screen.getByRole("region", { name: "AI access setup" });
-    expect(within(accessPanel).getByLabelText("Access key for public site")).toBeDefined();
-    expect(within(accessPanel).getByRole("button", { name: "Use local" })).toBeDefined();
+    expect(screen.queryByRole("dialog", { name: "AI access setup" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Feed the goblin" })).toBeDefined();
+  });
 
-    fireEvent.change(within(accessPanel).getByLabelText("Access key for public site"), {
+  it("pops up the AI access dialog when feeding the goblin", () => {
+    render(<Home />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Feed the goblin" }));
+
+    const dialog = screen.getByRole("dialog", { name: "AI access setup" });
+    expect(within(dialog).getByLabelText("Access key for public site")).toBeDefined();
+    expect(within(dialog).getByRole("button", { name: "Use local" })).toBeDefined();
+  });
+
+  it("saves the public key and continues to guided setup", () => {
+    render(<Home />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Feed the goblin" }));
+    const dialog = screen.getByRole("dialog", { name: "AI access setup" });
+
+    fireEvent.change(within(dialog).getByLabelText("Access key for public site"), {
       target: { value: "friend-public-key" },
     });
-    fireEvent.click(within(accessPanel).getByRole("button", { name: "Save public key" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save public key" }));
 
     expect(window.localStorage.getItem(ACCESS_KEY_STORAGE_KEY)).toBe("friend-public-key");
     expect(window.localStorage.getItem(ACCESS_MODE_STORAGE_KEY)).toBe("public");
+    expect(pushMock).toHaveBeenCalledWith("/guided-setup");
+  });
 
-    fireEvent.click(within(accessPanel).getByRole("button", { name: "Use local" }));
+  it("does not continue when saving an empty public key", () => {
+    render(<Home />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Feed the goblin" }));
+    const dialog = screen.getByRole("dialog", { name: "AI access setup" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save public key" }));
+
+    expect(window.localStorage.getItem(ACCESS_MODE_STORAGE_KEY)).toBeNull();
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(within(dialog).getByText(/paste a public key or use local/i)).toBeDefined();
+  });
+
+  it("saves local mode and continues to guided setup", () => {
+    render(<Home />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Feed the goblin" }));
+    const dialog = screen.getByRole("dialog", { name: "AI access setup" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Use local" }));
 
     expect(window.localStorage.getItem(ACCESS_KEY_STORAGE_KEY)).toBeNull();
     expect(window.localStorage.getItem(ACCESS_MODE_STORAGE_KEY)).toBe("local");
-    expect(within(accessPanel).getByText("Local mode selected")).toBeDefined();
+    expect(pushMock).toHaveBeenCalledWith("/guided-setup");
+  });
+
+  it("skips the dialog and goes straight to guided setup when a preference is saved", () => {
+    window.localStorage.setItem(ACCESS_MODE_STORAGE_KEY, "local");
+    render(<Home />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Feed the goblin" }));
+
+    expect(screen.queryByRole("dialog", { name: "AI access setup" })).toBeNull();
+    expect(pushMock).toHaveBeenCalledWith("/guided-setup");
   });
 });

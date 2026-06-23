@@ -1,6 +1,5 @@
-import Link from "next/link";
 import styles from "./page.module.css";
-import { CowriterAccessSetup } from "@/components/CowriterAccessSetup";
+import { FeedTheGoblin } from "@/components/FeedTheGoblin";
 import { getActiveRooms, getComingSoonRooms, structureModes } from "@/lib/storyRooms";
 
 const defaultBeats = [
@@ -24,7 +23,6 @@ export default function Home() {
         <p className={styles.eyebrow}>Plot Goblin</p>
         <div className={styles.heroGrid}>
           <div className={styles.heroCopy}>
-            <CowriterAccessSetup />
             <h1 aria-label="Feed the goblin before the script eats you." id="home-title">
               <span>
                 Feed the <strong>goblin</strong>
@@ -38,9 +36,7 @@ export default function Home() {
               A tiny structural menace that helps screenwriters move from premise → characters → theme → beats → scenes → script parameters without getting trapped in a rigid formula.
             </p>
             <div className={styles.ctaRow}>
-              <Link className={styles.primaryCta} href="/guided-setup">
-                Feed the goblin
-              </Link>
+              <FeedTheGoblin />
             </div>
           </div>
           <div className={styles.heroVisual}>

@@ -498,6 +498,20 @@ Treat these as strict rules when generating script pages.
 - If a required parameter is missing, ask a follow-up question instead of inventing a major constraint.
 - One screenplay page roughly equals one minute of screen time unless this room says otherwise.
 `,
+    "create-script": `# Create the Script Room
+
+This room checks whether the first six rooms contain enough story material for a tailored screenplay draft.
+
+## Draft request
+Press the goblin button when you believe the script has enough bones.
+
+## Readiness contract
+- Script Parameters must be fully filled out.
+- Premise and Characters must be strong enough to define the story spine.
+- Theme must name the central question and ending direction.
+- Beats must cover the major pressure turns.
+- Scenes must include at least a starter scene list or usable scene card.
+`,
   };
 
   for (const room of getComingSoonRooms()) {

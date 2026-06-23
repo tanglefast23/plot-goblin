@@ -93,7 +93,9 @@ describe("project storage", () => {
     const persisted = window.localStorage.getItem(PROJECT_STORAGE_KEY) ?? "";
 
     expect(migrated.rooms["script-parameters"]).toContain("# Script Parameters Room");
+    expect(migrated.rooms["create-script"]).toContain("# Create the Script Room");
     expect(migrated.rooms["script-parameters"]).toContain("Current genre: Comedy.");
+    expect(persisted).toContain("create-script");
     expect(persisted).toContain("script-parameters");
   });
 });
