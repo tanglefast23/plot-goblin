@@ -12,7 +12,9 @@ import {
 function storedAccessMode(): CowriterAccessMode | null {
   if (typeof window === "undefined") return null;
   const mode = window.localStorage.getItem(ACCESS_MODE_STORAGE_KEY);
-  return mode === "local" || mode === "public" ? mode : null;
+  if (mode === "local") return mode;
+  if (mode === "public" && window.localStorage.getItem(ACCESS_KEY_STORAGE_KEY)?.trim()) return mode;
+  return null;
 }
 
 export function FeedTheGoblin() {
@@ -20,6 +22,7 @@ export function FeedTheGoblin() {
   const [isOpen, setIsOpen] = useState(false);
   const [accessKey, setAccessKey] = useState("");
   const [message, setMessage] = useState("");
+  const [isTesting, setIsTesting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -44,10 +47,11 @@ export function FeedTheGoblin() {
 
     setMessage("");
     setAccessKey("");
+    setIsTesting(false);
     setIsOpen(true);
   }
 
-  function savePublicKey() {
+  async function savePublicKey() {
     const trimmed = accessKey.trim();
 
     if (!trimmed) {
@@ -55,9 +59,32 @@ export function FeedTheGoblin() {
       return;
     }
 
-    window.localStorage.setItem(ACCESS_KEY_STORAGE_KEY, trimmed);
-    window.localStorage.setItem(ACCESS_MODE_STORAGE_KEY, "public");
-    router.push("/guided-setup");
+    setIsTesting(true);
+    setMessage("");
+
+    try {
+      const response = await fetch("/api/hermes-cowriter", {
+        method: "GET",
+        headers: {
+          "x-plot-goblin-key": trimmed,
+        },
+      });
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+
+      if (!response.ok) {
+        setMessage(data.error ?? "The public key test failed.");
+        return;
+      }
+
+      window.localStorage.setItem(ACCESS_KEY_STORAGE_KEY, trimmed);
+      window.localStorage.setItem(ACCESS_MODE_STORAGE_KEY, "public");
+      router.push("/guided-setup");
+    } catch (caught) {
+      const detail = caught instanceof Error ? caught.message : "Unknown test failure.";
+      setMessage(`The public key test could not run. ${detail}`);
+    } finally {
+      setIsTesting(false);
+    }
   }
 
   function useLocal() {
@@ -108,10 +135,10 @@ export function FeedTheGoblin() {
                 />
               </label>
               <div className={styles.accessActions}>
-                <button className={styles.accessSaveButton} onClick={savePublicKey} type="button">
-                  Save public key
+                <button className={styles.accessSaveButton} disabled={isTesting} onClick={savePublicKey} type="button">
+                  {isTesting ? "Testing..." : "Test and save key"}
                 </button>
-                <button className={styles.accessLocalButton} onClick={useLocal} type="button">
+                <button className={styles.accessLocalButton} disabled={isTesting} onClick={useLocal} type="button">
                   Use local
                 </button>
               </div>

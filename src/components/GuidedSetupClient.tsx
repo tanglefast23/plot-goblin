@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import styles from "@/app/workspace.module.css";
 import {
   buildScriptBase,
@@ -37,53 +37,103 @@ function getAcceptedLogline(project: ScriptBase) {
   return logline;
 }
 
+const answerPathLabels: Record<(typeof guidedSetupQuestions)[number]["id"], string> = {
+  rawIdea: "Idea",
+  genre: "Kind",
+  audienceFeeling: "Feeling",
+  protagonist: "Hero",
+  surfaceWant: "Want",
+  stakes: "Stakes",
+  falseBelief: "Lie",
+  opposition: "Wall",
+  endingDirection: "End",
+  structurePreference: "Shape",
+};
+
 export function GuidedSetupClient() {
   const [answers, setAnswers] = useState<SetupAnswers>({ structurePreference: "Classic 3-act spine" });
   const [step, setStep] = useState(0);
   const [draftValue, setDraftValue] = useState("");
   const [completedProject, setCompletedProject] = useState<ScriptBase | null>(null);
   const [loglineSuggestions, setLoglineSuggestions] = useState<string[]>([]);
+  const answerBoxRef = useRef<HTMLTextAreaElement>(null);
 
   const question = guidedSetupQuestions[step];
   const progress = `${Math.min(step + 1, guidedSetupQuestions.length)} / ${guidedSetupQuestions.length}`;
 
-  const selectedAnswer = useMemo(() => {
-    if (!question) return "";
-    return draftValue || answers[question.id] || "";
+  const answerPathAnswers = useMemo(() => {
+    return question ? { ...answers, [question.id]: draftValue.trim() } : answers;
   }, [answers, draftValue, question]);
+
+  useEffect(() => {
+    if (!completedProject) {
+      answerBoxRef.current?.focus({ preventScroll: true });
+    }
+  }, [completedProject, step]);
 
   function selectOption(option: string) {
     if (!question.multiple) {
       setDraftValue(option);
+      answerBoxRef.current?.focus({ preventScroll: true });
       return;
     }
 
-    const currentPieces = splitSelectedOptions(selectedAnswer);
-    const isSelected = optionIsSelected(selectedAnswer, option);
+    const currentPieces = splitSelectedOptions(draftValue);
+    const isSelected = optionIsSelected(draftValue, option);
     const nextPieces = isSelected
       ? currentPieces.filter((piece) => piece.toLowerCase() !== option.toLowerCase())
       : [...currentPieces, option];
 
     setDraftValue(nextPieces.join(", "));
+    answerBoxRef.current?.focus({ preventScroll: true });
   }
 
-  function moveNext(value: string) {
-    const nextAnswers = question ? { ...answers, [question.id]: value.trim() } : answers;
+  function saveCurrentAnswer(value = draftValue) {
+    return question ? { ...answers, [question.id]: value.trim() } : answers;
+  }
+
+  function loadStep(nextStep: number, nextAnswers: SetupAnswers) {
+    const nextQuestion = guidedSetupQuestions[nextStep];
+
     setAnswers(nextAnswers);
-    setDraftValue("");
+    setDraftValue(nextQuestion ? nextAnswers[nextQuestion.id] ?? "" : "");
+    setStep(nextStep);
+  }
+
+  function moveNext(value = draftValue) {
+    const nextAnswers = question ? { ...answers, [question.id]: value.trim() } : answers;
 
     if (step >= guidedSetupQuestions.length - 1) {
       const project = buildScriptBase(nextAnswers);
+      setAnswers(nextAnswers);
+      setDraftValue("");
       saveProject(project);
       setCompletedProject(project);
       return;
     }
 
-    setStep((current) => current + 1);
+    loadStep(step + 1, nextAnswers);
   }
 
   function skipQuestion() {
     moveNext("");
+  }
+
+  function moveBack() {
+    if (step === 0) return;
+    loadStep(step - 1, saveCurrentAnswer());
+  }
+
+  function jumpToAnswer(nextStep: number) {
+    if (nextStep === step) return;
+    loadStep(nextStep, saveCurrentAnswer());
+  }
+
+  function handleAnswerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== "Enter" || event.shiftKey) return;
+
+    event.preventDefault();
+    moveNext();
   }
 
   function acceptLogline(logline: string) {
@@ -203,13 +253,13 @@ export function GuidedSetupClient() {
         className={styles.questionForm}
         onSubmit={(event) => {
           event.preventDefault();
-          moveNext(selectedAnswer);
+          moveNext();
         }}
       >
         {question.options ? (
           <div className={styles.optionRow}>
             {question.options.map((option) => {
-              const isSelected = question.multiple && optionIsSelected(selectedAnswer, option);
+              const isSelected = question.multiple && optionIsSelected(draftValue, option);
 
               return (
                 <button
@@ -231,8 +281,10 @@ export function GuidedSetupClient() {
           <textarea
             className={styles.textarea}
             onChange={(event) => setDraftValue(event.target.value)}
+            onKeyDown={handleAnswerKeyDown}
             placeholder={question.placeholder}
-            value={selectedAnswer}
+            ref={answerBoxRef}
+            value={draftValue}
           />
         </label>
 
@@ -244,10 +296,37 @@ export function GuidedSetupClient() {
           <button className={styles.primaryButton} type="submit">
             {step >= guidedSetupQuestions.length - 1 ? "Create script base" : "Next"}
           </button>
+          {step > 0 ? (
+            <button className={styles.ghostButton} onClick={moveBack} type="button">
+              Back
+            </button>
+          ) : null}
           <button className={styles.ghostButton} onClick={skipQuestion} type="button">
             Skip, cowardly but allowed
           </button>
         </div>
+
+        <nav aria-label="Answer path" className={styles.answerPath}>
+          {guidedSetupQuestions.map((setupQuestion, index) => {
+            const answer = answerPathAnswers[setupQuestion.id]?.trim();
+            const isCurrentStep = index === step;
+
+            return (
+              <button
+                aria-current={isCurrentStep ? "step" : undefined}
+                aria-label={`Go to answer ${index + 1}: ${setupQuestion.title}`}
+                className={`${styles.answerPathButton} ${isCurrentStep ? styles.currentAnswerPathButton : ""}`}
+                key={setupQuestion.id}
+                onClick={() => jumpToAnswer(index)}
+                type="button"
+              >
+                <span>{index + 1}</span>
+                <strong>{answerPathLabels[setupQuestion.id]}</strong>
+                <small>{answer ? "Answered" : "Blank"}</small>
+              </button>
+            );
+          })}
+        </nav>
       </form>
     </section>
   );

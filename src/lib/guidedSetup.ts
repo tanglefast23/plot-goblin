@@ -229,6 +229,18 @@ function clause(value: string) {
   return trimmed.charAt(0).toLowerCase() + trimmed.slice(1);
 }
 
+function loglineSubject(value: string) {
+  const trimmed = value.trim();
+  return {
+    text: trimmed.replace(/[.!?]+$/, ""),
+    wasSentence: /[.!?]\s*$/.test(trimmed),
+  };
+}
+
+function loglineFragment(value: string) {
+  return clause(value).replace(/,+$/, "");
+}
+
 function effortBased(falseBelief: string) {
   return /effort|hard work|try harder|work harder/i.test(falseBelief);
 }
@@ -560,15 +572,21 @@ ${writingPrompt(`Save one useful note for the ${room.title} room once it opens u
 }
 
 export function createLoglineSuggestions(answers: SetupAnswers) {
-  const protagonist = answerPhrase(answers, "protagonist");
-  const want = answerPhrase(answers, "surfaceWant");
+  const protagonist = loglineSubject(answerPhrase(answers, "protagonist"));
+  const want = loglineFragment(answerPhrase(answers, "surfaceWant"));
   const stakes = clause(answerPhrase(answers, "stakes"));
-  const opposition = answerPhrase(answers, "opposition");
-  const falseBelief = answerPhrase(answers, "falseBelief");
+  const opposition = loglineFragment(answerPhrase(answers, "opposition"));
+  const falseBelief = loglineFragment(answerPhrase(answers, "falseBelief"));
+  const firstSuggestionSetup = protagonist.wasSentence
+    ? `${protagonist.text}, they must ${want}`
+    : `${protagonist.text} must ${want}`;
+  const secondSuggestionSetup = protagonist.wasSentence
+    ? `${protagonist.text}, and must ${want}`
+    : `${protagonist.text} must ${want}`;
 
   return [
-    `When ${protagonist} must ${want}, ${opposition} forces them to act before ${stakes}.`,
-    `${protagonist} must ${want} before ${stakes}, but winning means confronting the lie that ${falseBelief}.`,
+    `When ${firstSuggestionSetup}, ${opposition} forces them to act before ${stakes}.`,
+    `${secondSuggestionSetup} before ${stakes}, but winning means confronting the lie that ${falseBelief}.`,
   ];
 }
 

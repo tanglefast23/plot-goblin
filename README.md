@@ -180,17 +180,23 @@ Meaning:
 
 - Local development on Joe’s Mac can call Hermes directly.
 - The bridge uses Joe’s current Hermes default provider/model.
-- Public Vercel may call Joe’s Mac only through a protected bridge URL.
+- Public Vercel may call Joe’s Mac only through a protected bridge URL, currently exposed with Tailscale Funnel.
 - Public Vercel requires `PLOT_GOBLIN_AI_ACCESS_KEY` before it will relay a request.
 - The local Mac bridge requires `PLOT_GOBLIN_HERMES_BRIDGE_TOKEN` before it will run Hermes.
 - Both the Vercel route and the local bridge have simple per-minute in-memory rate limits.
-- The quick Cloudflare tunnel URL is temporary; if the tunnel restarts, update `PLOT_GOBLIN_HERMES_BRIDGE_URL` in Vercel and redeploy.
+- The Tailscale Funnel URL is stable, but Joe’s Mac must stay on, awake, online, and running both the Hermes bridge and Tailscale.
 
 Current bridge commands:
 
 ```bash
 npm run bridge
-cloudflared tunnel --url http://127.0.0.1:8787 --no-autoupdate
+tailscale funnel --bg --yes --set-path /plot-goblin 8787
+```
+
+Current public bridge URL for Vercel:
+
+```txt
+https://joe-mac-mini.tail020d79.ts.net/plot-goblin
 ```
 
 Secret files on Joe’s Mac:

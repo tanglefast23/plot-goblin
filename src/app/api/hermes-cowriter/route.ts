@@ -68,6 +68,63 @@ async function callRemoteHermesBridge(prompt: string) {
   return data.output ?? "";
 }
 
+async function checkRemoteHermesBridge() {
+  const url = bridgeUrl();
+  const bridgeToken = process.env.PLOT_GOBLIN_HERMES_BRIDGE_TOKEN;
+
+  if (!url || !bridgeToken) {
+    throw new Error("Public Hermes bridge is not configured yet. Missing bridge URL or bridge token.");
+  }
+
+  const response = await fetch(`${url}/health`, {
+    method: "GET",
+    headers: {
+      "x-hermes-bridge-token": bridgeToken,
+    },
+    signal: AbortSignal.timeout(10_000),
+  });
+
+  const data = (await response.json().catch(() => ({}))) as { error?: string };
+
+  if (!response.ok) {
+    throw new Error(data.error ?? `Hermes bridge returned ${response.status}.`);
+  }
+}
+
+function publicBridgeFailureMessage(caught: unknown) {
+  const message = caught instanceof Error ? caught.message : "Unknown public Hermes bridge failure.";
+
+  if (message === "fetch failed") {
+    return "Public Hermes bridge could not reach Joe's Mac Hermes bridge. Make sure the Cloudflare tunnel is running and PLOT_GOBLIN_HERMES_BRIDGE_URL points at the current tunnel URL.";
+  }
+
+  return `Public Hermes bridge failed. ${message}`;
+}
+
+export async function GET(request: Request) {
+  if (process.env.VERCEL !== "1") {
+    return jsonResponse({ ok: true });
+  }
+
+  const expectedAccessKey = process.env.PLOT_GOBLIN_AI_ACCESS_KEY;
+  const providedAccessKey = request.headers.get("x-plot-goblin-key");
+
+  if (!expectedAccessKey) {
+    return jsonResponse({ error: "Plot Goblin AI access key is not configured on Vercel yet." }, 503);
+  }
+
+  if (!hasValidAccessKey(providedAccessKey, expectedAccessKey)) {
+    return jsonResponse({ error: "Enter the Plot Goblin access key to ask the public Hermes bridge." }, 401);
+  }
+
+  try {
+    await checkRemoteHermesBridge();
+    return jsonResponse({ ok: true });
+  } catch (caught) {
+    return jsonResponse({ error: publicBridgeFailureMessage(caught) }, 502);
+  }
+}
+
 export async function POST(request: Request) {
   let body: unknown;
   try {
@@ -107,8 +164,7 @@ export async function POST(request: Request) {
       const output = await callRemoteHermesBridge(prompt);
       return jsonResponse({ output: cleanHermesOutput(output), remaining: limit.remaining });
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : "Unknown public Hermes bridge failure.";
-      return jsonResponse({ error: `Public Hermes bridge failed. ${message}` }, 502);
+      return jsonResponse({ error: publicBridgeFailureMessage(caught) }, 502);
     }
   }
 

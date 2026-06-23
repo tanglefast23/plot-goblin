@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACCESS_KEY_STORAGE_KEY, ACCESS_MODE_STORAGE_KEY } from "@/lib/cowriterAccess";
 
@@ -14,6 +14,7 @@ afterEach(() => {
   cleanup();
   window.localStorage.clear();
   pushMock.mockClear();
+  vi.unstubAllGlobals();
 });
 
 describe("Plot Goblin homepage", () => {
@@ -69,7 +70,12 @@ describe("Plot Goblin homepage", () => {
     expect(within(dialog).getByRole("button", { name: "Use local" })).toBeDefined();
   });
 
-  it("saves the public key and continues to guided setup", () => {
+  it("tests the public key before continuing to guided setup", async () => {
+    const fetchSpy = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ ok: true }),
+    });
+    vi.stubGlobal("fetch", fetchSpy);
     render(<Home />);
 
     fireEvent.click(screen.getByRole("button", { name: "Feed the goblin" }));
@@ -78,11 +84,44 @@ describe("Plot Goblin homepage", () => {
     fireEvent.change(within(dialog).getByLabelText("Access key for public site"), {
       target: { value: "friend-public-key" },
     });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Save public key" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Test and save key" }));
 
-    expect(window.localStorage.getItem(ACCESS_KEY_STORAGE_KEY)).toBe("friend-public-key");
-    expect(window.localStorage.getItem(ACCESS_MODE_STORAGE_KEY)).toBe("public");
-    expect(pushMock).toHaveBeenCalledWith("/guided-setup");
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "/api/hermes-cowriter",
+      expect.objectContaining({
+        method: "GET",
+        headers: expect.objectContaining({ "x-plot-goblin-key": "friend-public-key" }),
+      }),
+    );
+    await waitFor(() => {
+      expect(window.localStorage.getItem(ACCESS_KEY_STORAGE_KEY)).toBe("friend-public-key");
+      expect(window.localStorage.getItem(ACCESS_MODE_STORAGE_KEY)).toBe("public");
+      expect(pushMock).toHaveBeenCalledWith("/guided-setup");
+    });
+  });
+
+  it("stays in the dialog when the public key test fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ error: "Public Hermes bridge could not reach Joe's Mac Hermes bridge." }),
+      }),
+    );
+    render(<Home />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Feed the goblin" }));
+    const dialog = screen.getByRole("dialog", { name: "AI access setup" });
+
+    fireEvent.change(within(dialog).getByLabelText("Access key for public site"), {
+      target: { value: "friend-public-key" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Test and save key" }));
+
+    expect(await within(dialog).findByText(/could not reach Joe's Mac Hermes bridge/i)).toBeDefined();
+    expect(window.localStorage.getItem(ACCESS_KEY_STORAGE_KEY)).toBeNull();
+    expect(window.localStorage.getItem(ACCESS_MODE_STORAGE_KEY)).toBeNull();
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it("does not continue when saving an empty public key", () => {
@@ -90,7 +129,7 @@ describe("Plot Goblin homepage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Feed the goblin" }));
     const dialog = screen.getByRole("dialog", { name: "AI access setup" });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Save public key" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Test and save key" }));
 
     expect(window.localStorage.getItem(ACCESS_MODE_STORAGE_KEY)).toBeNull();
     expect(pushMock).not.toHaveBeenCalled();
@@ -117,5 +156,15 @@ describe("Plot Goblin homepage", () => {
 
     expect(screen.queryByRole("dialog", { name: "AI access setup" })).toBeNull();
     expect(pushMock).toHaveBeenCalledWith("/guided-setup");
+  });
+
+  it("asks again when public mode is saved without an access key", () => {
+    window.localStorage.setItem(ACCESS_MODE_STORAGE_KEY, "public");
+    render(<Home />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Feed the goblin" }));
+
+    expect(screen.getByRole("dialog", { name: "AI access setup" })).toBeDefined();
+    expect(pushMock).not.toHaveBeenCalled();
   });
 });

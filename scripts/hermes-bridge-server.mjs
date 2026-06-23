@@ -86,6 +86,11 @@ async function runHermes(prompt) {
 
 const server = createServer(async (req, res) => {
   if (req.method === "GET" && req.url === "/health") {
+    if (!safeEquals(req.headers["x-hermes-bridge-token"], bridgeToken())) {
+      send(res, 401, { error: "Bridge token rejected." });
+      return;
+    }
+
     send(res, 200, { ok: true, service: "plot-goblin-hermes-bridge" });
     return;
   }

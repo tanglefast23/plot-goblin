@@ -10,6 +10,108 @@ afterEach(() => {
 });
 
 describe("GuidedSetupClient", () => {
+  it("lets the writer go back and revise the previous answer", async () => {
+    render(<GuidedSetupClient />);
+
+    fireEvent.change(screen.getByRole("textbox", { name: /your answer/i }), {
+      target: { value: "A one armed man dreams of playing professional baseball." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+
+    expect(await screen.findByRole("heading", { name: "What's the movie idea, badly explained?" })).toBeTruthy();
+    expect(screen.getByRole("textbox", { name: /your answer/i })).toHaveProperty(
+      "value",
+      "A one armed man dreams of playing professional baseball.",
+    );
+
+    fireEvent.change(screen.getByRole("textbox", { name: /your answer/i }), {
+      target: { value: "A one armed pitcher gets one last shot at the majors." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+
+    expect(screen.getByRole("textbox", { name: /your answer/i })).toHaveProperty(
+      "value",
+      "A one armed pitcher gets one last shot at the majors.",
+    );
+  });
+
+  it("shows an answer path that can jump back to an earlier setup answer", async () => {
+    render(<GuidedSetupClient />);
+
+    fireEvent.change(screen.getByRole("textbox", { name: /your answer/i }), {
+      target: { value: "A one armed man dreams of playing professional baseball." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    fireEvent.click(screen.getByRole("button", { name: "Horror" }));
+
+    fireEvent.click(screen.getByRole("button", { name: /^go to answer 1:/i }));
+
+    expect(await screen.findByRole("heading", { name: "What's the movie idea, badly explained?" })).toBeTruthy();
+    expect(screen.getByRole("textbox", { name: /your answer/i })).toHaveProperty(
+      "value",
+      "A one armed man dreams of playing professional baseball.",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /^go to answer 2:/i }));
+
+    expect(await screen.findByRole("heading", { name: "What kind of movie is this?" })).toBeTruthy();
+    expect(screen.getByRole("textbox", { name: /your answer/i })).toHaveProperty("value", "Horror");
+  });
+
+  it("advances to the next setup question when the writer presses Enter in the answer box", async () => {
+    render(<GuidedSetupClient />);
+
+    const answerBox = screen.getByRole("textbox", { name: /your answer/i });
+
+    fireEvent.change(answerBox, { target: { value: "A one armed man dreams of playing professional baseball." } });
+    fireEvent.keyDown(answerBox, { key: "Enter", code: "Enter" });
+
+    await screen.findByRole("heading", { name: "What kind of movie is this?" });
+  });
+
+  it("keeps the answer box focused as the writer moves through onboarding", async () => {
+    render(<GuidedSetupClient />);
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByRole("textbox", { name: /your answer/i }));
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByRole("textbox", { name: /your answer/i }));
+    });
+
+    const horrorButton = screen.getByRole("button", { name: "Horror" });
+
+    horrorButton.focus();
+    fireEvent.click(horrorButton);
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByRole("textbox", { name: /your answer/i }));
+    });
+  });
+
+  it("returns focus to the answer box after single-choice option selections", async () => {
+    render(<GuidedSetupClient />);
+
+    for (let questionIndex = 0; questionIndex < 8; questionIndex += 1) {
+      fireEvent.click(screen.getByRole("button", { name: /skip/i }));
+    }
+
+    const endingOption = screen.getByRole("button", { name: "I don't know yet" });
+
+    endingOption.focus();
+    fireEvent.click(endingOption);
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByRole("textbox", { name: /your answer/i }));
+    });
+  });
+
   it("lets the movie kind step combine multiple choices into one hybrid answer", () => {
     render(<GuidedSetupClient />);
 

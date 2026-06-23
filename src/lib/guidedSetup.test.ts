@@ -134,6 +134,23 @@ describe("guided setup model", () => {
     expect(suggestions[1]).toContain("if she needs help, she has failed");
   });
 
+  it("turns user-entered sentences into lower-case logline fragments", () => {
+    const suggestions = createLoglineSuggestions({
+      protagonist: "Joe starts full of hope but slowly breaks down.",
+      surfaceWant: "Become a professional baseball player.",
+      stakes: "They lose their other arm because they don't have the money to pay for surgery.",
+      opposition: "They only have one arm, which is not enough to be a pro baseball player.",
+      falseBelief: "That determination and hard work is enough to be a pro baseball player.",
+    });
+
+    expect(suggestions[0]).toBe(
+      "When Joe starts full of hope but slowly breaks down, they must become a professional baseball player, they only have one arm, which is not enough to be a pro baseball player forces them to act before they lose their other arm because they don't have the money to pay for surgery.",
+    );
+    expect(suggestions[1]).toBe(
+      "Joe starts full of hope but slowly breaks down, and must become a professional baseball player before they lose their other arm because they don't have the money to pay for surgery, but winning means confronting the lie that that determination and hard work is enough to be a pro baseball player.",
+    );
+  });
+
   it("exports all rooms into one markdown document", () => {
     const base = buildScriptBase({ rawIdea: "A detective investigates a murder on the moon." });
     const exported = buildExportMarkdown(base.rooms);
