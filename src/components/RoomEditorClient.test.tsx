@@ -43,6 +43,59 @@ describe("RoomEditorClient", () => {
     expect(screen.queryByRole("heading", { name: "Ask the Hermes goblin" })).toBeNull();
   });
 
+  it("places guided field suggest buttons directly above their text boxes", async () => {
+    const project = buildScriptBase({
+      rawIdea: "A one-armed pitcher tries to make the majors.",
+      genre: "Comedy",
+      audienceFeeling: "hopeful and tense",
+      protagonist: "Stubborn one-armed pitcher",
+      surfaceWant: "become a professional baseball player",
+      stakes: "he loses the only dream he has left",
+      falseBelief: "asking for help makes him weak",
+      opposition: "better players who have two arms",
+      endingDirection: "He changes and wins",
+      structurePreference: "Classic 3-act spine",
+    });
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+
+    render(<RoomEditorClient />);
+
+    await screen.findByRole("region", { name: "Premise questions" });
+    const heading = screen.getByRole("heading", { name: "Stakes" });
+    const suggestButton = screen.getByRole("button", { name: "Goblin Suggest for Stakes" });
+    const textBox = screen.getByRole("textbox", { name: "Stakes" });
+
+    expect(heading.compareDocumentPosition(suggestButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(suggestButton.compareDocumentPosition(textBox) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("places beat suggest buttons directly above their text boxes", async () => {
+    routeState.slug = "beats";
+    const project = buildScriptBase({
+      rawIdea: "A one-armed pitcher tries to make the majors.",
+      genre: "Comedy",
+      audienceFeeling: "hopeful and tense",
+      protagonist: "Stubborn one-armed pitcher",
+      surfaceWant: "become a professional baseball player",
+      stakes: "he loses the only dream he has left",
+      falseBelief: "asking for help makes him weak",
+      opposition: "better players who have two arms",
+      endingDirection: "He changes and wins",
+      structurePreference: "Classic 3-act spine",
+    });
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+
+    render(<RoomEditorClient />);
+
+    await screen.findByRole("region", { name: "Beat cork board" });
+    const titleInput = screen.getByRole("textbox", { name: "Beat title for Opening Image" });
+    const suggestButton = screen.getByRole("button", { name: "Goblin Suggest for Opening Image" });
+    const textBox = screen.getByRole("textbox", { name: "Opening Image beat" });
+
+    expect(titleInput.compareDocumentPosition(suggestButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(suggestButton.compareDocumentPosition(textBox) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("asks Hermes for one guided room field and applies the suggestion", async () => {
     const project = buildScriptBase({
       rawIdea: "A one-armed pitcher tries to make the majors.",

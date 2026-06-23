@@ -702,7 +702,7 @@
 }
 
 .beatStickyNeedsAnswer {
-  margin-top: 92px;
+  margin-top: 48px;
 }
 
 .beatStickyTop {
@@ -812,6 +812,14 @@
   padding-top: 8px;
 }
 
+.beatTextareaHeader {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: flex-end;
+  padding-top: 6px;
+}
+
 .beatStickyNumber {
   color: rgb(var(--goblin-moss-rgb) / 0.9);
   font-size: 0.68rem;
@@ -869,6 +877,12 @@
 .fieldSuggestButton {
   max-width: none;
   padding-inline: 12px;
+}
+
+.loglineSuggestButton {
+  min-height: 34px;
+  max-width: none;
+  padding: 6px 14px;
 }
 
 .goblinSuggestButton {
@@ -980,6 +994,12 @@
 }
 
 .beatStickyTop .suggestionGoblin {
+  width: 36px;
+  height: 36px;
+  flex-basis: 36px;
+}
+
+.beatTextareaHeader .suggestionGoblin {
   width: 36px;
   height: 36px;
   flex-basis: 36px;
@@ -1524,7 +1544,7 @@
 .fieldQuestionHeader {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 10px;
 }
 
@@ -1620,7 +1640,16 @@
   gap: 8px;
 }
 
-.parameterField span,
+.fieldInputHeader {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.fieldInputHeader label,
+.parameterField > span,
 .parameterSlider span {
   color: var(--goblin-moss);
   font-size: 0.68rem;

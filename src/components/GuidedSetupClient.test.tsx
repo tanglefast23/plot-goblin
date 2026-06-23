@@ -10,6 +10,17 @@ afterEach(() => {
 });
 
 describe("GuidedSetupClient", () => {
+  it("places Back before Next once the writer can return to a previous question", () => {
+    render(<GuidedSetupClient />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+
+    const backButton = screen.getByRole("button", { name: "Back" });
+    const nextButton = screen.getByRole("button", { name: "Next" });
+
+    expect(backButton.compareDocumentPosition(nextButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("lets the writer go back and revise the previous answer", async () => {
     render(<GuidedSetupClient />);
 
@@ -126,16 +137,16 @@ describe("GuidedSetupClient", () => {
     expect(screen.getByRole("button", { name: "Romance" }).getAttribute("aria-pressed")).toBe("true");
   });
 
-  it("marks the polished logline button as the visual attention target", () => {
+  it("uses the room-style goblin button for polished logline suggestions", () => {
     render(<GuidedSetupClient />);
 
     for (let questionIndex = 0; questionIndex < guidedSetupQuestions.length; questionIndex += 1) {
       fireEvent.click(screen.getByRole("button", { name: /skip/i }));
     }
 
-    const loglineButton = screen.getByRole("button", { name: /make it sound less/i });
+    const loglineButton = screen.getByRole("button", { name: /annoy the goblin for logline/i });
 
-    expect(loglineButton.className).toContain("attentionButton");
+    expect(loglineButton.className).toContain("goblinSuggestButton");
   });
 
   it("shows a saved logline confirmation after accepting a suggestion", () => {
@@ -145,12 +156,13 @@ describe("GuidedSetupClient", () => {
       fireEvent.click(screen.getByRole("button", { name: /skip/i }));
     }
 
-    fireEvent.click(screen.getByRole("button", { name: /make it sound less/i }));
+    fireEvent.click(screen.getByRole("button", { name: /annoy the goblin for logline/i }));
     const suggestion = screen.getByText(/When a protagonist whose want exposes/i).textContent ?? "";
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Accept this one" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Use suggestion" }));
 
     expect(screen.getByText("Accepted logline")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Use suggestion" })).toBeNull();
     expect(window.localStorage.getItem(PROJECT_STORAGE_KEY)).toContain(suggestion);
   });
 
@@ -161,20 +173,23 @@ describe("GuidedSetupClient", () => {
       fireEvent.click(screen.getByRole("button", { name: /skip/i }));
     }
 
-    fireEvent.click(screen.getByRole("button", { name: /make it sound less/i }));
-    const suggestions = [
-      screen.getByText(/When a protagonist whose want exposes/i).textContent ?? "",
-      screen.getByText(/^a protagonist whose want exposes/i).textContent ?? "",
-    ];
+    fireEvent.click(screen.getByRole("button", { name: /annoy the goblin for logline/i }));
+    const firstSuggestion = screen.getByText(/When a protagonist whose want exposes/i).textContent ?? "";
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Accept this one" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Use suggestion" }));
     await screen.findByText("Accepted logline");
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Accept this one" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: /annoy the goblin for logline/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Another suggestion" }));
+    const secondSuggestion = screen.getByText(/^a protagonist whose want exposes/i).textContent ?? "";
+
+    expect(secondSuggestion).not.toBe(firstSuggestion);
+
+    fireEvent.click(screen.getByRole("button", { name: "Use suggestion" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Accepted logline").parentElement?.textContent).toContain(suggestions[1]);
-      expect(window.localStorage.getItem(PROJECT_STORAGE_KEY)).toContain(suggestions[1]);
+      expect(screen.getByText("Accepted logline").parentElement?.textContent).toContain(secondSuggestion);
+      expect(window.localStorage.getItem(PROJECT_STORAGE_KEY)).toContain(secondSuggestion);
     });
   });
 });

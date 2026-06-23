@@ -873,6 +873,7 @@ function GuidedRoomEditor({ firstFieldRef, markdown, onMarkdownChange, project, 
       {parsedRoom.fields.map((field, index) => {
         const value = cleanGuidedFieldValue(field.body);
         const suggestion = fieldSuggestions[index];
+        const fieldId = `guided-${roomSlug}-field-${index}`;
 
         return (
           <section
@@ -882,7 +883,13 @@ function GuidedRoomEditor({ firstFieldRef, markdown, onMarkdownChange, project, 
             <div className={styles.parameterQuestionCopy}>
               <div className={styles.fieldQuestionHeader}>
                 <span>{String(index + 1).padStart(2, "0")}</span>
-                <span className={styles.suggestionButtonCluster}>
+              </div>
+              <h3>{field.heading}</h3>
+            </div>
+            <div className={styles.parameterField}>
+              <div className={styles.fieldInputHeader}>
+                <label htmlFor={fieldId}>Answer</label>
+                <div className={styles.suggestionButtonCluster}>
                   <button
                     aria-label={`Goblin Suggest for ${field.heading}`}
                     className={`${styles.fieldSuggestButton} ${styles.goblinSuggestButton} ${
@@ -895,20 +902,17 @@ function GuidedRoomEditor({ firstFieldRef, markdown, onMarkdownChange, project, 
                     {suggestion?.isLoading ? "Thinking" : "Goblin Suggest"}
                   </button>
                   <SuggestionGoblin label={field.heading} state={suggestion?.mascotState} />
-                </span>
+                </div>
               </div>
-              <h3>{field.heading}</h3>
-            </div>
-            <label className={styles.parameterField}>
-              <span>Answer</span>
               <textarea
                 aria-label={field.heading}
+                id={fieldId}
                 onChange={(event) => onMarkdownChange(updateGuidedRoomField(markdown, index, event.target.value))}
                 ref={index === 0 ? firstFieldRef : undefined}
                 rows={guidedFieldRows(value)}
                 value={value}
               />
-            </label>
+            </div>
             {suggestion?.error ? <p className={styles.fieldSuggestionError}>{suggestion.error}</p> : null}
             {suggestion?.text ? (
               <div className={styles.fieldSuggestion}>
@@ -1038,13 +1042,27 @@ function BeatsCorkBoard({ firstNoteRef, markdown, onMarkdownChange, project }: B
                   needsAnswer ? styles.beatStickyNeedsAnswer : ""
                 }`}
               >
-                <div className={styles.beatStickyTop}>
-                  {needsAnswer ? (
+                {needsAnswer ? (
+                  <div className={styles.beatStickyTop}>
                     <span aria-label={`${section.heading} needs your answer`} className={styles.beatNeedsTag}>
                       Needs your answer
                     </span>
-                  ) : null}
-                  <span className={styles.suggestionButtonCluster}>
+                  </div>
+                ) : null}
+                <div className={styles.beatStickyHeader}>
+                  <label className={styles.beatStickyNumber} htmlFor={titleId}>
+                    {String(index + 1).padStart(2, "0")}
+                  </label>
+                  <input
+                    aria-label={`Beat title for ${section.heading}`}
+                    className={styles.beatTitleInput}
+                    id={titleId}
+                    onChange={(event) => renameBeat(index, event.target.value)}
+                    value={section.heading}
+                  />
+                </div>
+                <div className={styles.beatTextareaHeader}>
+                  <div className={styles.suggestionButtonCluster}>
                     <button
                       aria-label={`Goblin Suggest for ${section.heading}`}
                       className={`${styles.beatSuggestButton} ${styles.goblinSuggestButton} ${
@@ -1057,19 +1075,7 @@ function BeatsCorkBoard({ firstNoteRef, markdown, onMarkdownChange, project }: B
                       {suggestion?.isLoading ? "Thinking" : "Goblin Suggest"}
                     </button>
                     <SuggestionGoblin label={section.heading} state={suggestion?.mascotState} />
-                  </span>
-                </div>
-                <div className={styles.beatStickyHeader}>
-                  <label className={styles.beatStickyNumber} htmlFor={titleId}>
-                    {String(index + 1).padStart(2, "0")}
-                  </label>
-                  <input
-                    aria-label={`Beat title for ${section.heading}`}
-                    className={styles.beatTitleInput}
-                    id={titleId}
-                    onChange={(event) => renameBeat(index, event.target.value)}
-                    value={section.heading}
-                  />
+                  </div>
                 </div>
                 <textarea
                   aria-label={`${section.heading} beat`}
