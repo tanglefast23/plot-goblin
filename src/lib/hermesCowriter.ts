@@ -12,6 +12,64 @@ function asJson(value: unknown) {
   return JSON.stringify(value ?? {}, null, 2);
 }
 
+function cleanMovieKind(value: string) {
+  const cleaned = value.trim().replace(/\s+/g, " ").replace(/[.!?]+$/, "");
+  if (!cleaned || /\[(?:needs your answer|needs answer|needs writing)\]/i.test(cleaned)) return "";
+
+  return cleaned;
+}
+
+function stringValue(value: unknown) {
+  return typeof value === "string" ? cleanMovieKind(value) : "";
+}
+
+function movieKindFromRecord(value: unknown) {
+  if (!value || typeof value !== "object") return "";
+
+  const record = value as Record<string, unknown>;
+  return (
+    stringValue(record.genre) ||
+    stringValue(record.movieKind) ||
+    stringValue(record.kind) ||
+    stringValue(record.moviePromise)
+  );
+}
+
+function movieKindFromMarkdown(markdown: unknown) {
+  if (typeof markdown !== "string") return "";
+
+  const currentGenre = /^Current genre:\s*(.+)$/im.exec(markdown)?.[1];
+  return cleanMovieKind(currentGenre ?? "");
+}
+
+function movieKindForRequest(request: CowriterRequest) {
+  return (
+    movieKindFromRecord(request.answers) ||
+    movieKindFromRecord(request.summary) ||
+    movieKindFromMarkdown(request.markdown) ||
+    movieKindFromMarkdown(request.beatMarkdown)
+  );
+}
+
+function movieKindRules(request: CowriterRequest) {
+  const movieKind = movieKindForRequest(request);
+  if (!movieKind) return "";
+
+  return `
+
+Movie-kind weight:
+- Current movie kind: ${movieKind}.
+- Treat the current movie kind as a high-priority creative constraint for every suggestion, follow-up question, beat, room fill, and draft choice.
+- Comedy choices should be genuinely funny through premise-specific situations, reversals, jokes, embarrassment, irony, and comic escalation.
+- Horror choices should prioritize dread, suspense, vulnerability, ominous images, threat logic, and scary turns when the story calls for it.
+- Drama choices should stay serious, emotionally specific, consequential, and character-driven.
+- Romance choices should heighten longing, chemistry, vulnerability, and emotional risk.
+- Thriller choices should sharpen danger, pressure, reversals, clocks, secrets, and suspicion.
+- Sci-fi and fantasy choices should make the speculative promise matter through rules, wonder, costs, and story consequences.
+- Hybrid genres must honor each selected promise instead of flattening everything into generic drama.
+- When generating screenplay pages, keep the selected movie kind visible in scene ideas, dialogue lane, tension, set pieces, pacing, and payoffs.`;
+}
+
 export function cleanHermesOutput(output: string) {
   const normalized = output.replace(/\r\n/g, "\n").trim();
   const marker = "PLOT_GOBLIN_FINAL:";
@@ -41,7 +99,7 @@ Rules:
 - When a needed detail is still blank, invent one vivid specific that fits what is already known and mark it (assumed). Prefer a concrete invented choice over a generic description.
 - Focus on screenplay fundamentals: visible want, stakes, false belief, opposition, theme pressure, beat turns, and scene change.
 - Keep the answer concise.
-- Start the final answer with PLOT_GOBLIN_FINAL: so the app can strip Hermes CLI noise.`;
+- Start the final answer with PLOT_GOBLIN_FINAL: so the app can strip Hermes CLI noise.${movieKindRules(request)}`;
 
   if (request.mode === "followup") {
     return `${sharedRules}

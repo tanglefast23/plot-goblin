@@ -51,6 +51,33 @@ describe("Hermes co-writer prompt", () => {
     expect(prompt).toContain("1. Midpoint: Replacement text");
   });
 
+  it("gives the guided setup movie kind high weight in suggestions", () => {
+    const prompt = buildCowriterPrompt({
+      mode: "suggestions",
+      answers: {
+        genre: "Comedy",
+        rawIdea: "A substitute teacher accidentally becomes a spy.",
+      },
+    });
+
+    expect(prompt).toContain("Current movie kind: Comedy.");
+    expect(prompt).toContain("high-priority creative constraint");
+    expect(prompt).toContain("Comedy choices should be genuinely funny");
+  });
+
+  it("uses the Script Parameters genre as a high-weight draft rule for room and screenplay help", () => {
+    const prompt = buildCowriterPrompt({
+      mode: "room",
+      room: "Create the Script",
+      markdown:
+        "# Plot Goblin Export\n\n## script-parameters.md\n\n## Genre / movie promise\nCurrent genre: Horror.\nAudience feeling: dread and suspense.\n\n## premise.md\n\nA babysitter hears a second baby monitor in an empty house.",
+    });
+
+    expect(prompt).toContain("Current movie kind: Horror.");
+    expect(prompt).toContain("Horror choices should prioritize dread");
+    expect(prompt).toContain("When generating screenplay pages");
+  });
+
   it("strips Hermes CLI noise when a final marker exists", () => {
     const cleaned = cleanHermesOutput(
       "Warning: Unknown toolsets: messaging\n\n┌─ Reasoning ──\nthinking...\nPLOT_GOBLIN_FINAL:\nWhat visible thing does he want?",
