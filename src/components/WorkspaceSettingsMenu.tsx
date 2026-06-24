@@ -38,21 +38,42 @@ function downloadScreenplayFormat(format: ScreenplayExportFormatId) {
   downloadFile(buildScreenplayExportFile(project.rooms, format));
 }
 
+function downloadAllScreenplayFormats() {
+  const project = loadProject() ?? ensureProject();
+  for (const format of screenplayExportFormats) {
+    downloadFile(buildScreenplayExportFile(project.rooms, format.id));
+  }
+}
+
 export function WorkspaceSettingsMenu() {
   const [isOpen, setIsOpen] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [status, setStatus] = useState("");
   const menuId = useId();
+  const exportMenuId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
 
+  function toggleSettingsMenu() {
+    setIsOpen((current) => {
+      const next = !current;
+      if (!next) setExportMenuOpen(false);
+      return next;
+    });
+  }
+
   function resetSavedScript() {
+    if (!window.confirm("Reset the saved script in this browser? Export first if you want a backup.")) return;
+
     clearProject();
     setStatus("Saved script reset.");
+    setExportMenuOpen(false);
     setIsOpen(false);
   }
 
   function resetAiAccess() {
     clearCowriterAccess();
     setStatus("AI access reset.");
+    setExportMenuOpen(false);
     setIsOpen(false);
   }
 
@@ -62,6 +83,7 @@ export function WorkspaceSettingsMenu() {
     try {
       importProjectMarkdown(await file.text());
       setStatus("Markdown imported.");
+      setExportMenuOpen(false);
       setIsOpen(false);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Import failed.");
@@ -78,9 +100,12 @@ export function WorkspaceSettingsMenu() {
         aria-haspopup="true"
         aria-label="Settings"
         className={styles.iconButton}
-        onClick={() => setIsOpen((current) => !current)}
+        onClick={toggleSettingsMenu}
         onKeyDown={(event) => {
-          if (event.key === "Escape") setIsOpen(false);
+          if (event.key === "Escape") {
+            setExportMenuOpen(false);
+            setIsOpen(false);
+          }
         }}
         title="Settings"
         type="button"
@@ -91,11 +116,30 @@ export function WorkspaceSettingsMenu() {
       {isOpen ? (
         <div className={styles.settingsPanel} id={menuId}>
           <span className={styles.settingsLabel}>Screenplay exports</span>
-          {screenplayExportFormats.map((format) => (
-            <button className={styles.settingsAction} key={format.id} onClick={() => downloadScreenplayFormat(format.id)} type="button">
-              Export {format.label}
+          <div className={styles.settingsSubmenu}>
+            <button
+              aria-controls={exportMenuId}
+              aria-expanded={exportMenuOpen}
+              aria-haspopup="menu"
+              className={`${styles.settingsAction} ${styles.settingsDisclosure}`}
+              onClick={() => setExportMenuOpen((current) => !current)}
+              type="button"
+            >
+              Export screenplay
             </button>
-          ))}
+            {exportMenuOpen ? (
+              <div className={styles.settingsSubmenuChoices} id={exportMenuId}>
+                <button className={`${styles.settingsAction} ${styles.settingsAllAction}`} onClick={downloadAllScreenplayFormats} type="button">
+                  Export all formats
+                </button>
+                {screenplayExportFormats.map((format) => (
+                  <button className={styles.settingsAction} key={format.id} onClick={() => downloadScreenplayFormat(format.id)} type="button">
+                    Export {format.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
           <span className={styles.settingsLabel}>Backup</span>
           <button className={styles.settingsAction} onClick={downloadMarkdownArchive} type="button">
             Export all .md files

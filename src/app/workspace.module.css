@@ -136,6 +136,42 @@
   outline: none;
 }
 
+.settingsSubmenu {
+  display: grid;
+  gap: 6px;
+}
+
+.settingsDisclosure {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settingsDisclosure::after {
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 160ms ease;
+  content: "";
+}
+
+.settingsDisclosure[aria-expanded="true"]::after {
+  transform: rotate(225deg) translateY(-1px);
+}
+
+.settingsSubmenuChoices {
+  display: grid;
+  gap: 6px;
+  border-left: 2px solid rgb(var(--goblin-night-rgb) / 0.14);
+  padding-left: 8px;
+}
+
+.settingsAllAction {
+  border-color: rgb(var(--goblin-night-rgb) / 0.2);
+  background: rgb(var(--goblin-gold-rgb) / 0.42);
+}
+
 .settingsDanger {
   background: rgb(var(--goblin-gold-rgb) / 0.24);
 }
@@ -323,23 +359,6 @@
   position: relative;
   overflow: hidden;
   padding: 34px;
-}
-
-.heroPanel::after {
-  position: absolute;
-  right: -52px;
-  bottom: -72px;
-  width: 220px;
-  height: 180px;
-  border-radius: 80px 80px 26px 26px;
-  background:
-    linear-gradient(var(--goblin-night), var(--goblin-night)) 50% 49% / 28px 7px no-repeat,
-    radial-gradient(circle, transparent 0 14px, var(--goblin-night) 15px 20px, transparent 21px) 35% 47% / 58px 58px no-repeat,
-    radial-gradient(circle, transparent 0 14px, var(--goblin-night) 15px 20px, transparent 21px) 65% 47% / 58px 58px no-repeat,
-    linear-gradient(62deg, transparent 34%, var(--goblin-mist) 35% 64%, transparent 65%) 50% 75% / 26px 34px no-repeat,
-    var(--goblin-lichen);
-  opacity: 0.24;
-  content: "";
 }
 
 .heroPanel h1,
@@ -565,6 +584,43 @@
   color: var(--goblin-moss);
 }
 
+.nextRoomCallout {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 22px;
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.18);
+  border-radius: 8px;
+  padding: 16px;
+  background: rgb(var(--goblin-gold-rgb) / 0.22);
+}
+
+.nextRoomCallout div {
+  display: grid;
+  gap: 4px;
+}
+
+.nextRoomCallout span {
+  color: var(--goblin-moss);
+  font-size: 0.66rem;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.nextRoomCallout strong {
+  color: var(--goblin-night);
+  font-size: 1rem;
+}
+
+.nextRoomCallout p {
+  color: rgb(var(--goblin-night-rgb) / 0.72);
+  line-height: 1.45;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -672,6 +728,11 @@
   border-radius: 8px;
   padding: 18px;
   background: rgb(var(--goblin-mist-rgb) / 0.58);
+}
+
+.guidanceGoblin {
+  width: min(100%, 250px);
+  margin: 22px auto 16px;
 }
 
 .summaryBox ul,
@@ -1521,16 +1582,14 @@
   display: grid;
   width: 100%;
   max-width: 100%;
-  max-height: min(72vh, 720px);
   gap: 10px;
-  overflow-y: auto;
+  overflow: visible;
   border: 1px solid rgb(var(--goblin-night-rgb) / 0.2);
   border-radius: 8px;
   padding: 10px;
   background:
     linear-gradient(135deg, rgb(var(--goblin-mist-rgb) / 0.86), rgb(var(--goblin-lichen-rgb) / 0.24)),
     rgb(var(--goblin-mist-rgb) / 0.72);
-  scroll-padding-block: 10px;
 }
 
 .sceneRailToggle {
@@ -2106,7 +2165,8 @@
 }
 
 .parameterField input,
-.parameterField textarea {
+.parameterField textarea,
+.parameterField select {
   width: 100%;
   border: 1px solid rgb(var(--goblin-night-rgb) / 0.2);
   border-radius: 8px;
@@ -2128,6 +2188,11 @@
 }
 
 .parameterField input {
+  min-height: 44px;
+  padding: 0 14px;
+}
+
+.parameterField select {
   min-height: 44px;
   padding: 0 14px;
 }
@@ -2170,7 +2235,13 @@
   display: flex;
   min-height: 42px;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sceneDeleteButton {
+  background: rgb(var(--goblin-gold-rgb) / 0.28);
 }
 
 .scenePopulatePanel {
@@ -2178,94 +2249,6 @@
   justify-items: start;
   gap: 14px;
   margin-top: 18px;
-}
-
-.scenePopulateGoblin {
-  position: relative;
-  width: min(100%, 250px);
-  aspect-ratio: 1.18;
-  justify-self: center;
-  margin: 8px 0 4px;
-  border-radius: 88px 88px 24px 24px;
-  background: var(--goblin-lichen);
-  box-shadow:
-    inset 0 1px 0 rgb(var(--goblin-mist-rgb) / 0.54),
-    0 20px 38px rgb(var(--goblin-night-rgb) / 0.12);
-}
-
-.scenePopulateGoblin::before,
-.scenePopulateGoblin::after {
-  position: absolute;
-  top: 24%;
-  width: 26%;
-  height: 24%;
-  background: var(--goblin-moss);
-  content: "";
-}
-
-.scenePopulateGoblin::before {
-  left: -16%;
-  clip-path: polygon(100% 0, 0 50%, 100% 100%);
-}
-
-.scenePopulateGoblin::after {
-  right: -16%;
-  clip-path: polygon(0 0, 100% 50%, 0 100%);
-}
-
-.scenePopulateGoblinGlasses {
-  position: absolute;
-  top: 33%;
-  left: 21%;
-  width: 58%;
-  height: 28%;
-  background:
-    linear-gradient(var(--goblin-night), var(--goblin-night)) 50% 54% / 16% 10% no-repeat,
-    radial-gradient(circle, transparent 0 28%, var(--goblin-night) 29% 39%, transparent 40%) left center / 47% 100% no-repeat,
-    radial-gradient(circle, transparent 0 28%, var(--goblin-night) 29% 39%, transparent 40%) right center / 47% 100% no-repeat;
-}
-
-.scenePopulateGoblinMouth {
-  position: absolute;
-  top: 60%;
-  left: 37%;
-  width: 32%;
-  height: 18%;
-  border-bottom: 7px solid var(--goblin-night);
-  border-radius: 999px;
-  transform: rotate(-3deg);
-}
-
-.scenePopulateGoblinFang {
-  position: absolute;
-  top: 71%;
-  left: 48%;
-  width: 10%;
-  height: 18%;
-  background: var(--goblin-mist);
-  clip-path: polygon(0 0, 100% 0, 52% 100%);
-}
-
-.scenePopulateGoblinQuill {
-  position: absolute;
-  right: 3%;
-  bottom: 5%;
-  width: 10%;
-  height: 42%;
-  border-radius: 999px;
-  background: var(--goblin-night);
-  transform: rotate(37deg);
-}
-
-.scenePopulateGoblinQuill::before {
-  position: absolute;
-  top: -20%;
-  left: -80%;
-  width: 190%;
-  height: 48%;
-  border-radius: 70% 0 70% 0;
-  background: var(--goblin-gold);
-  content: "";
 }
 
 .scenePopulateButton {
@@ -2392,7 +2375,12 @@
   z-index: 1;
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-end;
   gap: 10px;
+}
+
+.scriptGateStyleField {
+  width: min(100%, 420px);
 }
 
 .goblinDraftButton {
@@ -2431,6 +2419,117 @@
 
 .scriptGateNotice .editorTextarea {
   min-height: 360px;
+}
+
+.scriptDraftActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.scriptSaveAction {
+  display: grid;
+  gap: 5px;
+  justify-items: start;
+}
+
+.scriptSaveAction small,
+.scriptDraftStatus {
+  color: rgb(var(--goblin-night-rgb) / 0.66);
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.scriptExportMenu {
+  position: relative;
+}
+
+.scriptExportChoices {
+  position: absolute;
+  z-index: 8;
+  top: calc(100% + 8px);
+  right: 0;
+  display: grid;
+  min-width: 220px;
+  gap: 6px;
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.18);
+  border-radius: 8px;
+  padding: 8px;
+  background: rgb(var(--goblin-mist-rgb) / 0.98);
+  box-shadow: 0 16px 34px rgb(var(--goblin-night-rgb) / 0.16);
+}
+
+.draftsRoomPanel,
+.draftEditorPanel,
+.draftListPanel {
+  display: grid;
+  gap: 16px;
+}
+
+.draftEditorPanel {
+  max-width: 760px;
+}
+
+.draftEditorPanel .editorTextarea {
+  min-height: 460px;
+}
+
+.draftListPanel {
+  max-width: 760px;
+}
+
+.draftListItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: stretch;
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.14);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgb(var(--goblin-mist-rgb) / 0.7);
+}
+
+.draftTitleButton {
+  display: grid;
+  gap: 4px;
+  border: 0;
+  border-radius: 8px;
+  padding: 12px;
+  color: var(--goblin-night);
+  background: rgb(var(--goblin-lichen-rgb) / 0.24);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.draftTitleButton span {
+  font-size: 0.9rem;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.draftTitleButton small {
+  color: rgb(var(--goblin-night-rgb) / 0.62);
+  font-size: 0.68rem;
+  font-weight: 850;
+}
+
+.draftDeleteButton {
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.18);
+  border-radius: 999px;
+  padding: 0 14px;
+  color: var(--goblin-night);
+  background: rgb(var(--goblin-gold-rgb) / 0.28);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
 }
 
 .scriptGateQuestButton {
@@ -2549,6 +2648,15 @@
   .attentionButton {
     min-height: 44px;
     padding-block: 8px;
+  }
+
+  .nextRoomCallout {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .nextRoomCallout .primaryButton {
+    width: 100%;
   }
 
   .answerPath {

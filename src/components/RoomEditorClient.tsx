@@ -7,16 +7,30 @@ import styles from "@/app/workspace.module.css";
 import { NEEDS_ANSWER, type ScriptBase } from "@/lib/guidedSetup";
 import { ensureProject, saveProject } from "@/lib/projectStorage";
 import { getScriptReadiness, storyRooms } from "@/lib/storyRooms";
+import { type WriterGoblinVariant, WriterGoblin } from "./WriterGoblin";
 import { GUIDED_ROOM_SLUGS } from "./room-editor/RoomEditorSupport";
 import {
   BeatsCorkBoard,
   CreateScriptGuidanceMeters,
   CreateScriptRoom,
+  DraftsRoom,
   GuidedRoomEditor,
   SceneBoard,
+  type SceneBoardHandle,
   ScenePopulationGuidance,
   ScriptParametersEditor,
 } from "./room-editor/RoomEditors";
+
+const roomGoblinVariants: Record<string, WriterGoblinVariant> = {
+  beats: "beats",
+  characters: "characters",
+  "create-script": "createScript",
+  drafts: "drafts",
+  premise: "premise",
+  scenes: "scenes",
+  "script-parameters": "scriptParameters",
+  theme: "theme",
+};
 
 export function RoomEditorClient() {
   const params = useParams<{ slug: string }>();
@@ -28,6 +42,7 @@ export function RoomEditorClient() {
   const firstGuidedRoomFieldRef = useRef<HTMLTextAreaElement>(null);
   const firstBeatTextareaRef = useRef<HTMLTextAreaElement>(null);
   const sceneTitleRef = useRef<HTMLInputElement>(null);
+  const sceneBoardRef = useRef<SceneBoardHandle>(null);
   const createScriptRoomProgress = useMemo(
     () => (project ? getScriptReadiness(project.rooms).roomProgress : []),
     [project],
@@ -99,9 +114,11 @@ export function RoomEditorClient() {
               project={project}
             />
           ) : room.slug === "scenes" ? (
-            <SceneBoard firstSceneRef={sceneTitleRef} markdown={markdown} onMarkdownChange={setMarkdown} project={project} />
+            <SceneBoard ref={sceneBoardRef} firstSceneRef={sceneTitleRef} markdown={markdown} onMarkdownChange={setMarkdown} project={project} />
           ) : room.slug === "create-script" ? (
             <CreateScriptRoom markdown={markdown} onMarkdownChange={setMarkdown} project={project} />
+          ) : room.slug === "drafts" ? (
+            <DraftsRoom />
           ) : room.slug === "script-parameters" ? (
             <ScriptParametersEditor markdown={markdown} onMarkdownChange={setMarkdown} />
           ) : GUIDED_ROOM_SLUGS.has(room.slug) ? (
@@ -127,13 +144,14 @@ export function RoomEditorClient() {
         <aside className={styles.guidanceBox}>
           <h2>Goblin guidance</h2>
           <p className={styles.nudge}>{room.guidingQuestion}</p>
+          <WriterGoblin className={styles.guidanceGoblin} variant={roomGoblinVariants[room.slug] ?? "rooms"} />
           {room.slug === "create-script" ? (
             <CreateScriptGuidanceMeters roomProgress={createScriptRoomProgress} />
           ) : room.slug === "scenes" ? (
             <ScenePopulationGuidance
               beatsMarkdown={project.rooms.beats ?? ""}
               scenesMarkdown={markdown}
-              onScenesMarkdownChange={setMarkdown}
+              sceneBoardRef={sceneBoardRef}
             />
           ) : (
             <ul>

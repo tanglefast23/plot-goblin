@@ -410,40 +410,6 @@
   top: auto;
   right: auto;
   width: min(620px, 112%);
-  height: auto;
-  overflow: visible;
-  filter: drop-shadow(0 34px 42px rgb(var(--goblin-night-rgb) / 0.16));
-}
-
-.posterHat,
-.posterFace,
-.posterEarLeft,
-.posterEarRight {
-  fill: var(--goblin-moss);
-}
-
-.posterFace {
-  fill: var(--goblin-lichen);
-}
-
-.posterGlasses,
-.posterSmirk {
-  fill: none;
-  stroke: var(--goblin-night);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 26;
-}
-
-.posterSmirk {
-  stroke-width: 14;
-}
-
-.posterTooth {
-  fill: var(--goblin-mist);
-  stroke: var(--goblin-night);
-  stroke-linejoin: round;
-  stroke-width: 8;
 }
 
 .heroCard,

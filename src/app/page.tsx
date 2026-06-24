@@ -1,5 +1,6 @@
 import styles from "./page.module.css";
 import { FeedTheGoblin } from "@/components/FeedTheGoblin";
+import { WriterGoblin } from "@/components/WriterGoblin";
 import { getActiveRooms, getComingSoonRooms, structureModes } from "@/lib/storyRooms";
 
 const defaultBeats = [
@@ -40,15 +41,7 @@ export default function Home() {
             </div>
           </div>
           <div className={styles.heroVisual}>
-            <svg aria-hidden="true" className={styles.goblinPoster} viewBox="0 0 520 420" xmlns="http://www.w3.org/2000/svg">
-              <path className={styles.posterHat} d="M170 60h220c24 0 42 18 42 42v64h42c20 0 31 24 18 39l-54 61H137l-54-61c-13-15-2-39 18-39h42v-64c0-24 18-42 42-42Z" />
-              <path className={styles.posterFace} d="M142 224h252c30 0 54 24 54 54v62c0 41-33 74-74 74H162c-41 0-74-33-74-74v-62c0-30 24-54 54-54Z" />
-              <path className={styles.posterEarLeft} d="M102 248 24 202c-15-9-11-32 6-35l90-14Z" />
-              <path className={styles.posterEarRight} d="M432 248l78-46c15-9 11-32-6-35l-90-14Z" />
-              <path className={styles.posterGlasses} d="M142 273c20-25 76-25 96 0 10 13 8 55-6 68-18 17-67 17-85 0-14-13-15-55-5-68Zm158 0c20-25 76-25 96 0 10 13 9 55-5 68-18 17-67 17-85 0-14-13-16-55-6-68ZM238 291h62" />
-              <path className={styles.posterSmirk} d="M214 362c38 24 82 22 120-4" />
-              <path className={styles.posterTooth} d="M264 378 278 414l17-36Z" />
-            </svg>
+            <WriterGoblin className={styles.goblinPoster} variant="home" />
             <aside className={styles.heroCard} aria-label="MVP writing flow">
               <span>V1 flow</span>
               <strong>Idea → Logline → Dramatic Question → Beats → Scene Cards → Script Rules</strong>

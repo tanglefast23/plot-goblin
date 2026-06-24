@@ -18,6 +18,7 @@ describe("story room model", () => {
       "scenes",
       "script-parameters",
       "create-script",
+      "drafts",
     ]);
   });
 

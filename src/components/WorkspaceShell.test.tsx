@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildExportMarkdown, buildScriptBase } from "@/lib/guidedSetup";
 import { ACCESS_KEY_STORAGE_KEY, ACCESS_MODE_STORAGE_KEY } from "@/lib/cowriterAccess";
 import { PROJECT_STORAGE_KEY, saveProject } from "@/lib/projectStorage";
@@ -21,6 +21,7 @@ const completedSetupAnswers = {
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
+  vi.restoreAllMocks();
 });
 
 describe("WorkspaceShell", () => {
@@ -80,6 +81,7 @@ describe("WorkspaceShell", () => {
     window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(buildScriptBase(completedSetupAnswers)));
     window.localStorage.setItem(ACCESS_KEY_STORAGE_KEY, "friend-key");
     window.localStorage.setItem(ACCESS_MODE_STORAGE_KEY, "public");
+    vi.spyOn(window, "confirm").mockReturnValue(true);
 
     render(
       <WorkspaceShell>
@@ -93,6 +95,22 @@ describe("WorkspaceShell", () => {
     expect(window.localStorage.getItem(PROJECT_STORAGE_KEY)).toBeNull();
     expect(window.localStorage.getItem(ACCESS_KEY_STORAGE_KEY)).toBe("friend-key");
     expect(window.localStorage.getItem(ACCESS_MODE_STORAGE_KEY)).toBe("public");
+  });
+
+  it("keeps saved script data when the reset confirmation is canceled", async () => {
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(buildScriptBase(completedSetupAnswers)));
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    render(
+      <WorkspaceShell>
+        <p>Workspace content</p>
+      </WorkspaceShell>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Reset saved script" }));
+
+    expect(window.localStorage.getItem(PROJECT_STORAGE_KEY)).toBeTruthy();
   });
 
   it("resets AI access without clearing saved script data", async () => {
@@ -114,7 +132,7 @@ describe("WorkspaceShell", () => {
     expect(window.localStorage.getItem(ACCESS_MODE_STORAGE_KEY)).toBeNull();
   });
 
-  it("offers screenplay export formats from topbar settings", async () => {
+  it("opens screenplay export choices and downloads every format from the all option", async () => {
     render(
       <WorkspaceShell>
         <p>Workspace content</p>
@@ -123,11 +141,27 @@ describe("WorkspaceShell", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
 
-    expect(await screen.findByRole("button", { name: "Export Fountain" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "Export screenplay" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Export Fountain" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Export screenplay" }));
+
+    expect(await screen.findByRole("button", { name: "Export all formats" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Export Fountain" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Export Final Draft" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Export PDF" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Export Word" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Export RTF" })).toBeTruthy();
+
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    const createObjectUrlSpy = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:plot-goblin");
+    const revokeObjectUrlSpy = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+
+    fireEvent.click(screen.getByRole("button", { name: "Export all formats" }));
+
+    expect(clickSpy).toHaveBeenCalledTimes(5);
+    expect(createObjectUrlSpy).toHaveBeenCalledTimes(5);
+    expect(revokeObjectUrlSpy).toHaveBeenCalledTimes(5);
   });
 
   it("imports an exported markdown bundle from topbar settings", async () => {

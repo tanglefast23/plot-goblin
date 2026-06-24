@@ -689,6 +689,60 @@ export function buildDraftContextMarkdown(rooms: RoomMarkdown) {
   ].join("\n\n");
 }
 
+const SUGGESTION_CONTEXT_ROOM_SLUGS = ["premise", "characters", "theme", "beats", "script-parameters"] as const;
+
+function firstSentence(text: string, maxChars: number) {
+  const compacted = compactText(text, 10_000);
+  if (!compacted) return "";
+
+  const sentence = /^(.*?[.!?])(?:\s|$)/.exec(compacted)?.[1] ?? compacted;
+  return compactText(sentence, maxChars);
+}
+
+function summarizeRoomMarkdown(markdown: string) {
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  const summaries: string[] = [];
+  let heading = "";
+  let body: string[] = [];
+
+  const flush = () => {
+    if (heading) {
+      const sentence = firstSentence(body.join(" "), 200);
+      summaries.push(sentence ? `${heading}: ${sentence}` : heading);
+    }
+    body = [];
+  };
+
+  for (const line of lines) {
+    const headingMatch = /^#{1,6}\s+(.*)$/.exec(line);
+    if (headingMatch) {
+      flush();
+      heading = headingMatch[1].trim();
+      continue;
+    }
+    body.push(line);
+  }
+  flush();
+
+  return summaries.join("\n");
+}
+
+export function buildSuggestionContextMarkdown(rooms: RoomMarkdown) {
+  const activeRoomBySlug = new Map(getActiveRooms().map((room) => [room.slug, room]));
+
+  return [
+    "# Plot Goblin Suggestion Context",
+    "One-sentence-per-field summary so the goblin can spot where the script is light.",
+    ...SUGGESTION_CONTEXT_ROOM_SLUGS.flatMap((slug) => {
+      const markdown = rooms[slug]?.trim();
+      const room = activeRoomBySlug.get(slug);
+      if (!markdown || !room) return [];
+
+      return [`## ${room.markdownFile}`, summarizeRoomMarkdown(markdown)];
+    }),
+  ].join("\n\n");
+}
+
 function stripRoomExportHeading(slug: string, block: string) {
   const room = [...getActiveRooms(), ...getComingSoonRooms()].find((candidate) => candidate.slug === slug);
   const heading = `## ${room?.markdownFile ?? `${slug}.md`}`;

@@ -1,10 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { type KeyboardEvent as ReactKeyboardEvent, type RefObject, useMemo, useRef, useState } from "react";
+import {
+  forwardRef,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type RefObject,
+  useId,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import styles from "@/app/workspace.module.css";
 import { parseCowriterChoices } from "@/lib/cowriterChoices";
-import { buildDraftContextMarkdown, buildExportMarkdown, buildScriptBase, NEEDS_ANSWER, type ScriptBase } from "@/lib/guidedSetup";
+import { deleteSavedDraft, loadSavedDrafts, saveNewDraft, updateSavedDraft, type SavedDraft } from "@/lib/draftStorage";
+import {
+  buildDraftContextMarkdown,
+  buildExportMarkdown,
+  buildScriptBase,
+  buildSuggestionContextMarkdown,
+  NEEDS_ANSWER,
+  type ScriptBase,
+} from "@/lib/guidedSetup";
+import {
+  buildScreenplayExportFile,
+  screenplayExportFormats,
+  type ScreenplayExportFile,
+  type ScreenplayExportFormatId,
+} from "@/lib/screenplayExport";
 import {
   CREATE_SCRIPT_BLOCKED_MESSAGES,
   getScriptReadiness,
@@ -28,11 +51,11 @@ import {
   parseSavedSceneCards,
   parseSceneDraftPlaceholders,
   parseSceneDraftValues,
-  playGoblinSquashSound,
+  parseSuggestedPlacement,
+  numberedSceneList,
   renameBeatSection,
   reorderSceneCards,
   sceneCardTemplate,
-  sceneCardsFromBeats,
   sceneDraftValuesFromChoices,
   sceneSummary,
   selectedSceneAfterMove,
@@ -478,62 +501,132 @@ type SceneBoardProps = {
 
 type SceneFieldElement = HTMLInputElement | HTMLTextAreaElement;
 
+export type SceneBoardHandle = {
+  buildFromBeat: (heading: string) => Promise<void>;
+  suggestScene: () => Promise<void>;
+};
+
 type ScenePopulationGuidanceProps = {
   beatsMarkdown: string;
   scenesMarkdown: string;
-  onScenesMarkdownChange: (markdown: string) => void;
+  sceneBoardRef: RefObject<SceneBoardHandle | null>;
 };
 
 export function ScenePopulationGuidance({
   beatsMarkdown,
   scenesMarkdown,
-  onScenesMarkdownChange,
+  sceneBoardRef,
 }: ScenePopulationGuidanceProps) {
-  const beatSceneCards = useMemo(() => sceneCardsFromBeats(beatsMarkdown), [beatsMarkdown]);
-  const [populateStatus, setPopulateStatus] = useState("");
-  const canPopulate = beatSceneCards.length > 0;
-
-  function populateScenesFromBeats() {
-    if (!canPopulate) return;
-
-    playGoblinSquashSound();
-    onScenesMarkdownChange(formatScenesMarkdown(scenesMarkdown, beatSceneCards));
-    setPopulateStatus(
-      beatSceneCards.length === 1
-        ? "1 scene placed in the timeline."
-        : `${beatSceneCards.length} scenes placed in the timeline.`,
+  const answeredBeats = useMemo(() => answeredBeatSections(beatsMarkdown), [beatsMarkdown]);
+  const availableBeats = useMemo(() => {
+    const placed = new Set(
+      parseSavedSceneCards(scenesMarkdown).map((card) => sceneSummary(card).title.trim().toLowerCase()),
     );
+    return answeredBeats.filter((beat) => !placed.has(beat.heading.trim().toLowerCase()));
+  }, [answeredBeats, scenesMarkdown]);
+
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [beatLoading, setBeatLoading] = useState(false);
+  const [suggestLoading, setSuggestLoading] = useState(false);
+  const [error, setError] = useState("");
+  const busy = beatLoading || suggestLoading;
+
+  async function populateFromBeat(heading: string) {
+    if (!heading) return;
+    setError("");
+    setPickerOpen(false);
+    setBeatLoading(true);
+    try {
+      await sceneBoardRef.current?.buildFromBeat(heading);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The goblin could not build that beat.");
+    } finally {
+      setBeatLoading(false);
+    }
+  }
+
+  async function askForSuggestion() {
+    setError("");
+    setSuggestLoading(true);
+    try {
+      await sceneBoardRef.current?.suggestScene();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The goblin could not suggest a scene.");
+    } finally {
+      setSuggestLoading(false);
+    }
   }
 
   return (
     <div className={styles.scenePopulatePanel}>
-      <div aria-label="Large scene goblin mascot" className={styles.scenePopulateGoblin} role="img">
-        <span className={styles.scenePopulateGoblinGlasses} data-mascot-part="glasses" />
-        <span className={styles.scenePopulateGoblinMouth} />
-        <span className={styles.scenePopulateGoblinFang} data-mascot-part="fang" />
-        <span className={styles.scenePopulateGoblinQuill} />
-      </div>
+      {answeredBeats.length === 0 ? (
+        <p className={styles.scenePopulateHelp}>
+          Populate the beat sheet first — the goblin has no answered beats to work from.
+        </p>
+      ) : availableBeats.length === 0 ? (
+        <p className={styles.scenePopulateHelp}>All answered beats are already in the timeline.</p>
+      ) : (
+        <>
+          <button
+            className={`${styles.primaryButton} ${styles.scenePopulateButton} ${styles.goblinSuggestButton} ${
+              beatLoading ? styles.goblinSuggestButtonSquashed : ""
+            }`}
+            disabled={busy}
+            onClick={() => setPickerOpen((open) => !open)}
+            type="button"
+          >
+            {beatLoading ? "Building" : "Populate from beat sheet"}
+          </button>
+          {pickerOpen ? (
+            <label className={styles.parameterField}>
+              <span>Pick a beat to populate</span>
+              <select
+                aria-label="Beat to populate from the beat sheet"
+                defaultValue=""
+                onChange={(event) => populateFromBeat(event.target.value)}
+              >
+                <option value="">Pick a beat…</option>
+                {availableBeats.map((beat) => (
+                  <option key={beat.heading} value={beat.heading}>
+                    {beat.heading}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          <p className={styles.scenePopulateHelp}>
+            The goblin builds one scene from only that beat, then drops it in the editor to review and save.
+          </p>
+        </>
+      )}
+
       <button
-        className={`${styles.primaryButton} ${styles.scenePopulateButton} ${styles.goblinSuggestButton}`}
-        disabled={!canPopulate}
-        onClick={populateScenesFromBeats}
+        className={`${styles.primaryButton} ${styles.scenePopulateButton} ${styles.goblinSuggestButton} ${
+          suggestLoading ? styles.goblinSuggestButtonSquashed : ""
+        }`}
+        disabled={busy}
+        onClick={askForSuggestion}
         type="button"
       >
-        Ask the goblin to populate scenes
+        {suggestLoading ? "Thinking" : "Goblin suggestion"}
       </button>
       <p className={styles.scenePopulateHelp}>
-        Auto-populates scene cards from answered beats only, then places them in the scene timeline in that order.
+        The goblin reads the whole story, finds where it is light, and suggests a new scene to drop in.
       </p>
-      {populateStatus ? (
-        <p className={styles.scenePopulateStatus} role="status">
-          {populateStatus}
+
+      {error ? (
+        <p className={styles.fieldSuggestionError} role="alert">
+          {error}
         </p>
       ) : null}
     </div>
   );
 }
 
-export function SceneBoard({ firstSceneRef, markdown, onMarkdownChange, project }: SceneBoardProps) {
+export const SceneBoard = forwardRef<SceneBoardHandle, SceneBoardProps>(function SceneBoard(
+  { firstSceneRef, markdown, onMarkdownChange, project },
+  ref,
+) {
   const sceneCards = useMemo(() => parseSavedSceneCards(markdown), [markdown]);
   const template = useMemo(() => sceneCardTemplate(markdown), [markdown]);
   const sceneFieldRefs = useRef<Array<SceneFieldElement | null>>([]);
@@ -569,13 +662,19 @@ export function SceneBoard({ firstSceneRef, markdown, onMarkdownChange, project 
   const sceneFill = sceneFillStates[0];
   const preFillSnapshot = useRef<{ draft: string; changed: boolean } | null>(null);
   const [goblinFilled, setGoblinFilled] = useState(false);
+  const [suggestionActive, setSuggestionActive] = useState(false);
+  const [suggestionPlacement, setSuggestionPlacement] = useState(0);
 
-  async function buildSceneFromBeat() {
-    const beat = beatOptions.find((option) => option.heading === activeBeatHeading);
+  async function buildSceneFromBeat(headingOverride?: string, options?: { fresh?: boolean }) {
+    const heading = headingOverride ?? activeBeatHeading;
+    const beat = beatOptions.find((option) => option.heading === heading);
     if (!beat) return;
 
+    const baseValues = options?.fresh ? parseSceneDraftValues(template) : sceneValues;
     if (!goblinFilled) {
-      preFillSnapshot.current = { draft: sceneDraft, changed: draftChanged };
+      preFillSnapshot.current = options?.fresh
+        ? { draft: template, changed: false }
+        : { draft: sceneDraft, changed: draftChanged };
     }
 
     const mascotCycle = beginSceneFill(0);
@@ -588,8 +687,6 @@ export function SceneBoard({ firstSceneRef, markdown, onMarkdownChange, project 
           mode: "scene",
           beat: beat.heading,
           beatMarkdown: beat.body,
-          markdown: buildExportMarkdown({ ...(project?.rooms ?? {}), scenes: markdown }),
-          answers: project?.answers,
         }),
       });
       const data = (await response.json()) as { output?: string; error?: string };
@@ -605,7 +702,7 @@ export function SceneBoard({ firstSceneRef, markdown, onMarkdownChange, project 
         return;
       }
 
-      setSceneDraft(formatSceneDraftValues({ ...sceneValues, ...filledValues }));
+      setSceneDraft(formatSceneDraftValues({ ...baseValues, ...filledValues }));
       setDraftChanged(true);
       setGoblinFilled(true);
       finishSceneFill(0, mascotCycle, { error: "", text: "" });
@@ -615,6 +712,78 @@ export function SceneBoard({ firstSceneRef, markdown, onMarkdownChange, project 
         text: "",
       });
     }
+  }
+
+  async function buildFromBeat(heading: string) {
+    setSuggestionActive(false);
+    setSelectedSceneIndex(null);
+    setSelectedBeatHeading(heading);
+    setGoblinFilled(false);
+    await buildSceneFromBeat(heading, { fresh: true });
+  }
+
+  async function suggestScene() {
+    setSelectedSceneIndex(null);
+    setSelectedBeatHeading(null);
+    const mascotCycle = beginSceneFill(0);
+
+    try {
+      const response = await fetch("/api/hermes-cowriter", {
+        method: "POST",
+        headers: cowriterRequestHeaders(),
+        body: JSON.stringify({
+          mode: "scene-suggest",
+          markdown: buildSuggestionContextMarkdown(project?.rooms ?? {}),
+          sceneList: numberedSceneList(sceneCards),
+        }),
+      });
+      const data = (await response.json()) as { output?: string; error?: string };
+
+      if (!response.ok) {
+        failSceneFill(0, mascotCycle, { error: data.error ?? "The scene suggestion failed.", text: "" });
+        return;
+      }
+
+      const output = data.output ?? "";
+      const filledValues = sceneDraftValuesFromChoices(parseCowriterChoices(output));
+      if (Object.keys(filledValues).length === 0) {
+        failSceneFill(0, mascotCycle, { error: "The goblin came back empty-handed. Try again.", text: "" });
+        return;
+      }
+
+      setSceneDraft(formatSceneDraftValues({ ...parseSceneDraftValues(template), ...filledValues }));
+      setDraftChanged(true);
+      setSuggestionPlacement(parseSuggestedPlacement(output, sceneCards.length));
+      setSuggestionActive(true);
+      finishSceneFill(0, mascotCycle, { error: "", text: "" });
+    } catch (caught) {
+      failSceneFill(0, mascotCycle, {
+        error: caught instanceof Error ? caught.message : "The scene suggestion failed.",
+        text: "",
+      });
+    }
+  }
+
+  useImperativeHandle(ref, () => ({ buildFromBeat, suggestScene }));
+
+  function saveSuggestedScene() {
+    const cleaned = trimSceneMarkdown(displayedSceneDraft);
+    if (!cleaned) return;
+
+    const index = Math.max(0, Math.min(suggestionPlacement, sceneCards.length));
+    const nextSceneCards = [...sceneCards];
+    nextSceneCards.splice(index, 0, cleaned);
+
+    onMarkdownChange(formatScenesMarkdown(markdown, nextSceneCards));
+    setSelectedSceneIndex(index);
+    setSceneDraft(cleaned);
+    setDraftChanged(false);
+    resetGoblinFill();
+    focusSceneDraft();
+  }
+
+  function discardSuggestion() {
+    startNewScene();
   }
 
   function discardSceneFill() {
@@ -636,6 +805,7 @@ export function SceneBoard({ firstSceneRef, markdown, onMarkdownChange, project 
   function resetGoblinFill() {
     preFillSnapshot.current = null;
     setGoblinFilled(false);
+    setSuggestionActive(false);
     clearSceneFill(0);
   }
 
@@ -691,6 +861,23 @@ export function SceneBoard({ firstSceneRef, markdown, onMarkdownChange, project 
     setSelectedSceneIndex((current) => (current === null ? null : selectedSceneAfterMove(current, fromIndex, toIndex)));
   }
 
+  function selectedSceneAfterDelete(deletedIndex: number, nextSceneCount: number) {
+    if (selectedSceneIndex === null) return null;
+    if (selectedSceneIndex === deletedIndex) return nextSceneCount === 0 ? null : Math.min(deletedIndex, nextSceneCount - 1);
+    return selectedSceneIndex > deletedIndex ? selectedSceneIndex - 1 : selectedSceneIndex;
+  }
+
+  function deleteScene(index: number) {
+    const nextSceneCards = sceneCards.filter((_, sceneIndex) => sceneIndex !== index);
+    const nextSelectedIndex = selectedSceneAfterDelete(index, nextSceneCards.length);
+
+    onMarkdownChange(formatScenesMarkdown(markdown, nextSceneCards));
+    setSelectedSceneIndex(nextSelectedIndex);
+    setSceneDraft(nextSelectedIndex === null ? template : (nextSceneCards[nextSelectedIndex] ?? template));
+    setDraftChanged(false);
+    resetGoblinFill();
+  }
+
   function endSceneDrag() {
     setDraggedSceneIndex(null);
     setIsTrashTargetActive(false);
@@ -699,19 +886,7 @@ export function SceneBoard({ firstSceneRef, markdown, onMarkdownChange, project 
   function deleteDraggedScene() {
     if (draggedSceneIndex === null) return;
 
-    const nextSceneCards = sceneCards.filter((_, index) => index !== draggedSceneIndex);
-    onMarkdownChange(formatScenesMarkdown(markdown, nextSceneCards));
-    setSelectedSceneIndex((current) => {
-      if (current === null) return null;
-      if (current === draggedSceneIndex) return null;
-      return current > draggedSceneIndex ? current - 1 : current;
-    });
-
-    if (selectedSceneIndex === draggedSceneIndex) {
-      setSceneDraft(template);
-      setDraftChanged(false);
-    }
-
+    deleteScene(draggedSceneIndex);
     endSceneDrag();
   }
 
@@ -880,7 +1055,7 @@ export function SceneBoard({ firstSceneRef, markdown, onMarkdownChange, project 
                         sceneFill?.isLoading ? styles.goblinSuggestButtonSquashed : ""
                       }`}
                       disabled={sceneFill?.isLoading}
-                      onClick={buildSceneFromBeat}
+                      onClick={() => buildSceneFromBeat()}
                       type="button"
                     >
                       {sceneFill?.isLoading ? "Thinking" : "Another attempt"}
@@ -901,7 +1076,7 @@ export function SceneBoard({ firstSceneRef, markdown, onMarkdownChange, project 
                       sceneFill?.isLoading ? styles.goblinSuggestButtonSquashed : ""
                     }`}
                     disabled={!activeBeatHeading || sceneFill?.isLoading}
-                    onClick={buildSceneFromBeat}
+                    onClick={() => buildSceneFromBeat()}
                     type="button"
                   >
                     {sceneFill?.isLoading ? "Building" : "Ask the goblin to build this scene"}
@@ -1019,17 +1194,62 @@ export function SceneBoard({ firstSceneRef, markdown, onMarkdownChange, project 
             </label>
           </section>
           <div className={styles.sceneDraftFooter}>
-            {canSaveScene ? (
-              <button className={styles.primaryButton} onClick={saveScene} ref={saveSceneButtonRef} type="button">
-                Save scene
-              </button>
-            ) : null}
+            {suggestionActive ? (
+              <>
+                <button
+                  aria-label="Delete the suggested scene"
+                  className={`${styles.dangerButton} ${styles.sceneDeleteButton}`}
+                  onClick={discardSuggestion}
+                  type="button"
+                >
+                  Delete
+                </button>
+                <button
+                  aria-label="Ask the goblin to suggest another scene"
+                  className={`${styles.fieldUseSuggestionButton} ${styles.goblinSuggestButton} ${
+                    sceneFill?.isLoading ? styles.goblinSuggestButtonSquashed : ""
+                  }`}
+                  disabled={sceneFill?.isLoading}
+                  onClick={() => suggestScene()}
+                  type="button"
+                >
+                  {sceneFill?.isLoading ? "Thinking" : "Suggest another"}
+                </button>
+                <button
+                  aria-label="Save the suggested scene"
+                  className={styles.primaryButton}
+                  onClick={saveSuggestedScene}
+                  ref={saveSceneButtonRef}
+                  type="button"
+                >
+                  Save scene
+                </button>
+              </>
+            ) : (
+              <>
+                {selectedSceneIndex !== null ? (
+                  <button
+                    aria-label="Delete selected scene"
+                    className={`${styles.dangerButton} ${styles.sceneDeleteButton}`}
+                    onClick={() => deleteScene(selectedSceneIndex)}
+                    type="button"
+                  >
+                    Delete scene
+                  </button>
+                ) : null}
+                {canSaveScene ? (
+                  <button className={styles.primaryButton} onClick={saveScene} ref={saveSceneButtonRef} type="button">
+                    Save scene
+                  </button>
+                ) : null}
+              </>
+            )}
           </div>
         </div>
       </div>
     </section>
   );
-}
+});
 
 const LENGTH_FORMATS = ["Short film", "Feature film", "Really long feature"] as const;
 type LengthFormat = (typeof LENGTH_FORMATS)[number];
@@ -1170,6 +1390,30 @@ type CreateScriptGateState =
   | { message: string; status: "error" }
   | { status: "drafted" };
 
+function downloadFile(file: ScreenplayExportFile) {
+  const contents =
+    typeof file.contents === "string"
+      ? file.contents
+      : (Uint8Array.from(file.contents).buffer as ArrayBuffer);
+  const blob = new Blob([contents], { type: file.mimeType });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = file.filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+function generatedDraftBody(markdown: string) {
+  const marker = "## Generated screenplay draft";
+  const markerIndex = markdown.indexOf(marker);
+  if (markerIndex === -1) return "";
+
+  return markdown.slice(markerIndex + marker.length).trim();
+}
+
 function randomBlockedMessage(roomTitle: string) {
   const template =
     CREATE_SCRIPT_BLOCKED_MESSAGES[Math.floor(Math.random() * CREATE_SCRIPT_BLOCKED_MESSAGES.length)] ??
@@ -1178,10 +1422,133 @@ function randomBlockedMessage(roomTitle: string) {
   return template.replace("{room}", roomTitle);
 }
 
+export function DraftsRoom() {
+  const [drafts, setDrafts] = useState<SavedDraft[]>(() => loadSavedDrafts());
+  const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null);
+  const selectedDraft = drafts.find((draft) => draft.id === selectedDraftId) ?? null;
+  const [editingTitle, setEditingTitle] = useState("");
+  const [editingBody, setEditingBody] = useState("");
+  const [status, setStatus] = useState("");
+
+  function openDraft(draft: SavedDraft) {
+    setSelectedDraftId(draft.id);
+    setEditingTitle(draft.title);
+    setEditingBody(draft.body);
+    setStatus("");
+  }
+
+  function saveDraftEdits() {
+    if (!selectedDraft) return;
+
+    const updatedDrafts = updateSavedDraft(selectedDraft.id, {
+      body: editingBody,
+      title: editingTitle,
+    });
+    setDrafts(updatedDrafts);
+    setStatus("Draft saved.");
+  }
+
+  function deleteDraft(id: string) {
+    if (!window.confirm("Delete this saved draft? This cannot be undone.")) return;
+
+    const updatedDrafts = deleteSavedDraft(id);
+    setDrafts(updatedDrafts);
+    if (selectedDraftId === id) {
+      setSelectedDraftId(null);
+      setEditingBody("");
+      setEditingTitle("");
+    }
+    setStatus("Draft deleted.");
+  }
+
+  function closeDraft() {
+    setSelectedDraftId(null);
+    setEditingBody("");
+    setEditingTitle("");
+    setStatus("");
+  }
+
+  return (
+    <section aria-label="Saved screenplay drafts" className={styles.draftsRoomPanel}>
+      <div className={styles.parameterIntro}>
+        <p className={styles.stepMeta}>Saved drafts</p>
+        <h2>Drafts the writer decided not to abandon in a ditch.</h2>
+      </div>
+
+      {selectedDraft ? (
+        <div className={styles.draftEditorPanel}>
+          <label className={styles.parameterField}>
+            <span>Draft title</span>
+            <input
+              aria-label="Draft title"
+              onChange={(event) => setEditingTitle(event.target.value)}
+              value={editingTitle}
+            />
+          </label>
+          <label className={styles.parameterField}>
+            <span>Draft body</span>
+            <textarea
+              aria-label="Draft body"
+              className={styles.editorTextarea}
+              onChange={(event) => setEditingBody(event.target.value)}
+              value={editingBody}
+            />
+          </label>
+          <div className={styles.scriptDraftActions}>
+            <button className={styles.primaryButton} onClick={saveDraftEdits} type="button">
+              Save draft edits
+            </button>
+            <button className={styles.secondaryButton} onClick={closeDraft} type="button">
+              Back to drafts
+            </button>
+            <button className={styles.dangerButton} onClick={() => deleteDraft(selectedDraft.id)} type="button">
+              Delete draft
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className={styles.draftListPanel}>
+          {drafts.length > 0 ? (
+            drafts.map((draft) => (
+              <article className={styles.draftListItem} key={draft.id}>
+                <button
+                  aria-label={`Edit ${draft.title}`}
+                  className={styles.draftTitleButton}
+                  onClick={() => openDraft(draft)}
+                  type="button"
+                >
+                  <span>Edit {draft.title}</span>
+                  <small>Saved {new Date(draft.updatedAt).toLocaleString()}</small>
+                </button>
+                <button className={styles.draftDeleteButton} onClick={() => deleteDraft(draft.id)} type="button">
+                  Delete {draft.title}
+                </button>
+              </article>
+            ))
+          ) : (
+            <p className={styles.nudge}>No saved drafts yet. Save one from Create the Script when a draft earns its keep.</p>
+          )}
+        </div>
+      )}
+
+      {status ? (
+        <p aria-live="polite" className={styles.exportHint}>
+          {status}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
 export function CreateScriptRoom({ markdown, onMarkdownChange, project }: CreateScriptRoomProps) {
   const readiness = useMemo(() => getScriptReadiness(project.rooms), [project.rooms]);
   const [gateState, setGateState] = useState<CreateScriptGateState>({ status: "idle" });
   const [writingStyle, setWritingStyle] = useState(defaultWritingStyleId);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [saveStatus, setSaveStatus] = useState("");
+  const exportMenuId = useId();
+  const draftBody = generatedDraftBody(markdown);
+  const hasDraft = draftBody.length > 0;
 
   async function requestDraft() {
     if (!readiness.ready) {
@@ -1195,6 +1562,13 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
         roomTitle: missing.room.title,
         status: "blocked",
       });
+      return;
+    }
+
+    if (
+      hasDraft &&
+      !window.confirm("Replace the generated draft in this room? Save it to Drafts first if you want to keep it.")
+    ) {
       return;
     }
 
@@ -1222,6 +1596,8 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
 
       const output = data.output?.trim() || "The goblin came back empty. Rude.";
       onMarkdownChange(`# Create the Script Room\n\n## Generated screenplay draft\n${output}\n`);
+      setExportMenuOpen(false);
+      setSaveStatus("");
       setGateState({ status: "drafted" });
     } catch (caught) {
       setGateState({
@@ -1229,6 +1605,33 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
         status: "error",
       });
     }
+  }
+
+  function deleteDraftOutput() {
+    if (!window.confirm("Delete the generated draft from this room? Saved drafts will stay in Drafts.")) return;
+
+    onMarkdownChange("# Create the Script Room\n\n");
+    setExportMenuOpen(false);
+    setSaveStatus("");
+    setGateState({ status: "idle" });
+  }
+
+  function saveDraftOutput() {
+    const savedDraft = saveNewDraft(draftBody);
+    setSaveStatus(savedDraft ? "Saved to Drafts room." : "Nothing to save yet.");
+  }
+
+  function exportDraft(format: ScreenplayExportFormatId) {
+    downloadFile(buildScreenplayExportFile({ ...project.rooms, "create-script": markdown }, format));
+    setExportMenuOpen(false);
+  }
+
+  function exportAllDraftFormats() {
+    const rooms = { ...project.rooms, "create-script": markdown };
+    for (const format of screenplayExportFormats) {
+      downloadFile(buildScreenplayExportFile(rooms, format.id));
+    }
+    setExportMenuOpen(false);
   }
 
   return (
@@ -1292,7 +1695,7 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
         </div>
       ) : null}
 
-      {gateState.status === "drafted" ? (
+      {gateState.status === "drafted" || hasDraft ? (
         <div className={styles.scriptGateNotice} role="status">
           <p>The goblin wrote a draft from the filled rooms. Dangerous. Promising. Finally.</p>
           <textarea
@@ -1301,6 +1704,63 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
             onChange={(event) => onMarkdownChange(event.target.value)}
             value={markdown}
           />
+          <div className={styles.scriptDraftActions}>
+            <button className={styles.dangerButton} onClick={deleteDraftOutput} type="button">
+              Delete draft
+            </button>
+            <span className={styles.scriptSaveAction}>
+              <button className={styles.primaryButton} onClick={saveDraftOutput} type="button">
+                Save draft
+              </button>
+              <small>Saves to Drafts room.</small>
+            </span>
+            <button
+              className={`${styles.secondaryButton} ${styles.goblinDraftButton}`}
+              disabled={gateState.status === "drafting"}
+              onClick={requestDraft}
+              type="button"
+            >
+              Goblin, make me another.
+            </button>
+            <div className={styles.scriptExportMenu}>
+              <button
+                aria-controls={exportMenuId}
+                aria-expanded={exportMenuOpen}
+                aria-haspopup="menu"
+                className={styles.secondaryButton}
+                onClick={() => setExportMenuOpen((current) => !current)}
+                type="button"
+              >
+                Export draft
+              </button>
+              {exportMenuOpen ? (
+                <div className={styles.scriptExportChoices} id={exportMenuId}>
+                  <button
+                    className={`${styles.settingsAction} ${styles.settingsAllAction}`}
+                    onClick={exportAllDraftFormats}
+                    type="button"
+                  >
+                    Export all formats
+                  </button>
+                  {screenplayExportFormats.map((format) => (
+                    <button
+                      className={styles.settingsAction}
+                      key={format.id}
+                      onClick={() => exportDraft(format.id)}
+                      type="button"
+                    >
+                      Export {format.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </div>
+          {saveStatus ? (
+            <small aria-live="polite" className={styles.scriptDraftStatus}>
+              {saveStatus}
+            </small>
+          ) : null}
         </div>
       ) : null}
     </section>

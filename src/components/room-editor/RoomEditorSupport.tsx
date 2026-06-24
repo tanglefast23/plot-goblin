@@ -551,6 +551,30 @@ export function formatScenesMarkdown(markdown: string, sceneCards: string[]) {
   return `${pieces.join("\n\n")}\n`;
 }
 
+export function numberedSceneList(sceneCards: string[]) {
+  return sceneCards
+    .map((card, index) => {
+      const summary = sceneSummary(card);
+      return `${index + 1}. ${summary.title} — ${summary.location}`;
+    })
+    .join("\n");
+}
+
+export function parseSuggestedPlacement(output: string, sceneCount: number) {
+  const clamp = (value: number) => Math.max(0, Math.min(sceneCount, value));
+  const line = /placement[^\n]*/i.exec(output)?.[0] ?? "";
+
+  if (/\b(start|beginning|top|opening|very first)\b/i.test(line)) return 0;
+
+  const before = /before\s+scene\s*#?\s*(\d+)/i.exec(line);
+  if (before) return clamp(Number(before[1]) - 1);
+
+  const after = /(?:after\s+scene|scene)\s*#?\s*(\d+)/i.exec(line);
+  if (after) return clamp(Number(after[1]));
+
+  return sceneCount;
+}
+
 export function reorderSceneCards(sceneCards: string[], fromIndex: number, toIndex: number) {
   const reordered = [...sceneCards];
   const [moved] = reordered.splice(fromIndex, 1);
@@ -875,42 +899,11 @@ export function cleanBeatSceneText(body: string) {
     .trim();
 }
 
-export function beatSceneCard(section: BeatSection, index: number) {
-  const heading = section.heading.trim() || `Beat ${index + 1}`;
-  const beatText = cleanBeatSceneText(section.body);
-
-  return `### Scene: ${heading}
-
-**Location / time:** INT./EXT. PLACE - DAY/NIGHT
-
-**Characters:**
-${NEEDS_WRITING} Who is in this beat's scene, and who can apply the most pressure?
-
-**Scene want:**
-Make the scene want concrete from this beat: ${beatText}
-
-**Opposition:**
-${NEEDS_WRITING} What blocks the goal inside this beat?
-
-**Turn:**
-By the end, this beat has changed: ${beatText}
-
-**Button:**
-${NEEDS_WRITING} End on an image, line, or action that pushes into the next beat.
-
-**Purpose:**
-Beat: ${heading}`;
-}
-
 export function answeredBeatSections(beatsMarkdown: string): BeatSection[] {
   return parseRoomSections(beatsMarkdown).sections
     .filter((section) => section.heading.trim().toLowerCase() !== "custom beats")
     .filter((section) => !beatNeedsAnswer(section))
     .filter((section) => cleanBeatSceneText(section.body).length > 0);
-}
-
-export function sceneCardsFromBeats(beatsMarkdown: string) {
-  return answeredBeatSections(beatsMarkdown).map(beatSceneCard);
 }
 
 const SCENE_FIELD_ORDER: Array<keyof SceneDraftValues> = [
