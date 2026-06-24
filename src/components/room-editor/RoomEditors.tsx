@@ -48,6 +48,7 @@ import {
   cowriterRequestHeaders,
   escapeRegExp,
   formatSceneDraftValues,
+  formatRoomSections,
   formatScenesMarkdown,
   guidedFieldUsesPlaceholder,
   guidedFieldRows,
@@ -331,6 +332,9 @@ type BeatsCorkBoardProps = {
 export function BeatsCorkBoard({ firstNoteRef, markdown, onMarkdownChange, project }: BeatsCorkBoardProps) {
   const beatSections = useMemo(() => parseRoomSections(markdown).sections, [markdown]);
   const [focusedBeatIndex, setFocusedBeatIndex] = useState<number | null>(null);
+  const [beatReorderMode, setBeatReorderMode] = useState(false);
+  const [beatDeletePickerOpen, setBeatDeletePickerOpen] = useState(false);
+  const [reorderBeatIndex, setReorderBeatIndex] = useState<number | null>(null);
   const {
     beginSuggestion: beginBeatSuggestion,
     clearSuggestion: clearBeatSuggestion,
@@ -351,7 +355,7 @@ export function BeatsCorkBoard({ firstNoteRef, markdown, onMarkdownChange, proje
           mode: "beat",
           beat: section.heading,
           beatMarkdown: section.body,
-          markdown: buildExportMarkdown({ ...(project?.rooms ?? {}), beats: markdown }),
+          markdown: buildSuggestionContextMarkdown({ ...(project?.rooms ?? {}), beats: markdown }),
         }),
       });
       const data = (await response.json()) as { output?: string; error?: string };
@@ -380,6 +384,7 @@ export function BeatsCorkBoard({ firstNoteRef, markdown, onMarkdownChange, proje
 
   function addBeat() {
     onMarkdownChange(addCustomBeatSection(markdown));
+    setBeatDeletePickerOpen(false);
   }
 
   function renameBeat(index: number, heading: string) {
@@ -390,18 +395,94 @@ export function BeatsCorkBoard({ firstNoteRef, markdown, onMarkdownChange, proje
     onMarkdownChange(updateBeatSection(markdown, index, body));
   }
 
+  function moveBeat(index: number, destinationIndex: number) {
+    const parsed = parseRoomSections(markdown);
+    const movingSection = parsed.sections[index];
+    if (!movingSection || index === destinationIndex) return;
+
+    const sections = [...parsed.sections];
+    sections.splice(index, 1);
+    sections.splice(destinationIndex, 0, movingSection);
+    onMarkdownChange(formatRoomSections(parsed.intro, sections));
+    setReorderBeatIndex(null);
+    setBeatReorderMode(false);
+  }
+
+  function deleteBeat(index: number) {
+    const parsed = parseRoomSections(markdown);
+    if (!parsed.sections[index]) return;
+
+    const sections = parsed.sections.filter((_, sectionIndex) => sectionIndex !== index);
+    onMarkdownChange(formatRoomSections(parsed.intro, sections));
+    setBeatDeletePickerOpen(false);
+    setBeatReorderMode(false);
+    setReorderBeatIndex(null);
+  }
+
   function applyBeatSuggestion(index: number, suggestionText: string) {
     updateBeat(index, suggestionText);
     clearBeatSuggestion(index);
   }
 
   return (
-    <section aria-label="Beat cork board" className={styles.beatBoardPanel}>
+    <section
+      aria-label="Beat cork board"
+      className={`${styles.beatBoardPanel} ${beatReorderMode ? styles.beatBoardReordering : ""}`}
+    >
       <div className={styles.beatBoardToolbar}>
         <button aria-label="Add custom beat" className={styles.beatAddButton} onClick={addBeat} type="button">
           + Beat
         </button>
+        <button
+          aria-expanded={beatDeletePickerOpen}
+          aria-label="Delete a beat"
+          className={`${styles.beatDeleteButton} ${beatDeletePickerOpen ? styles.beatDeleteButtonActive : ""}`}
+          onClick={() => {
+            setBeatDeletePickerOpen((current) => !current);
+            setBeatReorderMode(false);
+            setReorderBeatIndex(null);
+          }}
+          type="button"
+        >
+          - Beat
+        </button>
+        <button
+          aria-label="Reorder beats"
+          aria-pressed={beatReorderMode}
+          className={`${styles.beatReorderModeButton} ${beatReorderMode ? styles.beatReorderModeButtonActive : ""}`}
+          onClick={() => {
+            setBeatDeletePickerOpen(false);
+            setReorderBeatIndex(null);
+            setBeatReorderMode((current) => !current);
+          }}
+          type="button"
+        >
+          Reorder
+        </button>
       </div>
+      {beatReorderMode ? (
+        <p className={styles.beatReorderInstructions} role="status">
+          Tap a glowing circle beside a beat, then choose its new number.
+        </p>
+      ) : null}
+      {beatDeletePickerOpen ? (
+        <div className={styles.beatDeletePanel}>
+          <p className={styles.beatDeleteTitle}>Choose a beat number to delete.</p>
+          <div aria-label="Beat numbers to delete" className={styles.beatDeleteGrid}>
+            {beatSections.map((section, index) => (
+              <button
+                aria-label={`Delete beat ${index + 1}: ${section.heading}`}
+                className={styles.beatDeleteOption}
+                key={`beat-delete-${section.heading}-${index}`}
+                onClick={() => deleteBeat(index)}
+                type="button"
+              >
+                {String(index + 1).padStart(2, "0")}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
       <ol className={styles.beatBoard}>
         {beatSections.map((section, index) => {
           const noteId = `beat-note-${index}`;
@@ -411,9 +492,51 @@ export function BeatsCorkBoard({ firstNoteRef, markdown, onMarkdownChange, proje
           const displayedBody = beatDisplayBody(section.body);
           const placeholder = needsAnswer ? displayedBody.trim() : "";
           const textareaValue = placeholder ? "" : displayedBody;
+          const isReorderOpen = reorderBeatIndex === index;
+          const reorderMenuId = `beat-reorder-menu-${index}`;
 
           return (
             <li className={styles.beatBoardItem} key={`beat-${index}`}>
+              <button
+                aria-controls={isReorderOpen ? reorderMenuId : undefined}
+                aria-expanded={isReorderOpen}
+                aria-label={`Move ${section.heading} to another beat position`}
+                className={styles.beatPositionButton}
+                disabled={!beatReorderMode && !isReorderOpen}
+                onClick={() => {
+                  if (isReorderOpen) {
+                    setReorderBeatIndex(null);
+                    return;
+                  }
+
+                  setReorderBeatIndex(index);
+                  setBeatReorderMode(false);
+                }}
+                title={beatReorderMode || isReorderOpen ? "Move beat" : "Press Reorder first"}
+                type="button"
+              >
+                <span aria-hidden="true" />
+              </button>
+              {isReorderOpen ? (
+                <div className={styles.beatReorderPopover} id={reorderMenuId}>
+                  <p className={styles.beatReorderTitle}>Move to</p>
+                  <div aria-label={`Positions for ${section.heading}`} className={styles.beatReorderGrid}>
+                    {beatSections.map((_, destinationIndex) =>
+                      destinationIndex === index ? null : (
+                        <button
+                          aria-label={`Move ${section.heading} to position ${destinationIndex + 1}`}
+                          className={styles.beatReorderOption}
+                          key={`beat-reorder-${destinationIndex}`}
+                          onClick={() => moveBeat(index, destinationIndex)}
+                          type="button"
+                        >
+                          {String(destinationIndex + 1).padStart(2, "0")}
+                        </button>
+                      ),
+                    )}
+                  </div>
+                </div>
+              ) : null}
               <article
                 className={`${styles.beatSticky} ${stickyToneClasses[index % stickyToneClasses.length]} ${
                   needsAnswer ? styles.beatStickyNeedsAnswer : ""

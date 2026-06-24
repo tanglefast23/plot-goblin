@@ -817,6 +817,128 @@ describe("RoomEditorClient", () => {
     });
   });
 
+  it("moves a beat sticky from the rail position picker", async () => {
+    routeState.slug = "beats";
+    const project = buildScriptBase({
+      rawIdea: "A one-armed pitcher tries to make the majors.",
+      genre: "Comedy",
+      audienceFeeling: "hopeful and tense",
+      protagonist: "Stubborn one-armed pitcher",
+      surfaceWant: "become a professional baseball player",
+      stakes: "he loses the only dream he has left",
+      falseBelief: "asking for help makes him weak",
+      opposition: "better players who have two arms",
+      endingDirection: "He changes and wins",
+      structurePreference: "Classic 3-act spine",
+    });
+    project.rooms.beats = [
+      "# Beats Room",
+      "",
+      "## Opening Image",
+      "One",
+      "",
+      "## Setup",
+      "Two",
+      "",
+      "## Inciting Incident",
+      "Three",
+      "",
+      "## Act One Break",
+      "Four",
+    ].join("\n");
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+
+    render(<RoomEditorClient />);
+
+    await screen.findByRole("region", { name: "Beat cork board" });
+    expect(screen.queryByText(/tap a glowing circle beside a beat/i)).toBeNull();
+    expect((screen.getByRole("button", { name: "Move Setup to another beat position" }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Reorder beats" }));
+
+    expect(screen.getByText(/tap a glowing circle beside a beat/i)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Move Setup to another beat position" }));
+
+    expect(screen.getByRole("button", { name: "Move Setup to position 1" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Move Setup to position 2" })).toBeNull();
+    expect(screen.queryByText(/tap a glowing circle beside a beat/i)).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Move Setup to position 4" }));
+
+    await waitFor(() => {
+      const storedProject = JSON.parse(window.localStorage.getItem(PROJECT_STORAGE_KEY) ?? "{}");
+      expect(storedProject.rooms.beats.indexOf("## Setup")).toBeGreaterThan(
+        storedProject.rooms.beats.indexOf("## Act One Break"),
+      );
+    });
+
+    const beatTitles = screen
+      .getAllByRole("textbox", { name: /Beat title for / })
+      .map((input) => (input as HTMLInputElement).value);
+    expect(beatTitles).toEqual(["Opening Image", "Inciting Incident", "Act One Break", "Setup"]);
+  });
+
+  it("deletes a beat sticky from the toolbar number picker", async () => {
+    routeState.slug = "beats";
+    const project = buildScriptBase({
+      rawIdea: "A one-armed pitcher tries to make the majors.",
+      genre: "Comedy",
+      audienceFeeling: "hopeful and tense",
+      protagonist: "Stubborn one-armed pitcher",
+      surfaceWant: "become a professional baseball player",
+      stakes: "he loses the only dream he has left",
+      falseBelief: "asking for help makes him weak",
+      opposition: "better players who have two arms",
+      endingDirection: "He changes and wins",
+      structurePreference: "Classic 3-act spine",
+    });
+    project.rooms.beats = [
+      "# Beats Room",
+      "",
+      "## Opening Image",
+      "One",
+      "",
+      "## Setup",
+      "Two",
+      "",
+      "## Inciting Incident",
+      "Three",
+      "",
+      "## Act One Break",
+      "Four",
+    ].join("\n");
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+
+    render(<RoomEditorClient />);
+
+    await screen.findByRole("region", { name: "Beat cork board" });
+    fireEvent.click(screen.getByRole("button", { name: "Delete a beat" }));
+
+    expect(screen.getByText(/choose a beat number to delete/i)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Delete beat 1: Opening Image" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Delete beat 2: Setup" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Delete beat 3: Inciting Incident" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Delete beat 4: Act One Break" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete beat 2: Setup" }));
+
+    await waitFor(() => {
+      const storedProject = JSON.parse(window.localStorage.getItem(PROJECT_STORAGE_KEY) ?? "{}");
+      expect(storedProject.rooms.beats).not.toContain("## Setup");
+      expect(storedProject.rooms.beats.indexOf("## Inciting Incident")).toBeGreaterThan(
+        storedProject.rooms.beats.indexOf("## Opening Image"),
+      );
+    });
+
+    const beatTitles = screen
+      .getAllByRole("textbox", { name: /Beat title for / })
+      .map((input) => (input as HTMLInputElement).value);
+    expect(beatTitles).toEqual(["Opening Image", "Inciting Incident", "Act One Break"]);
+    expect(screen.queryByText(/choose a beat number to delete/i)).toBeNull();
+  });
+
   it("gives long beat notes at least fifty percent more visible rows", async () => {
     routeState.slug = "beats";
     const project = buildScriptBase({
@@ -948,7 +1070,7 @@ describe("RoomEditorClient", () => {
     });
   });
 
-  it("asks Hermes for one beat using every room markdown file and applies the suggestion", async () => {
+  it("asks Hermes for one beat using compact room context and applies the suggestion", async () => {
     routeState.slug = "beats";
     const project = buildScriptBase({
       rawIdea: "A one-armed pitcher tries to make the majors.",
@@ -962,7 +1084,7 @@ describe("RoomEditorClient", () => {
       endingDirection: "He changes and wins",
       structurePreference: "Classic 3-act spine",
     });
-    project.rooms.characters += "\n## Mirror character\nMina pushes Rafa to ask for help.\n";
+    project.rooms.characters += `\n## Mirror character\nMina pushes Rafa to ask for help.\n\n## Long private notes\n${"Rafa repeats the same batting-cage worry. ".repeat(1200)}\n`;
     window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
     const fetchSpy = vi
       .fn()
@@ -1000,11 +1122,14 @@ describe("RoomEditorClient", () => {
     expect(requestBody.mode).toBe("beat");
     expect(requestBody.beat).toBe("Opening Image");
     expect(requestBody.beatMarkdown).toContain("Describe the first visual snapshot");
+    expect(requestBody.markdown.length).toBeLessThan(36_000);
+    expect(requestBody.markdown).toContain("# Plot Goblin Suggestion Context");
     expect(requestBody.markdown).toContain("## premise.md");
     expect(requestBody.markdown).toContain("## characters.md");
     expect(requestBody.markdown).toContain("## beats.md");
     expect(requestBody.markdown).toContain("## script-parameters.md");
     expect(requestBody.markdown).toContain("Mina pushes Rafa to ask for help.");
+    expect(requestBody.markdown).not.toContain("Rafa repeats the same batting-cage worry. Rafa repeats");
 
     fireEvent.click(screen.getByRole("button", { name: "Another suggestion for Opening Image" }));
     await screen.findByText(/Rafa fingers a repaired glove/i);

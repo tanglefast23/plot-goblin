@@ -1028,11 +1028,16 @@
 
 .beatBoardToolbar {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   justify-content: flex-end;
   margin-bottom: 18px;
 }
 
-.beatAddButton {
+.beatAddButton,
+.beatDeleteButton,
+.beatReorderModeButton {
   display: inline-flex;
   min-height: 34px;
   align-items: center;
@@ -1049,8 +1054,101 @@
   cursor: pointer;
 }
 
-.beatAddButton:hover {
+.beatDeleteButton {
+  border-color: rgb(var(--goblin-mist-rgb) / 0.64);
+  color: var(--goblin-mist);
+  background: rgb(var(--goblin-night-rgb) / 0.4);
+}
+
+.beatDeleteButtonActive {
+  border-color: rgb(var(--goblin-gold-rgb) / 0.86);
+  color: var(--goblin-night);
+  background: var(--goblin-gold);
+  box-shadow: 0 0 0 4px rgb(var(--goblin-gold-rgb) / 0.18);
+}
+
+.beatReorderModeButton {
+  border-color: rgb(var(--goblin-mist-rgb) / 0.64);
+  color: var(--goblin-mist);
+  background: rgb(var(--goblin-night-rgb) / 0.4);
+}
+
+.beatReorderModeButtonActive {
+  border-color: rgb(var(--goblin-gold-rgb) / 0.86);
+  color: var(--goblin-night);
+  background: var(--goblin-gold);
+  box-shadow: 0 0 0 4px rgb(var(--goblin-gold-rgb) / 0.18);
+}
+
+.beatAddButton:hover,
+.beatDeleteButton:hover,
+.beatReorderModeButton:hover {
   transform: translateY(-1px);
+}
+
+.beatDeletePanel {
+  width: min(100%, 360px);
+  margin: -8px 0 18px auto;
+  padding: 12px;
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.24);
+  border-radius: 8px;
+  color: var(--goblin-night);
+  background: rgb(var(--goblin-mist-rgb) / 0.94);
+  box-shadow:
+    0 12px 22px rgb(var(--goblin-night-rgb) / 0.18),
+    inset 0 1px 0 rgb(var(--goblin-mist-rgb) / 0.64);
+}
+
+.beatDeleteTitle {
+  margin: 0 0 9px;
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+.beatDeleteGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(38px, 1fr));
+  gap: 7px;
+}
+
+.beatDeleteOption {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.26);
+  border-radius: 999px;
+  color: var(--goblin-night);
+  background: var(--goblin-gold);
+  font-size: 0.66rem;
+  font-weight: 950;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
+.beatDeleteOption:hover,
+.beatDeleteOption:focus-visible {
+  outline: none;
+  background: var(--goblin-lichen);
+  box-shadow: 0 0 0 3px rgb(var(--goblin-gold-rgb) / 0.28);
+}
+
+.beatReorderInstructions {
+  width: fit-content;
+  max-width: 100%;
+  margin: -8px 0 18px auto;
+  padding: 9px 13px;
+  border: 1px solid rgb(var(--goblin-gold-rgb) / 0.76);
+  border-radius: 999px;
+  color: var(--goblin-night);
+  background: rgb(var(--goblin-mist-rgb) / 0.92);
+  box-shadow:
+    0 9px 18px rgb(var(--goblin-night-rgb) / 0.16),
+    0 0 0 4px rgb(var(--goblin-gold-rgb) / 0.14);
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1.25;
 }
 
 .beatBoardItem {
@@ -1061,18 +1159,134 @@
   align-items: center;
 }
 
-.beatBoardItem::before {
+.beatPositionButton {
   position: absolute;
-  z-index: 2;
-  top: calc(50% - 8px);
-  left: calc(50% - 8px);
-  width: 16px;
-  height: 16px;
+  z-index: 4;
+  top: calc(50% - 11px);
+  left: calc(50% - 11px);
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
   border: 2px solid rgb(var(--goblin-night-rgb) / 0.76);
   border-radius: 999px;
   background: var(--goblin-gold);
-  box-shadow: 0 0 0 5px rgb(var(--goblin-gold-rgb) / 0.18);
-  content: "";
+  box-shadow: 0 2px 0 rgb(var(--goblin-night-rgb) / 0.24);
+  cursor: default;
+}
+
+.beatPositionButton:disabled {
+  opacity: 1;
+}
+
+.beatPositionButton span {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgb(var(--goblin-night-rgb) / 0.58);
+}
+
+.beatBoardReordering .beatPositionButton {
+  box-shadow:
+    0 0 0 7px rgb(var(--goblin-gold-rgb) / 0.28),
+    0 0 28px rgb(var(--goblin-gold-rgb) / 0.72),
+    0 8px 14px rgb(var(--goblin-night-rgb) / 0.22);
+  cursor: pointer;
+  animation: beatPositionGrowOnce 780ms cubic-bezier(0.2, 0.78, 0.22, 1) 1;
+}
+
+.beatPositionButton:not(:disabled):hover,
+.beatPositionButton:not(:disabled):focus-visible,
+.beatPositionButton[aria-expanded="true"] {
+  animation: none;
+  outline: none;
+  transform: scale(1.14);
+  box-shadow:
+    0 0 0 7px rgb(var(--goblin-gold-rgb) / 0.28),
+    0 0 26px rgb(var(--goblin-gold-rgb) / 0.68),
+    0 8px 14px rgb(var(--goblin-night-rgb) / 0.24);
+}
+
+.beatPositionButton:focus-visible {
+  outline: 2px solid var(--goblin-mist);
+  outline-offset: 3px;
+}
+
+@keyframes beatPositionGrowOnce {
+  0% {
+    transform: scale(1);
+  }
+
+  46% {
+    transform: scale(1.72);
+  }
+
+  78% {
+    transform: scale(0.94);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.beatReorderPopover {
+  position: absolute;
+  z-index: 6;
+  top: calc(50% - 26px);
+  left: calc(50% + 18px);
+  width: min(214px, calc(50% - 28px));
+  padding: 10px;
+  border: 1px solid rgb(var(--goblin-gold-rgb) / 0.72);
+  border-radius: 8px;
+  background: rgb(var(--goblin-mist-rgb) / 0.96);
+  box-shadow:
+    0 14px 28px rgb(var(--goblin-night-rgb) / 0.24),
+    0 0 0 4px rgb(var(--goblin-gold-rgb) / 0.16);
+}
+
+.beatBoardItem:nth-child(even) .beatReorderPopover {
+  right: calc(50% + 18px);
+  left: auto;
+}
+
+.beatReorderTitle {
+  margin: 0 0 7px;
+  color: var(--goblin-night);
+  font-size: 0.58rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.beatReorderGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(34px, 1fr));
+  gap: 6px;
+}
+
+.beatReorderOption {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.22);
+  border-radius: 999px;
+  color: var(--goblin-night);
+  background: var(--goblin-gold);
+  font-size: 0.65rem;
+  font-weight: 950;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
+.beatReorderOption:hover,
+.beatReorderOption:focus-visible {
+  outline: none;
+  background: var(--goblin-lichen);
+  box-shadow: 0 0 0 3px rgb(var(--goblin-gold-rgb) / 0.28);
 }
 
 .beatBoardItem::after {
@@ -1249,7 +1463,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .beatNeedsTag {
+  .beatNeedsTag,
+  .beatPositionButton,
+  .beatBoardReordering .beatPositionButton {
     animation: none;
   }
 }
@@ -3130,9 +3346,9 @@
     min-height: auto;
   }
 
-  .beatBoardItem::before {
+  .beatPositionButton {
     top: 26px;
-    left: 4px;
+    left: 1px;
   }
 
   .beatBoardItem::after {
@@ -3151,6 +3367,14 @@
     top: 34px;
     bottom: -27px;
     left: 10px;
+  }
+
+  .beatReorderPopover,
+  .beatBoardItem:nth-child(even) .beatReorderPopover {
+    top: 1px;
+    right: auto;
+    left: 34px;
+    width: min(220px, calc(100% - 42px));
   }
 
   .beatBoardItem:nth-child(odd) .beatSticky,
