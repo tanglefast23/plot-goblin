@@ -43,3 +43,29 @@ export function parseBeatSheet(raw: string): UnifiedBeatSheet {
   if (current) beats.push(current);
   return beats;
 }
+
+export function mergeSetups(sheet: UnifiedBeatSheet, setups: PlantedSetup[]): UnifiedBeatSheet {
+  const next = sheet.map((beat) => ({ ...beat, setups: [...beat.setups] }));
+  for (const setup of setups) {
+    const beat = next.find((candidate) => candidate.index === setup.beatIndex);
+    if (beat && setup.note.trim()) beat.setups.push(setup.note.trim());
+  }
+  return next;
+}
+
+export function pageBudgetTotal(sheet: UnifiedBeatSheet): number {
+  return sheet.reduce((total, beat) => total + beat.pageBudget, 0);
+}
+
+export function renderBeatSheet(sheet: UnifiedBeatSheet): string {
+  return sheet
+    .map((beat) => {
+      const lines = [
+        `BEAT ${beat.index} | PAGES: ${beat.pageBudget} | TITLE: ${beat.title}`,
+        `INTENT: ${beat.intent}`,
+        ...beat.setups.map((note) => `PLANTED: ${note}`),
+      ];
+      return lines.join("\n");
+    })
+    .join("\n---\n");
+}

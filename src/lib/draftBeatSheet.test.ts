@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseBeatSheet } from "./draftBeatSheet";
+import { parseBeatSheet, mergeSetups, pageBudgetTotal, renderBeatSheet } from "./draftBeatSheet";
 
 describe("parseBeatSheet", () => {
   it("parses labeled beat blocks into typed beats", () => {
@@ -41,5 +41,41 @@ describe("parseBeatSheet", () => {
     const raw = "BEAT 7 | PAGES: 2 | TITLE: A\nINTENT: x\n---\nBEAT 9 | PAGES: 2 | TITLE: B\nINTENT: y";
     const sheet = parseBeatSheet(raw);
     expect(sheet.map((b) => b.index)).toEqual([1, 2]);
+  });
+});
+
+describe("mergeSetups", () => {
+  it("appends a planted note to the matching beat without mutating the input", () => {
+    const sheet = parseBeatSheet("BEAT 1 | PAGES: 3 | TITLE: A\nINTENT: x\n---\nBEAT 2 | PAGES: 3 | TITLE: B\nINTENT: y");
+    const next = mergeSetups(sheet, [{ beatIndex: 2, note: "cellar door left unlocked" }]);
+
+    expect(next[1].setups).toEqual(["cellar door left unlocked"]);
+    expect(sheet[1].setups).toEqual([]);
+  });
+
+  it("ignores setups whose beat index is out of range", () => {
+    const sheet = parseBeatSheet("BEAT 1 | PAGES: 3 | TITLE: A\nINTENT: x");
+    const next = mergeSetups(sheet, [{ beatIndex: 99, note: "nope" }]);
+    expect(next[0].setups).toEqual([]);
+  });
+});
+
+describe("pageBudgetTotal", () => {
+  it("sums every beat's page budget", () => {
+    const sheet = parseBeatSheet("BEAT 1 | PAGES: 3 | TITLE: A\nINTENT: x\n---\nBEAT 2 | PAGES: 5 | TITLE: B\nINTENT: y");
+    expect(pageBudgetTotal(sheet)).toBe(8);
+  });
+});
+
+describe("renderBeatSheet", () => {
+  it("renders beats back to text including planted setups", () => {
+    const sheet = mergeSetups(
+      parseBeatSheet("BEAT 1 | PAGES: 3 | TITLE: A\nINTENT: x"),
+      [{ beatIndex: 1, note: "gun on the mantel" }],
+    );
+    const text = renderBeatSheet(sheet);
+    expect(text).toContain("BEAT 1 | PAGES: 3 | TITLE: A");
+    expect(text).toContain("INTENT: x");
+    expect(text).toContain("PLANTED: gun on the mantel");
   });
 });
