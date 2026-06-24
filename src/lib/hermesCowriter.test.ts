@@ -147,6 +147,19 @@ describe("Hermes co-writer prompt", () => {
     expect(prompt).toContain("If two room details conflict, preserve the newest or most specific user-written choice");
   });
 
+  it("requires draft pages to keep the core screenplay spine under pressure", () => {
+    const prompt = buildCowriterPrompt({
+      mode: "draft",
+      markdown: "# Plot Goblin Draft Context\n\n## premise.md\n\nA cursed wedding videographer saves his sister's wedding.",
+    });
+
+    expect(prompt).toContain("Make the protagonist active");
+    expect(prompt).toContain("clear, high stakes");
+    expect(prompt).toContain("personal values");
+    expect(prompt).toContain("strong opposition");
+    expect(prompt).toContain("midpoint reversal");
+  });
+
   it("uses the goblin house writing style by default", () => {
     const prompt = buildCowriterPrompt({
       mode: "draft",
