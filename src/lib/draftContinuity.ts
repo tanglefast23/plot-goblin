@@ -16,10 +16,12 @@ export type ChunkContextParams = {
   runningSummary: string;
   previousTail: string;
   roomExport: string;
+  storyBrief?: string;
   maxChars: number;
 };
 
 function compose(params: ChunkContextParams, includeSummary: boolean, roomChars: number): string {
+  const compactStoryContext = params.storyBrief?.trim();
   const sections = [
     "## Unified beat sheet (the living blueprint — honor every PLANTED note)",
     params.beatSheetText,
@@ -33,8 +35,8 @@ function compose(params: ChunkContextParams, includeSummary: boolean, roomChars:
     "## Previous pages (tail — pick up seamlessly)",
     params.previousTail,
     "",
-    "## Room export (facts: premise, characters, theme, parameters)",
-    params.roomExport.slice(0, roomChars),
+    compactStoryContext ? "## Story brief (compressed room facts)" : "## Room export (facts: premise, characters, theme, parameters)",
+    compactStoryContext || params.roomExport.slice(0, roomChars),
   ];
   return sections.filter((line) => line !== "").join("\n").trim();
 }

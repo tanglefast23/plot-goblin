@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseBeatSheet, mergeSetups, pageBudgetTotal, renderBeatSheet } from "./draftBeatSheet";
+import { parseBeatSheet, mergeSetups, pageBudgetTotal, parseStoryBrief, renderBeatSheet } from "./draftBeatSheet";
 
 describe("parseBeatSheet", () => {
   it("parses labeled beat blocks into typed beats", () => {
@@ -85,5 +85,20 @@ describe("renderBeatSheet", () => {
     const sheet = parseBeatSheet("BEAT 1 | PAGES: 3 | TITLE: A\nINTENT: x\n---\nBEAT 2 | PAGES: 5 | TITLE: B\nINTENT: y");
     const roundTripped = parseBeatSheet(renderBeatSheet(sheet));
     expect(roundTripped).toEqual(sheet);
+  });
+});
+
+describe("parseStoryBrief", () => {
+  it("extracts the compact brief from a plan response", () => {
+    const raw = [
+      "STORY_BRIEF:",
+      "premise: Mara steals a moon rock.",
+      "characters: Mara wants proof.",
+      "",
+      "BEAT 1 | PAGES: 3 | TITLE: Theft",
+      "INTENT: Mara steals the rock.",
+    ].join("\n");
+
+    expect(parseStoryBrief(raw)).toBe("premise: Mara steals a moon rock.\ncharacters: Mara wants proof.");
   });
 });

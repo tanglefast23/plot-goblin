@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { FullScriptDirector } from "./FullScriptDirector";
 import type { DraftRun } from "@/lib/draftRunStorage";
+import { draftWaitingMessageDelayMs, draftWaitingMessages } from "./RoomEditorSupport";
 
 const run: DraftRun = {
   beatSheet: [
@@ -48,5 +49,36 @@ describe("FullScriptDirector", () => {
     );
     expect(screen.getByText(/Beat 3 stalled\./)).toBeTruthy();
     expect(screen.getByRole("button", { name: /retry/i })).toBeTruthy();
+  });
+
+  it("animates the full-script button while the movie plan is being prepared", () => {
+    vi.useFakeTimers();
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValueOnce(0.99);
+
+    render(
+      <FullScriptDirector
+        run={null}
+        statusLine="Planning the whole movie…"
+        error={null}
+        stitched={null}
+        onStart={vi.fn()}
+        onResume={vi.fn()}
+        onStop={vi.fn()}
+        onReset={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Goblin is writing..." }).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByLabelText("Animated writing ellipsis")).toBeTruthy();
+
+    act(() => {
+      vi.advanceTimersByTime(draftWaitingMessageDelayMs);
+    });
+
+    expect(screen.getByRole("button", { name: `${draftWaitingMessages.at(-1)}...` }).hasAttribute("disabled")).toBe(
+      true,
+    );
+    expect(randomSpy).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
   });
 });

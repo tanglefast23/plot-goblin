@@ -3,6 +3,7 @@ import {
   NEEDS_ANSWER,
   buildDraftContextMarkdown,
   buildExportMarkdown,
+  buildSampleContextMarkdown,
   buildScriptBase,
   buildSuggestionContextMarkdown,
   createLoglineSuggestions,
@@ -292,6 +293,63 @@ Mina hears the freezer answer.
     expect(compact).not.toContain("Old generated draft should stay out.");
     expect(compact).not.toContain("drafts.md");
     expect(compact).not.toContain("Old saved draft shelf should stay out.");
+  });
+
+  it("caps the complete draft context so blueprint requests stay under the API prompt limit", () => {
+    const base = buildScriptBase({ rawIdea: "A detective investigates a murder on the moon." });
+    base.rooms.premise = `# Premise Room\n\n${"Premise detail. ".repeat(2_000)}`;
+    base.rooms.characters = `# Characters Room\n\n${"Character detail. ".repeat(2_000)}`;
+    base.rooms.theme = `# Theme Room\n\n${"Theme detail. ".repeat(2_000)}`;
+    base.rooms.beats = `# Beats Room\n\n${"Beat detail. ".repeat(2_000)}`;
+    base.rooms.scenes = `# Scenes Room\n\n${"Scene detail. ".repeat(2_000)}`;
+    base.rooms["script-parameters"] = `# Script Parameters Room\n\n${"Parameter detail. ".repeat(2_000)}`;
+
+    const compact = buildDraftContextMarkdown(base.rooms);
+
+    expect(compact.length).toBeLessThanOrEqual(28_000);
+    expect(compact).toContain("[...capped for draft prompt]");
+  });
+
+  it("builds sample context from core rooms plus only early beats and scenes", () => {
+    const base = buildScriptBase({ rawIdea: "A detective investigates a murder on the moon." });
+    base.rooms.premise = "# Premise Room\n\nA moon detective chases the killer before sunrise.";
+    base.rooms.characters = "# Characters Room\n\nMara wants proof but refuses backup.";
+    base.rooms.theme = "# Theme Room\n\nIsolation is not strength.";
+    base.rooms["script-parameters"] = "# Script Parameters Room\n\nCurrent genre: Thriller.\nTarget page count: 100 pages.";
+    base.rooms.beats = [
+      "# Beats Room",
+      "## Opening Image\nMara crosses a quiet crater.",
+      "## Setup\nMara hides evidence from her partner.",
+      "## Inciting Incident\nThe corpse transmits one last clue.",
+      "## Act One Break\nMara steals a rover.",
+      "## Promise of the Premise\nThe chase crosses the mining domes.",
+      "## Midpoint\nMara learns the killer is inside command.",
+      "## Final Image\nMara watches Earth rise with the case solved.",
+    ].join("\n\n");
+    base.rooms.scenes = [
+      "# Scenes Room",
+      "## Saved scenes",
+      ...Array.from({ length: 10 }, (_, index) =>
+        [
+          `### Scene: Scene ${index + 1}`,
+          "**Location / time:**",
+          `Dome ${index + 1} - Night`,
+          "**Scene want:**",
+          `Mara wants clue ${index + 1}.`,
+        ].join("\n"),
+      ),
+    ].join("\n\n");
+
+    const compact = buildSampleContextMarkdown(base.rooms);
+
+    expect(compact).toContain("## premise.md");
+    expect(compact).toContain("## Opening Image");
+    expect(compact).toContain("## Midpoint");
+    expect(compact).not.toContain("## Final Image");
+    expect(compact).toContain("1. Scene 1");
+    expect(compact).toContain("8. Scene 8");
+    expect(compact).not.toContain("10. Scene 10");
+    expect(compact.length).toBeLessThanOrEqual(16_000);
   });
 
   it("imports the same room markdown that export writes", () => {

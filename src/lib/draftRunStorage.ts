@@ -10,6 +10,7 @@ export type DraftRun = {
   completedBeats: CompletedBeat[];
   runningSummary: string;
   nextBeatIndex: number;
+  storyBrief?: string;
   targetPages: number;
   status: DraftRunStatus;
 };

@@ -12,6 +12,8 @@ export type PlantedSetup = { beatIndex: number; note: string };
 
 const BEAT_HEADER = /^BEAT\s+\d+\s*\|\s*PAGES:\s*(\d+)\s*\|\s*TITLE:\s*(.+)$/i;
 const INTENT_LINE = /^INTENT:\s*(.+)$/i;
+const STORY_BRIEF_HEADER = /^STORY_BRIEF:\s*$/im;
+const FIRST_BEAT_HEADER = /^BEAT\s+\d+\s*\|/im;
 
 export function parseBeatSheet(raw: string): UnifiedBeatSheet {
   const lines = raw.replace(/\r\n|\r/g, "\n").split("\n");
@@ -43,6 +45,16 @@ export function parseBeatSheet(raw: string): UnifiedBeatSheet {
 
   if (current) beats.push(current);
   return beats;
+}
+
+export function parseStoryBrief(raw: string): string {
+  const storyBriefMatch = STORY_BRIEF_HEADER.exec(raw);
+  if (!storyBriefMatch) return "";
+
+  const afterHeader = raw.slice(storyBriefMatch.index + storyBriefMatch[0].length).trimStart();
+  const firstBeat = FIRST_BEAT_HEADER.exec(afterHeader);
+  const brief = firstBeat ? afterHeader.slice(0, firstBeat.index) : afterHeader;
+  return brief.trim();
 }
 
 export function mergeSetups(sheet: UnifiedBeatSheet, setups: PlantedSetup[]): UnifiedBeatSheet {

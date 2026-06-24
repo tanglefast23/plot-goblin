@@ -1931,7 +1931,7 @@ Rafa wants to hide the injury.
     expect(draftGoblin.querySelector('[data-mascot-part="glasses"]')).toBeTruthy();
     expect(draftGoblin.querySelector('[data-mascot-part="fang"]')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Quick sample" }));
+    fireEvent.click(screen.getByRole("button", { name: "Write a Quick Sample" }));
 
     const scriptParametersLinks = (await screen.findAllByRole("link", {
       name: /Script Parameters - take me there/i,
@@ -2080,7 +2080,7 @@ Lena sees a frame that should not exist.
     fireEvent.change(writingStyleSelect, { target: { value: "sorkin-legal" } });
     vi.useFakeTimers();
     act(() => {
-      fireEvent.click(screen.getByRole("button", { name: "Quick sample" }));
+      fireEvent.click(screen.getByRole("button", { name: "Write a Quick Sample" }));
     });
 
     expect(screen.getByRole("button", { name: "Goblin is writing..." })).toBeTruthy();
@@ -2111,7 +2111,7 @@ Lena sees a frame that should not exist.
     );
 
     const requestBody = JSON.parse((fetchSpy.mock.calls[0]?.[1] as RequestInit).body as string);
-    expect(requestBody.mode).toBe("draft");
+    expect(requestBody.mode).toBe("sample");
     expect(requestBody.room).toBe("Create the Script");
     expect(requestBody.writingStyle).toBe("sorkin-legal");
     expect(requestBody.markdown).toContain("## premise.md");
@@ -2148,20 +2148,19 @@ Lena sees a frame that should not exist.
     routeState.slug = "create-script";
     const project = completedDraftableProject();
     window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValueOnce({
+    const fetchSpy = vi.fn().mockResolvedValueOnce({
         ok: true,
         json: async () => ({ output: "TITLE: LOVE, CURSED\n\nINT. WEDDING VENUE - DAY\nMilo raises his camera." }),
-      }),
-    );
+      });
+    vi.stubGlobal("fetch", fetchSpy);
 
     render(<RoomEditorClient />);
 
     await screen.findByRole("region", { name: "Create the Script draft gate" });
-    fireEvent.click(screen.getByRole("button", { name: "Quick sample" }));
+    fireEvent.click(screen.getByRole("button", { name: "Write a Quick Sample" }));
 
     await screen.findByText(/The goblin wrote a draft/i);
+    expect(JSON.parse(fetchSpy.mock.calls[0][1].body).mode).toBe("sample");
 
     const savedDrafts = JSON.parse(window.localStorage.getItem(DRAFT_STORAGE_KEY) ?? "[]");
     expect(savedDrafts).toHaveLength(1);
@@ -2173,6 +2172,35 @@ Lena sees a frame that should not exist.
     );
     expect(screen.getByText("Draft automatically tucked into the Drafts room.")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Take me there" }).getAttribute("href")).toBe("/rooms/drafts");
+  });
+
+  it("shows the shared running goblin and lower wait-copy pill while the full script is planning", async () => {
+    routeState.slug = "create-script";
+    const project = completedDraftableProject();
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockReturnValueOnce(new Promise(() => undefined)),
+    );
+
+    render(<RoomEditorClient />);
+
+    await screen.findByRole("region", { name: "Create the Script draft gate" });
+    vi.useFakeTimers();
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "Write the full script" }));
+    });
+
+    expect(screen.getByRole("img", { name: "Mini goblin running while the draft is written" })).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "Goblin is writing..." })).toHaveLength(2);
+
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.99);
+    act(() => {
+      vi.advanceTimersByTime(draftWaitingMessageDelayMs);
+    });
+
+    expect(screen.getAllByRole("button", { name: "Emergency semicolon meeting in progress..." })).toHaveLength(2);
+    expect(randomSpy).toHaveBeenCalled();
   });
 
   it("keeps an existing generated draft when another-draft confirmation is canceled", async () => {
@@ -2232,7 +2260,7 @@ Lena sees a frame that should not exist.
     render(<RoomEditorClient />);
 
     await screen.findByRole("region", { name: "Create the Script draft gate" });
-    fireEvent.click(screen.getByRole("button", { name: "Quick sample" }));
+    fireEvent.click(screen.getByRole("button", { name: "Write a Quick Sample" }));
     await screen.findByRole("button", { name: "Export draft" });
 
     fireEvent.click(screen.getByRole("button", { name: "Export draft" }));

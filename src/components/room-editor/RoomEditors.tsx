@@ -20,6 +20,7 @@ import { deleteSavedDraft, loadSavedDrafts, saveNewDraft, updateSavedDraft, type
 import {
   buildDraftContextMarkdown,
   buildExportMarkdown,
+  buildSampleContextMarkdown,
   buildScriptBase,
   buildSuggestionContextMarkdown,
   NEEDS_ANSWER,
@@ -58,6 +59,9 @@ import {
   parseSuggestedPlacement,
   numberedSceneList,
   playGoblinSquashSound,
+  draftWaitingMessageDelayMs,
+  draftWaitingMessages,
+  randomDraftWaitingMessageIndex,
   renameBeatSection,
   reorderSceneCards,
   sceneCardTemplate,
@@ -77,6 +81,8 @@ import {
 import { FullScriptDirector } from "./FullScriptDirector";
 import { useDraftDirector } from "./useDraftDirector";
 import { defaultWritingStyleIdForGenre, writingStyleOptions } from "@/lib/writingStyles";
+
+export { draftWaitingMessageDelayMs, draftWaitingMessages, randomDraftWaitingMessageIndex } from "./RoomEditorSupport";
 
 type GuidedRoomEditorProps = {
   firstFieldRef: RefObject<HTMLTextAreaElement | null>;
@@ -1373,44 +1379,6 @@ type CreateScriptGateState =
   | { message: string; status: "error" }
   | { status: "drafted" };
 
-export const draftWaitingMessageDelayMs = 8000;
-
-export const draftWaitingMessages = [
-  "Goblin is writing",
-  "Please wait. The goblin is bribing the commas",
-  "Tiny quill tantrum. Five more seconds",
-  "Hold please. Act Two is arguing",
-  "Do not refresh. The verbs are being sharpened",
-  "Almost there. A subplot is being cornered",
-  "The midpoint is refusing to make eye contact",
-  "A side character just demanded snacks",
-  "The third act is looking for its shoes",
-  "Plot holes are being lightly threatened",
-  "The protagonist is practicing wanting something visible",
-  "The antagonist has requested better lighting",
-  "One theme is being lured into the room",
-  "The draft is chewing with its mouth closed",
-  "A scene heading is putting on pants",
-  "The stakes are being made less decorative",
-  "A joke has entered committee review",
-  "The emotional arc is doing stretches",
-  "Someone found a motive under the couch",
-  "The cold open is pretending not to panic",
-  "A weak verb has been escorted outside",
-  "The screenplay is asking for one responsible adult",
-  "Three commas have formed a union",
-  "The ending is being bribed with snacks",
-  "A dramatic question is blinking into existence",
-  "Emergency semicolon meeting in progress",
-];
-
-export function randomDraftWaitingMessageIndex(currentIndex: number, randomValue = Math.random()) {
-  if (draftWaitingMessages.length <= 1) return 0;
-
-  const candidateIndex = Math.floor(randomValue * (draftWaitingMessages.length - 1));
-  return candidateIndex >= currentIndex ? candidateIndex + 1 : candidateIndex;
-}
-
 function downloadFile(file: ScreenplayExportFile) {
   const contents =
     typeof file.contents === "string"
@@ -1668,6 +1636,9 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
   const draftBody = generatedDraftBody(markdown);
   const hasDraft = draftBody.length > 0;
   const isDrafting = gateState.status === "drafting";
+  const fullScriptRunning =
+    director.run?.status === "running" || director.run?.status === "planning" || (!director.run && director.statusLine === "Planning the whole movie…");
+  const draftChromeRunning = isDrafting || fullScriptRunning;
   const draftWaitingMessage = draftWaitingMessages[draftWaitingMessageIndex] ?? draftWaitingMessages[0];
   const exportMenuStyle = exportMenuPosition
     ? ({
@@ -1677,14 +1648,14 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
     : undefined;
 
   useEffect(() => {
-    if (!isDrafting) return;
+    if (!draftChromeRunning) return;
 
     const interval = window.setInterval(() => {
       setDraftWaitingMessageIndex((currentIndex) => randomDraftWaitingMessageIndex(currentIndex));
     }, draftWaitingMessageDelayMs);
 
     return () => window.clearInterval(interval);
-  }, [isDrafting]);
+  }, [draftChromeRunning]);
 
   useEffect(() => {
     if (!exportMenuOpen) return;
@@ -1744,9 +1715,9 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
         method: "POST",
         headers: cowriterRequestHeaders(),
         body: JSON.stringify({
-          mode: "draft",
+          mode: "sample",
           room: "Create the Script",
-          markdown: buildDraftContextMarkdown(project.rooms),
+          markdown: buildSampleContextMarkdown(project.rooms),
           writingStyle,
           answers: project.answers,
           summary: project.summary,
@@ -1883,7 +1854,7 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
               </option>
             ))}
           </select>
-          {isDrafting ? (
+          {draftChromeRunning ? (
             <span
               aria-label="Mini goblin running while the draft is written"
               className={styles.scriptGateRunner}
@@ -1902,20 +1873,23 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
             statusLine={director.statusLine}
             error={director.error}
             stitched={director.stitched}
-            onStart={director.start}
+            onStart={() => {
+              setDraftWaitingMessageIndex(0);
+              void director.start();
+            }}
             onResume={director.resume}
             onStop={director.stop}
             onReset={director.reset}
           />
         ) : null}
         <button
-          aria-label={isDrafting ? `${draftWaitingMessage}...` : undefined}
-          className={`${styles.secondaryButton} ${styles.goblinDraftButton}`}
-          disabled={isDrafting}
+          aria-label={draftChromeRunning ? `${draftWaitingMessage}...` : undefined}
+          className={`${styles.primaryButton} ${styles.goblinDraftButton}`}
+          disabled={draftChromeRunning}
           onClick={requestDraft}
           type="button"
         >
-          {isDrafting ? (
+          {draftChromeRunning ? (
             <>
               <span>{draftWaitingMessage}</span>
               <span aria-label="Animated writing ellipsis" className={styles.writingEllipsis} role="img">
@@ -1925,7 +1899,7 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
               </span>
             </>
           ) : (
-            "Quick sample"
+            "Write a Quick Sample"
           )}
         </button>
       </div>

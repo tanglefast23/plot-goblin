@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { cowriterRequestHeaders } from "@/lib/cowriterAccess";
-import { parseBeatSheet, renderBeatSheet } from "@/lib/draftBeatSheet";
+import { parseBeatSheet, parseStoryBrief, renderBeatSheet } from "@/lib/draftBeatSheet";
 import { parseChunkResult } from "@/lib/draftChunk";
 import { assembleChunkContext, estimatePageCount, shouldTopUp } from "@/lib/draftContinuity";
 import {
@@ -67,10 +67,11 @@ export function useDraftDirector(roomExport: string, writingStyle: string, targe
         const lastPages = run.completedBeats.at(-1)?.pages ?? "";
         const context = assembleChunkContext({
           beatSheetText: renderBeatSheet(run.beatSheet),
-          currentBeatsText: pair.map((beat) => `BEAT ${beat.index} | PAGES: ${beat.pageBudget} | TITLE: ${beat.title}`).join("\n"),
+          currentBeatsText: `Write ${pair.map((beat) => `BEAT ${beat.index}`).join(" and ")} from the unified beat sheet above.`,
           runningSummary: run.runningSummary,
           previousTail: lastPages.slice(-TAIL_CHARS),
           roomExport,
+          storyBrief: run.storyBrief,
           maxChars: MAX_PROMPT_CHARS,
         });
 
@@ -131,6 +132,7 @@ export function useDraftDirector(roomExport: string, writingStyle: string, targe
         completedBeats: [],
         runningSummary: "",
         nextBeatIndex: 1,
+        storyBrief: parseStoryBrief(planResult),
         targetPages,
         status: "running",
       };

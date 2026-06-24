@@ -82,6 +82,44 @@ export const GUIDED_ROOM_SLUGS = new Set(["premise", "characters", "theme"]);
 export const SUGGESTION_GOBLIN_POP_MS = 1900;
 export { cowriterRequestHeaders };
 
+export const draftWaitingMessageDelayMs = 8000;
+
+export const draftWaitingMessages = [
+  "Goblin is writing",
+  "Please wait. The goblin is bribing the commas",
+  "Tiny quill tantrum. Five more seconds",
+  "Hold please. Act Two is arguing",
+  "Do not refresh. The verbs are being sharpened",
+  "Almost there. A subplot is being cornered",
+  "The midpoint is refusing to make eye contact",
+  "A side character just demanded snacks",
+  "The third act is looking for its shoes",
+  "Plot holes are being lightly threatened",
+  "The protagonist is practicing wanting something visible",
+  "The antagonist has requested better lighting",
+  "One theme is being lured into the room",
+  "The draft is chewing with its mouth closed",
+  "A scene heading is putting on pants",
+  "The stakes are being made less decorative",
+  "A joke has entered committee review",
+  "The emotional arc is doing stretches",
+  "Someone found a motive under the couch",
+  "The cold open is pretending not to panic",
+  "A weak verb has been escorted outside",
+  "The screenplay is asking for one responsible adult",
+  "Three commas have formed a union",
+  "The ending is being bribed with snacks",
+  "A dramatic question is blinking into existence",
+  "Emergency semicolon meeting in progress",
+];
+
+export function randomDraftWaitingMessageIndex(currentIndex: number, randomValue = Math.random()) {
+  if (draftWaitingMessages.length <= 1) return 0;
+
+  const candidateIndex = Math.floor(randomValue * (draftWaitingMessages.length - 1));
+  return candidateIndex >= currentIndex ? candidateIndex + 1 : candidateIndex;
+}
+
 export const DEFAULT_SCENE_CARD = `### Scene: [Short title]
 
 **Location / time:** INT./EXT. PLACE - DAY/NIGHT

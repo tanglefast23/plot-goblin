@@ -27,6 +27,7 @@ describe("assembleChunkContext", () => {
     runningSummary: "So far: Mara escaped.",
     previousTail: "FADE OUT.",
     roomExport: "# Premise\nA heist.",
+    storyBrief: "",
     maxChars: 36_000,
   };
 
@@ -37,6 +38,17 @@ describe("assembleChunkContext", () => {
     expect(out).toContain("So far: Mara escaped.");
     expect(out).toContain("FADE OUT.");
     expect(out).toContain("A heist.");
+  });
+
+  it("uses the saved story brief instead of resending room exports after planning", () => {
+    const out = assembleChunkContext({
+      ...base,
+      roomExport: "# Premise\nLong source room export.",
+      storyBrief: "premise: haunted heist; characters: Mara vs Landlord",
+    });
+
+    expect(out).toContain("premise: haunted heist");
+    expect(out).not.toContain("Long source room export");
   });
 
   it("drops the running summary first when over budget, keeping the beat sheet and current beats", () => {

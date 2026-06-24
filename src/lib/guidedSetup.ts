@@ -611,6 +611,8 @@ export function buildExportMarkdown(rooms: RoomMarkdown) {
 
 const DRAFT_CONTEXT_ROOM_SLUGS = ["premise", "characters", "theme", "beats", "scenes", "script-parameters"] as const;
 const SCENE_FIELD_LABELS = ["Location / time", "Characters", "Scene want", "Opposition", "Turn", "Button", "Purpose"] as const;
+const DRAFT_CONTEXT_MAX_CHARS = 28_000;
+const SAMPLE_CONTEXT_MAX_CHARS = 16_000;
 
 function compactText(value: string, maxChars: number) {
   const compacted = value
@@ -624,11 +626,21 @@ function compactText(value: string, maxChars: number) {
 }
 
 function capMarkdown(markdown: string, maxChars: number) {
+  const marker = "\n\n[...capped for draft prompt]";
   const compacted = markdown.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
 
   if (compacted.length <= maxChars) return compacted;
 
-  return `${compacted.slice(0, maxChars).trim()}\n\n[...capped for draft prompt]`;
+  return `${compacted.slice(0, Math.max(0, maxChars - marker.length)).trim()}${marker}`;
+}
+
+function firstMarkdownSections(markdown: string, maxSections: number, maxChars: number) {
+  const compacted = markdown.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+  const pieces = compacted.split(/(?=^##\s+)/m);
+  const intro = pieces[0] ?? "";
+  const sections = pieces.slice(1, maxSections + 1);
+
+  return capMarkdown([intro, ...sections].filter(Boolean).join("\n\n"), maxChars);
 }
 
 function escapeRegExp(value: string) {
@@ -653,8 +665,8 @@ function sceneField(card: string, label: string) {
   return pattern.exec(card)?.[1] ?? "";
 }
 
-function compactScenesMarkdown(markdown: string) {
-  const cards = sceneCards(markdown).slice(0, 40);
+function compactScenesMarkdown(markdown: string, maxCards = 40) {
+  const cards = sceneCards(markdown).slice(0, maxCards);
 
   if (cards.length === 0) return capMarkdown(markdown, 4_000);
 
@@ -674,7 +686,7 @@ function compactScenesMarkdown(markdown: string) {
 export function buildDraftContextMarkdown(rooms: RoomMarkdown) {
   const activeRoomBySlug = new Map(getActiveRooms().map((room) => [room.slug, room]));
 
-  return [
+  return capMarkdown([
     "# Plot Goblin Draft Context",
     "Compact source. Same story facts, fewer snack crumbs.",
     ...DRAFT_CONTEXT_ROOM_SLUGS.flatMap((slug) => {
@@ -686,7 +698,30 @@ export function buildDraftContextMarkdown(rooms: RoomMarkdown) {
 
       return [`## ${room.markdownFile}`, body];
     }),
-  ].join("\n\n");
+  ].join("\n\n"), DRAFT_CONTEXT_MAX_CHARS);
+}
+
+export function buildSampleContextMarkdown(rooms: RoomMarkdown) {
+  const activeRoomBySlug = new Map(getActiveRooms().map((room) => [room.slug, room]));
+
+  return capMarkdown([
+    "# Plot Goblin Sample Context",
+    "Compact source for a short opening sample. Later beats and late scenes are intentionally omitted.",
+    ...DRAFT_CONTEXT_ROOM_SLUGS.flatMap((slug) => {
+      const markdown = rooms[slug]?.trim();
+      const room = activeRoomBySlug.get(slug);
+      if (!markdown || !room) return [];
+
+      const body =
+        slug === "beats"
+          ? firstMarkdownSections(markdown, 6, 5_000)
+          : slug === "scenes"
+            ? compactScenesMarkdown(markdown, 8)
+            : capMarkdown(markdown, 4_000);
+
+      return [`## ${room.markdownFile}`, body];
+    }),
+  ].join("\n\n"), SAMPLE_CONTEXT_MAX_CHARS);
 }
 
 const SUGGESTION_CONTEXT_ROOM_SLUGS = ["premise", "characters", "theme", "beats", "script-parameters"] as const;

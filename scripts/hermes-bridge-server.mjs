@@ -34,6 +34,15 @@ function send(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
+function safeErrorMessage(error) {
+  const message = error instanceof Error ? error.message : "Unknown bridge failure.";
+  if (message.includes("Command failed: hermes")) {
+    return "Hermes command failed before returning a draft. Check that Hermes is installed, authenticated, and available on this Mac.";
+  }
+
+  return message;
+}
+
 function readJson(req) {
   return new Promise((resolve, reject) => {
     let raw = "";
@@ -130,7 +139,7 @@ const server = createServer(async (req, res) => {
     const output = await runHermes(prompt);
     send(res, 200, { output });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown bridge failure.";
+    const message = safeErrorMessage(error);
     send(res, 500, { error: `Hermes bridge failed. ${message}` });
   }
 });

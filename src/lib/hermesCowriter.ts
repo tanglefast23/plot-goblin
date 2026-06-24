@@ -1,7 +1,18 @@
 import { writingStylePrompt } from "./writingStyles";
 
 export type CowriterRequest = {
-  mode: "followup" | "suggestions" | "logline" | "room" | "beat" | "draft" | "scene" | "scene-suggest" | "plan" | "chunk";
+  mode:
+    | "followup"
+    | "suggestions"
+    | "logline"
+    | "room"
+    | "beat"
+    | "draft"
+    | "sample"
+    | "scene"
+    | "scene-suggest"
+    | "plan"
+    | "chunk";
   room?: string;
   beat?: string;
   beatMarkdown?: string;
@@ -66,18 +77,43 @@ function movieKindRules(request: CowriterRequest) {
   const movieKind = movieKindForRequest(request);
   if (!movieKind) return "";
 
+  const selectedRules = [
+    {
+      pattern: /\b(comedy|comic|funny)\b/i,
+      text: "- Comedy choices should be genuinely funny through premise-specific situations, reversals, jokes, embarrassment, irony, and comic escalation.",
+    },
+    {
+      pattern: /\bhorror\b/i,
+      text: "- Horror choices should prioritize dread, suspense, vulnerability, ominous images, threat logic, and scary turns when the story calls for it.",
+    },
+    {
+      pattern: /\bdrama\b|\bdramatic\b/i,
+      text: "- Drama choices should stay serious, emotionally specific, consequential, and character-driven.",
+    },
+    {
+      pattern: /\bromance\b|\bromantic\b/i,
+      text: "- Romance choices should heighten longing, chemistry, vulnerability, and emotional risk.",
+    },
+    {
+      pattern: /\bthriller\b/i,
+      text: "- Thriller choices should sharpen danger, pressure, reversals, clocks, secrets, and suspicion.",
+    },
+    {
+      pattern: /\bsci[- ]?fi\b|\bscience fiction\b|\bfantasy\b/i,
+      text: "- Sci-fi and fantasy choices should make the speculative promise matter through rules, wonder, costs, and story consequences.",
+    },
+  ]
+    .filter((rule) => rule.pattern.test(movieKind))
+    .map((rule) => rule.text);
+
+  const rules = selectedRules.length > 0 ? selectedRules : ["- Keep the selected movie kind visible in choices, tone, pacing, pressure, and payoffs."];
+
   return `
 
 Movie-kind weight:
 - Current movie kind: ${movieKind}.
 - Treat the current movie kind as a high-priority creative constraint for every suggestion, follow-up question, beat, room fill, and draft choice.
-- Comedy choices should be genuinely funny through premise-specific situations, reversals, jokes, embarrassment, irony, and comic escalation.
-- Horror choices should prioritize dread, suspense, vulnerability, ominous images, threat logic, and scary turns when the story calls for it.
-- Drama choices should stay serious, emotionally specific, consequential, and character-driven.
-- Romance choices should heighten longing, chemistry, vulnerability, and emotional risk.
-- Thriller choices should sharpen danger, pressure, reversals, clocks, secrets, and suspicion.
-- Sci-fi and fantasy choices should make the speculative promise matter through rules, wonder, costs, and story consequences.
-- Hybrid genres must honor each selected promise instead of flattening everything into generic drama.
+${rules.join("\n")}
 - When generating screenplay pages, keep the selected movie kind visible in scene ideas, dialogue lane, tension, set pieces, pacing, and payoffs.`;
 }
 
@@ -106,12 +142,20 @@ export function cleanHermesOutput(output: string) {
 }
 
 export function buildCowriterPrompt(request: CowriterRequest) {
-  const sharedRules = `You are Plot Goblin, a helpfully annoying screenplay co-writer. Be useful, sharp, funny in small doses, and structurally rigorous.
-
-Rules:
+  const suggestionMode =
+    request.mode === "followup" ||
+    request.mode === "suggestions" ||
+    request.mode === "room" ||
+    request.mode === "beat";
+  const suggestionRules = suggestionMode
+    ? `
 - Do not rewrite the user's document automatically unless the explicit task is to draft screenplay pages.
 - Give 1-2 concrete suggestions the user can accept, reject, or adapt when the task is suggestions/room/beat help.
-- When giving example choices, number each choice and use this format when possible: 1. Section heading: Replacement text.
+- When giving example choices, number each choice and use this format when possible: 1. Section heading: Replacement text.`
+    : "";
+  const sharedRules = `You are Plot Goblin, a helpfully annoying screenplay co-writer. Be useful, sharp, funny in small doses, and structurally rigorous.
+
+Rules:${suggestionRules}
 - Write the ACTUAL content for THIS script: name the protagonist, dramatize specific events, images, and turns. Never restate what a beat, field, or room is "for" — fulfill it.
 - Treat any instruction-style or placeholder text (for example "Establish the world, the want, the lie...") as a task to complete with specifics, not text to paraphrase.
 - Ground every specific in the other rooms: pull the want, stakes, false belief, opposition, and theme from the full script context.
@@ -274,6 +318,22 @@ Complete Plot Goblin room export:
 ${request.markdown ?? ""}`;
   }
 
+  if (request.mode === "sample") {
+    return `${sharedRules}
+
+Task: Generate a quick screenplay sample from the compact Plot Goblin context below. This is an explicit draft request, so write screenplay-format material rather than advice.
+
+Sample rules:
+- Use standard screenplay style: scene headings, action, character cues, and dialogue.
+- Preserve approved facts: protagonist, want, stakes, false belief, opposition, theme, genre, rating, POV, ending direction, names, relationships, and locations.
+- Make the protagonist active, with visible choices, pressure, stakes, opposition, and genre tone on the page.
+- For short-film targets, write a compact complete sample. For feature targets, write only the first 6-8 pages.
+- Do not include generic advice. Start with a title line or the first scene heading after the final marker.
+
+Compact Plot Goblin draft context:
+${request.markdown ?? ""}`;
+  }
+
   if (request.mode === "plan") {
     const targetPages = request.targetPages ?? 100;
     return `${sharedRules}
@@ -281,7 +341,8 @@ ${request.markdown ?? ""}`;
 Task: Build the unified beat sheet for a full ${targetPages}-page feature of THIS specific script. Read the structural beats, every scene the writer already wrote, and the room facts below. Decide how many beats a strong, award-worthy version of this movie needs (usually 15-30). Expand thin spots, add the connective beats a real feature requires, and keep the writer's existing choices.
 
 Output rules:
-- Return ONLY beat blocks in this exact format, one per beat, divided by a line containing only ---:
+- Start with STORY_BRIEF:. Summarize each source room in as few words as possible. The app will reuse STORY_BRIEF for chunk drafting instead of resending full room exports.
+- Then return beat blocks in this exact format, one per beat, divided by a line containing only ---:
   BEAT 1 | PAGES: <n> | TITLE: <short title>
   INTENT: <one line of what concretely happens>
 - Assign each beat a PAGES budget. The budgets MUST sum to about ${targetPages}.

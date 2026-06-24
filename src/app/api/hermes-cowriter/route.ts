@@ -28,6 +28,7 @@ function isCowriterRequest(value: unknown): value is CowriterRequest {
     mode === "room" ||
     mode === "beat" ||
     mode === "draft" ||
+    mode === "sample" ||
     mode === "scene" ||
     mode === "scene-suggest" ||
     mode === "plan" ||
@@ -176,6 +177,10 @@ function publicBridgeFailureMessage(caught: unknown) {
     return "Public Hermes bridge could not reach Joe's Mac Hermes bridge. Make sure the Cloudflare tunnel is running and PLOT_GOBLIN_HERMES_BRIDGE_URL points at the current tunnel URL.";
   }
 
+  if (message.includes("Command failed: hermes")) {
+    return "Public Hermes bridge failed. Hermes command failed before returning a draft. Check that Hermes is installed, authenticated, and available on Joe's Mac.";
+  }
+
   return `Public Hermes bridge failed. ${message}`;
 }
 
@@ -264,9 +269,13 @@ export async function POST(request: Request) {
     return jsonResponse({ output: cleanHermesOutput(output) });
   } catch (caught) {
     const message = caught instanceof Error ? caught.message : "Unknown Hermes bridge failure.";
+    const safeMessage = message.includes("Command failed: hermes")
+      ? "Hermes command failed before returning a draft."
+      : message;
+
     return jsonResponse(
       {
-        error: `Hermes local bridge failed. Make sure Hermes is installed and authenticated on this Mac. ${message}`,
+        error: `Hermes local bridge failed. Make sure Hermes is installed and authenticated on this Mac. ${safeMessage}`,
       },
       500,
     );

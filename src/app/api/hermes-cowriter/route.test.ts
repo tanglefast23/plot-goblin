@@ -60,6 +60,32 @@ describe("Hermes co-writer API route", () => {
     expect(data.error).not.toContain("fetch failed");
   });
 
+  it("does not expose the full Hermes prompt when the public bridge command fails", async () => {
+    process.env.VERCEL = "1";
+    process.env.PLOT_GOBLIN_AI_ACCESS_KEY = "correct-key";
+    process.env.PLOT_GOBLIN_HERMES_BRIDGE_TOKEN = "bridge-token";
+    process.env.PLOT_GOBLIN_HERMES_BRIDGE_URL = "https://live-tunnel.example";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => ({
+          error:
+            "Hermes bridge failed. Command failed: hermes chat -Q --source plot-goblin-public-bridge -q You are Plot Goblin, a helpfully annoying screenplay co-writer.",
+        }),
+      }),
+    );
+
+    const response = await POST(cowriterRequest("correct-key"));
+    const data = (await response.json()) as { error?: string };
+
+    expect(response.status).toBe(502);
+    expect(data.error).toContain("Hermes command failed");
+    expect(data.error).not.toContain("You are Plot Goblin");
+    expect(data.error).not.toContain("-q");
+  });
+
   it("checks public access without asking Hermes to generate text", async () => {
     process.env.VERCEL = "1";
     process.env.PLOT_GOBLIN_AI_ACCESS_KEY = "correct-key";
@@ -208,9 +234,10 @@ describe("Hermes co-writer API route", () => {
 });
 
 describe("cowriter request validation", () => {
-  it("accepts the new plan and chunk modes", () => {
+  it("accepts the full-script planning and sample modes", () => {
     expect(isCowriterRequestForTest({ mode: "plan" })).toBe(true);
     expect(isCowriterRequestForTest({ mode: "chunk" })).toBe(true);
+    expect(isCowriterRequestForTest({ mode: "sample" })).toBe(true);
   });
 
   it("rejects an unknown mode", () => {

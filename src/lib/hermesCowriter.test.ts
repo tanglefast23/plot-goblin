@@ -171,6 +171,8 @@ describe("Hermes co-writer prompt", () => {
     expect(prompt).toContain("Current movie kind: Comedy.");
     expect(prompt).toContain("high-priority creative constraint");
     expect(prompt).toContain("Comedy choices should be genuinely funny");
+    expect(prompt).not.toContain("Horror choices should prioritize dread");
+    expect(prompt).not.toContain("Drama choices should stay serious");
   });
 
   it("uses the Script Parameters genre as a high-weight draft rule for room and screenplay help", () => {
@@ -241,6 +243,23 @@ describe("Hermes co-writer prompt", () => {
     expect(prompt).toContain("goblin-flavored word choice");
   });
 
+  it("builds a shorter quick-sample prompt with only the selected genre guidance", () => {
+    const prompt = buildCowriterPrompt({
+      mode: "sample",
+      writingStyle: "fey-comedy",
+      markdown:
+        "# Plot Goblin Draft Context\n\n## script-parameters.md\n\nCurrent genre: Comedy.\nTarget page count: 100 pages.\n\n## premise.md\n\nA substitute teacher becomes a spy.",
+    });
+
+    expect(prompt).toContain("Generate a quick screenplay sample");
+    expect(prompt).toContain("Current movie kind: Comedy.");
+    expect(prompt).toContain("Comedy choices should be genuinely funny");
+    expect(prompt).not.toContain("Horror choices should prioritize dread");
+    expect(prompt).not.toContain("If the target is a feature or longer than 15 pages");
+    expect(prompt).not.toContain("continuation map");
+    expect(prompt).not.toContain("Give 1-2 concrete suggestions");
+  });
+
   it("strips Hermes CLI noise when a final marker exists", () => {
     const cleaned = cleanHermesOutput(
       "Warning: Unknown toolsets: messaging\n\n┌─ Reasoning ──\nthinking...\nPLOT_GOBLIN_FINAL:\nWhat visible thing does he want?",
@@ -300,6 +319,17 @@ describe("plan mode", () => {
     expect(prompt).toContain("100");
     expect(prompt).toContain("PLOT_GOBLIN_FINAL:");
   });
+
+  it("asks for a tiny reusable story brief before the beat sheet", () => {
+    const prompt = buildCowriterPrompt({
+      mode: "plan",
+      markdown: "# Premise\nA heist gone wrong.",
+      targetPages: 100,
+    });
+    expect(prompt).toContain("STORY_BRIEF:");
+    expect(prompt).toContain("Summarize each source room in as few words as possible");
+    expect(prompt).toContain("The app will reuse STORY_BRIEF");
+  });
 });
 
 describe("chunk mode", () => {
@@ -313,5 +343,15 @@ describe("chunk mode", () => {
     expect(prompt).toContain("PLOT_GOBLIN_SUMMARY:");
     expect(prompt).toContain("PLOT_GOBLIN_SETUPS:");
     expect(prompt).toContain("PLANTED");
+  });
+
+  it("omits suggestion-only guidance from chunk prompts", () => {
+    const prompt = buildCowriterPrompt({
+      mode: "chunk",
+      markdown: "## Story brief\nA heist.",
+      beat: "4 and 5",
+    });
+    expect(prompt).not.toContain("Give 1-2 concrete suggestions");
+    expect(prompt).not.toContain("Section heading: Replacement text");
   });
 });
