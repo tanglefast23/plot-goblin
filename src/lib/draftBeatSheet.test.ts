@@ -43,6 +43,49 @@ describe("parseBeatSheet", () => {
     const sheet = parseBeatSheet(raw);
     expect(sheet.map((b) => b.index)).toEqual([1, 2]);
   });
+
+  it("parses a useful plan when pages are on their own line", () => {
+    const raw = [
+      "STORY_BRIEF:",
+      "premise: Mara steals a moon rock.",
+      "",
+      "BEAT 1: Cold open at the impound lot",
+      "PAGES: 3",
+      "INTENT: Mara hot-wires the wrong car and meets the antagonist.",
+      "---",
+      "BEAT 2: The wager",
+      "PAGES: 5",
+      "INTENT: She bets the deed to win the car back.",
+    ].join("\n");
+
+    const sheet = parseBeatSheet(raw);
+
+    expect(sheet).toHaveLength(2);
+    expect(sheet[0]).toEqual({
+      index: 1,
+      pageBudget: 3,
+      title: "Cold open at the impound lot",
+      intent: "Mara hot-wires the wrong car and meets the antagonist.",
+      setups: [],
+    });
+    expect(sheet[1].pageBudget).toBe(5);
+    expect(sheet[1].title).toBe("The wager");
+  });
+
+  it("parses beat blocks with markdown list numbering", () => {
+    const raw = [
+      "1. BEAT 1 | PAGES: 3 | TITLE: Cold open at the impound lot",
+      "INTENT: Mara hot-wires the wrong car.",
+      "---",
+      "2. BEAT 2 | PAGES: 5 | TITLE: The wager",
+      "INTENT: She bets the deed.",
+    ].join("\n");
+
+    const sheet = parseBeatSheet(raw);
+
+    expect(sheet.map((beat) => beat.title)).toEqual(["Cold open at the impound lot", "The wager"]);
+    expect(sheet.map((beat) => beat.pageBudget)).toEqual([3, 5]);
+  });
 });
 
 describe("mergeSetups", () => {
@@ -100,5 +143,18 @@ describe("parseStoryBrief", () => {
     ].join("\n");
 
     expect(parseStoryBrief(raw)).toBe("premise: Mara steals a moon rock.\ncharacters: Mara wants proof.");
+  });
+
+  it("stops before a loose beat header when extracting the compact brief", () => {
+    const raw = [
+      "STORY_BRIEF:",
+      "premise: Mara steals a moon rock.",
+      "",
+      "BEAT 1: Theft",
+      "PAGES: 3",
+      "INTENT: Mara steals the rock.",
+    ].join("\n");
+
+    expect(parseStoryBrief(raw)).toBe("premise: Mara steals a moon rock.");
   });
 });

@@ -10,21 +10,59 @@ export type UnifiedBeatSheet = Beat[];
 
 export type PlantedSetup = { beatIndex: number; note: string };
 
-const BEAT_HEADER = /^BEAT\s+\d+\s*\|\s*PAGES:\s*(\d+)\s*\|\s*TITLE:\s*(.+)$/i;
+const BEAT_HEADER = /^(?:[-*]\s*|\d+[.)]\s*)?BEAT\s+\d+\s*\|\s*PAGES:\s*(\d+)\s*\|\s*TITLE:\s*(.+)$/i;
+const BEAT_START = /^(?:[-*]\s*|\d+[.)]\s*)?BEAT\s+\d+\b(.+)$/i;
 const INTENT_LINE = /^INTENT:\s*(.+)$/i;
+const PAGE_LINE = /^(?:PAGES?|PAGE\s+BUDGET):\s*(\d+)/i;
+const INLINE_PAGE_BUDGET = /\b(?:PAGES?|PAGE\s+BUDGET):\s*(\d+)/i;
+const PAREN_PAGE_BUDGET = /\((\d+)\s*pages?\)/i;
+const TITLE_LINE = /^TITLE:\s*(.+)$/i;
 const STORY_BRIEF_HEADER = /^STORY_BRIEF:\s*$/im;
-const FIRST_BEAT_HEADER = /^BEAT\s+\d+\s*\|/im;
+const FIRST_BEAT_HEADER = /^(?:[-*]\s*|\d+[.)]\s*)?BEAT\s+\d+\b/im;
+
+type DraftBeat = Omit<Beat, "pageBudget"> & { pageBudget: number | null };
+
+function pageBudgetFromLine(line: string): number | null {
+  const inline = INLINE_PAGE_BUDGET.exec(line) ?? PAREN_PAGE_BUDGET.exec(line);
+  if (!inline) return null;
+
+  return Number.parseInt(inline[1], 10);
+}
+
+function titleFromBeatLine(line: string) {
+  const title = /\bTITLE:\s*(.+)$/i.exec(line);
+  if (title) return title[1].trim();
+
+  return line
+    .replace(/^(?:[-*]\s*|\d+[.)]\s*)?BEAT\s+\d+\b/i, "")
+    .replace(/\|\s*(?:PAGES?|PAGE\s+BUDGET):\s*\d+\b/gi, "")
+    .replace(/\((?:\d+\s*pages?|(?:PAGES?|PAGE\s+BUDGET):\s*\d+)\)/gi, "")
+    .replace(/^\s*(?:\||:|-|—)+\s*/, "")
+    .trim();
+}
+
+function finalBeat(current: DraftBeat | null): Beat | null {
+  if (!current || current.pageBudget === null) return null;
+
+  return {
+    ...current,
+    pageBudget: current.pageBudget,
+    title: current.title || `Beat ${current.index}`,
+  };
+}
 
 export function parseBeatSheet(raw: string): UnifiedBeatSheet {
   const lines = raw.replace(/\r\n|\r/g, "\n").split("\n");
   const beats: UnifiedBeatSheet = [];
-  let current: Beat | null = null;
+  let current: DraftBeat | null = null;
 
   for (const line of lines) {
-    const header = BEAT_HEADER.exec(line.trim());
+    const trimmed = line.trim();
+    const header = BEAT_HEADER.exec(trimmed);
     if (header) {
       const [, rawPages, rawTitle] = header;
-      if (current) beats.push(current);
+      const finished = finalBeat(current);
+      if (finished) beats.push(finished);
       current = {
         index: beats.length + 1,
         pageBudget: Number.parseInt(rawPages, 10),
@@ -35,15 +73,42 @@ export function parseBeatSheet(raw: string): UnifiedBeatSheet {
       continue;
     }
 
+    const looseHeader = BEAT_START.exec(trimmed);
+    if (looseHeader) {
+      const finished = finalBeat(current);
+      if (finished) beats.push(finished);
+      current = {
+        index: beats.length + 1,
+        pageBudget: pageBudgetFromLine(trimmed),
+        title: titleFromBeatLine(trimmed),
+        intent: "",
+        setups: [],
+      };
+      continue;
+    }
+
     if (!current) continue;
 
-    const intent = INTENT_LINE.exec(line.trim());
+    const pageBudget = PAGE_LINE.exec(trimmed);
+    if (pageBudget) {
+      current.pageBudget = Number.parseInt(pageBudget[1], 10);
+      continue;
+    }
+
+    const title = TITLE_LINE.exec(trimmed);
+    if (title) {
+      current.title = title[1].trim();
+      continue;
+    }
+
+    const intent = INTENT_LINE.exec(trimmed);
     if (intent) {
       current.intent = current.intent ? `${current.intent} ${intent[1].trim()}` : intent[1].trim();
     }
   }
 
-  if (current) beats.push(current);
+  const finished = finalBeat(current);
+  if (finished) beats.push(finished);
   return beats;
 }
 

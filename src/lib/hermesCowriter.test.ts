@@ -246,6 +246,19 @@ describe("Hermes co-writer prompt", () => {
     expect(prompt).toContain("midpoint reversal");
   });
 
+  it("tells comedy draft generation to load the script with jokes, punch lines, and awkward situations", () => {
+    const prompt = buildCowriterPrompt({
+      mode: "draft",
+      markdown:
+        "# Plot Goblin Draft Context\n\n## script-parameters.md\n\nCurrent genre: Comedy.\n\n## premise.md\n\nA substitute teacher accidentally becomes a spy.",
+    });
+
+    expect(prompt).toContain("Current movie kind: Comedy.");
+    expect(prompt).toContain("infuse the script with a lot of jokes");
+    expect(prompt).toContain("set up punch lines in dialogue");
+    expect(prompt).toContain("awkward/funny situations");
+  });
+
   it("uses the goblin house writing style by default", () => {
     const prompt = buildCowriterPrompt({
       mode: "draft",

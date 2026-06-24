@@ -81,7 +81,7 @@ function movieKindRules(request: CowriterRequest) {
   const selectedRules = [
     {
       pattern: /\b(comedy|comic|funny)\b/i,
-      text: "- Comedy choices should be genuinely funny through premise-specific situations, reversals, jokes, embarrassment, irony, and comic escalation.",
+      text: "- Comedy choices should be genuinely funny through premise-specific situations, reversals, jokes, embarrassment, irony, and comic escalation. When generating screenplay pages, infuse the script with a lot of jokes, set up punch lines in dialogue, and create awkward/funny situations.",
     },
     {
       pattern: /\bhorror\b/i,
