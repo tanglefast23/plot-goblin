@@ -26,3 +26,42 @@ export function advanceDraft(run: DraftRun, beatsInChunk: Beat[], chunk: ChunkRe
 export function stitchDraft(run: DraftRun): string {
   return run.completedBeats.map((beat) => beat.pages.trim()).join("\n\n");
 }
+
+export type CowriterCallResult = {
+  status: number;
+  output?: string;
+  error?: string;
+  retryAfterSeconds?: number;
+};
+
+export type RetryOptions = {
+  maxAttempts: number;
+  sleep: (ms: number) => Promise<void>;
+};
+
+export async function callWithRetry(
+  call: () => Promise<CowriterCallResult>,
+  options: RetryOptions,
+): Promise<string> {
+  let lastError = "The goblin failed to draft this beat.";
+
+  for (let attempt = 1; attempt <= options.maxAttempts; attempt += 1) {
+    const result = await call();
+
+    if (result.status >= 200 && result.status < 300 && result.output) {
+      return result.output;
+    }
+
+    lastError = result.error ?? lastError;
+
+    if (attempt < options.maxAttempts) {
+      const backoffMs =
+        result.status === 429 && result.retryAfterSeconds
+          ? result.retryAfterSeconds * 1000
+          : attempt * 1000;
+      await options.sleep(backoffMs);
+    }
+  }
+
+  throw new Error(lastError);
+}
