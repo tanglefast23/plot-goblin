@@ -245,7 +245,7 @@ describe("RoomEditorClient", () => {
     expect(within(nextSuggestedRoom).getByRole("link", { name: "Characters" }).getAttribute("href")).toBe("/rooms/characters");
   });
 
-  it("hides the next suggested room footer once every tracked room is complete", async () => {
+  it("suggests Create the Script at the bottom once every tracked room is complete", async () => {
     const project = buildScriptBase({
       rawIdea: "A one-armed pitcher tries to make the majors.",
       genre: "Comedy",
@@ -268,7 +268,11 @@ describe("RoomEditorClient", () => {
     render(<RoomEditorClient />);
 
     await screen.findByRole("region", { name: "Premise questions" });
-    expect(screen.queryByRole("navigation", { name: "Next suggested room" })).toBeNull();
+    const nextSuggestedRoom = screen.getByRole("navigation", { name: "Next suggested room" });
+    expect(within(nextSuggestedRoom).getByText("Next suggested room:")).toBeTruthy();
+    expect(within(nextSuggestedRoom).getByRole("link", { name: "Create the Script" }).getAttribute("href")).toBe(
+      "/rooms/create-script",
+    );
   });
 
   it("places guided field suggest buttons directly above their text boxes", async () => {
@@ -2003,21 +2007,43 @@ Lena sees a frame that should not exist.
       "# Script Parameters Room\n\n## Runtime / page target\nLength format: Short film.\nTarget page count: 8 pages.\n\n## Genre / movie promise\nCurrent genre: Comedy mystery.\nAudience feeling: Funny and tense.\nTone words: Fast, heartfelt, anxious.\n\n## Structure and pacing\nStructure mode: Classic 3-act spine.\nPacing bias: Lean and fast.\nScene length rule: Short and punchy.\n\n## Format rules\nFormat: Standard spec screenplay format.\nDialogue density: Snappy.\nVoiceover / narration: No voiceover.\n\n## Rating and boundaries\nTarget rating: PG-13.\nNo-go content: No cruelty to animals.\n\n## Production constraints\nCast size: 6 major speaking roles.\nLocation limits: Wedding venue only.\nTime period / setting rules: Modern day.\nBudget reality: Cheap.\n\n## Point of view\nPrimary POV: Milo.\nScene access: Stay close to Milo.";
     project.rooms["create-script"] = "# Create the Script Room\n\nOld generated screenplay draft should not be sent again.";
     window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
-    const fetchSpy = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ output: "TITLE: LOVE, CURSED\n\nINT. WEDDING VENUE - DAY\nMilo raises his camera." }),
-    });
+    let resolveDraft: (response: { ok: true; json: () => Promise<{ output: string }> }) => void = () => {};
+    const fetchSpy = vi.fn().mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveDraft = resolve;
+      }),
+    );
     vi.stubGlobal("fetch", fetchSpy);
 
     render(<RoomEditorClient />);
 
     await screen.findByRole("region", { name: "Create the Script draft gate" });
-    const writingStyleSelect = screen.getByRole("combobox", { name: "Writing style" }) as HTMLSelectElement;
-    expect(writingStyleSelect.value).toBe("goblin-house");
+    const writingStyleSelect = screen.getByRole("combobox", {
+      name: "Writing style (choose one)",
+    }) as HTMLSelectElement;
+    expect(writingStyleSelect.value).toBe("fey-comedy");
     fireEvent.change(writingStyleSelect, { target: { value: "sorkin-legal" } });
-    fireEvent.click(screen.getByRole("button", { name: "Please Oh Mighty Goblin. Write a draft." }));
+    vi.useFakeTimers();
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "Please Oh Mighty Goblin. Write a draft." }));
+    });
 
-    expect(await screen.findByRole("button", { name: "Goblin is writing..." })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Goblin is writing..." })).toBeTruthy();
+    expect(screen.getByLabelText("Animated writing ellipsis")).toBeTruthy();
+    expect(screen.getByRole("img", { name: "Mini goblin running while the draft is written" })).toBeTruthy();
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(screen.getByRole("button", { name: "Please wait. The goblin is bribing the commas..." })).toBeTruthy();
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(screen.getByRole("button", { name: "Tiny quill tantrum. Five more seconds..." })).toBeTruthy();
+    vi.useRealTimers();
+    resolveDraft({
+      ok: true,
+      json: async () => ({ output: "TITLE: LOVE, CURSED\n\nINT. WEDDING VENUE - DAY\nMilo raises his camera." }),
+    });
     await screen.findByText(/The goblin wrote a draft/i);
     expect((screen.getByRole("textbox", { name: "Create the Script markdown" }) as HTMLTextAreaElement).value).toContain(
       "INT. WEDDING VENUE - DAY",
@@ -2036,6 +2062,25 @@ Lena sees a frame that should not exist.
     expect(requestBody.markdown).not.toContain("create-script.md");
     expect(requestBody.markdown).not.toContain("Old generated screenplay draft");
     expect(requestBody.markdown).not.toContain("Celeste smiles and blocks every honest answer. ".repeat(20));
+  });
+
+  it("defaults drama-comedy scripts to a genre writer instead of the goblin", async () => {
+    routeState.slug = "create-script";
+    const project = completedDraftableProject();
+    project.answers.genre = "Drama, Comedy";
+    project.rooms["script-parameters"] =
+      "# Script Parameters Room\n\n## Runtime / page target\nLength format: Feature film.\nTarget page count: 100 pages.\n\n## Genre / movie promise\nCurrent genre: Drama comedy.\nAudience feeling: Funny and cathartic.\nTone words: Honest, sharp, humane.\n\n## Structure and pacing\nStructure mode: Classic 3-act spine.\nPacing bias: Lean and fast.\nScene length rule: Short and punchy.\n\n## Format rules\nFormat: Standard spec screenplay format.\nDialogue density: Snappy.\nVoiceover / narration: No voiceover.\n\n## Rating and boundaries\nTarget rating: PG-13.\nNo-go content: No graphic injury.\n\n## Production constraints\nCast size: 6 major speaking roles.\nLocation limits: Wedding venue only.\nTime period / setting rules: Modern day.\nBudget reality: Cheap.\n\n## Point of view\nPrimary POV: Milo.\nScene access: Stay close to Milo.";
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+
+    render(<RoomEditorClient />);
+
+    await screen.findByRole("region", { name: "Create the Script draft gate" });
+    const writingStyleSelect = screen.getByRole("combobox", {
+      name: "Writing style (choose one)",
+    }) as HTMLSelectElement;
+
+    expect(writingStyleSelect.value).not.toBe("goblin-house");
+    expect(["simon-tv-drama", "fey-comedy"]).toContain(writingStyleSelect.value);
   });
 
   it("saves generated screenplay pages into the Drafts room", async () => {

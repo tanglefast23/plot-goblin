@@ -53,8 +53,12 @@ export function RoomEditorClient() {
     if (!scriptReadiness) return null;
 
     const progressBySlug = new Map(scriptReadiness.roomProgress.map((progress) => [progress.room.slug, progress]));
-    return storyRooms.find((candidate) => (progressBySlug.get(candidate.slug)?.percent ?? 100) < 100) ?? null;
-  }, [scriptReadiness]);
+    const nextIncompleteRoom = storyRooms.find((candidate) => (progressBySlug.get(candidate.slug)?.percent ?? 100) < 100);
+    if (nextIncompleteRoom) return nextIncompleteRoom;
+    if (slug === "create-script") return null;
+
+    return storyRooms.find((candidate) => candidate.slug === "create-script") ?? null;
+  }, [scriptReadiness, slug]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {

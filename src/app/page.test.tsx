@@ -40,10 +40,13 @@ describe("Plot Goblin homepage", () => {
     expect(within(activeRooms).getByText("Scenes")).toBeDefined();
     expect(within(activeRooms).getByText("Script Parameters")).toBeDefined();
     expect(within(activeRooms).getByText("Create the Script")).toBeDefined();
+    expect(within(activeRooms).queryByText("premise.md")).toBeNull();
+    expect(within(activeRooms).queryByText("script-parameters.md")).toBeNull();
 
     const comingSoon = screen.getByLabelText("Coming soon work rooms");
     expect(within(comingSoon).getByText("Relationships")).toBeDefined();
     expect(within(comingSoon).getAllByText("Coming soon").length).toBeGreaterThanOrEqual(5);
+    expect(within(comingSoon).queryByText("relationships.md")).toBeNull();
   });
 
   it("explains the hybrid structure choice", () => {

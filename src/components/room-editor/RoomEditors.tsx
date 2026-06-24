@@ -5,6 +5,7 @@ import {
   forwardRef,
   type KeyboardEvent as ReactKeyboardEvent,
   type RefObject,
+  useEffect,
   useId,
   useImperativeHandle,
   useMemo,
@@ -70,7 +71,7 @@ import {
   type SceneDraftValues,
   type ScriptParameterValues,
 } from "./RoomEditorSupport";
-import { defaultWritingStyleId, writingStyleOptions } from "@/lib/writingStyles";
+import { defaultWritingStyleIdForGenre, writingStyleOptions } from "@/lib/writingStyles";
 
 type GuidedRoomEditorProps = {
   firstFieldRef: RefObject<HTMLTextAreaElement | null>;
@@ -1391,6 +1392,15 @@ type CreateScriptGateState =
   | { message: string; status: "error" }
   | { status: "drafted" };
 
+const draftWaitingMessages = [
+  "Goblin is writing",
+  "Please wait. The goblin is bribing the commas",
+  "Tiny quill tantrum. Five more seconds",
+  "Hold please. Act Two is arguing",
+  "Do not refresh. The verbs are being sharpened",
+  "Almost there. A subplot is being cornered",
+];
+
 function downloadFile(file: ScreenplayExportFile) {
   const contents =
     typeof file.contents === "string"
@@ -1543,14 +1553,32 @@ export function DraftsRoom() {
 
 export function CreateScriptRoom({ markdown, onMarkdownChange, project }: CreateScriptRoomProps) {
   const readiness = useMemo(() => getScriptReadiness(project.rooms), [project.rooms]);
+  const defaultWritingStyle = useMemo(() => {
+    const scriptParametersGenre = lineParameter(project.rooms["script-parameters"] ?? "", "Current genre");
+    return defaultWritingStyleIdForGenre(scriptParametersGenre || project.answers.genre);
+  }, [project.answers.genre, project.rooms]);
   const [gateState, setGateState] = useState<CreateScriptGateState>({ status: "idle" });
-  const [writingStyle, setWritingStyle] = useState(defaultWritingStyleId);
+  const [writingStyle, setWritingStyle] = useState(defaultWritingStyle);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState("");
   const [savedDraftConfirmation, setSavedDraftConfirmation] = useState<SavedDraft | null>(null);
+  const [draftWaitingMessageIndex, setDraftWaitingMessageIndex] = useState(0);
+  const writingStyleId = useId();
   const exportMenuId = useId();
   const draftBody = generatedDraftBody(markdown);
   const hasDraft = draftBody.length > 0;
+  const isDrafting = gateState.status === "drafting";
+  const draftWaitingMessage = draftWaitingMessages[draftWaitingMessageIndex] ?? draftWaitingMessages[0];
+
+  useEffect(() => {
+    if (!isDrafting) return;
+
+    const interval = window.setInterval(() => {
+      setDraftWaitingMessageIndex((currentIndex) => (currentIndex + 1) % draftWaitingMessages.length);
+    }, 5000);
+
+    return () => window.clearInterval(interval);
+  }, [isDrafting]);
 
   async function requestDraft() {
     if (!readiness.ready) {
@@ -1574,6 +1602,7 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
       return;
     }
 
+    setDraftWaitingMessageIndex(0);
     setGateState({ status: "drafting" });
 
     try {
@@ -1664,10 +1693,12 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
       </div>
 
       <div className={styles.scriptGateLinks}>
-        <label className={`${styles.parameterField} ${styles.scriptGateStyleField}`}>
-          <span>Writing style</span>
+        <label className={`${styles.parameterField} ${styles.scriptGateStyleField}`} htmlFor={writingStyleId}>
+          <span>Writing style (choose one)</span>
           <select
-            aria-label="Writing style"
+            aria-label="Writing style (choose one)"
+            id={writingStyleId}
+            name="writingStyle"
             onChange={(event) => setWritingStyle(event.target.value)}
             value={writingStyle}
           >
@@ -1677,14 +1708,38 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
               </option>
             ))}
           </select>
+          {isDrafting ? (
+            <span
+              aria-label="Mini goblin running while the draft is written"
+              className={styles.scriptGateRunner}
+              role="img"
+            >
+              <span className={styles.scriptGateRunnerGoblin}>
+                <span className={styles.scriptGateRunnerEye} />
+                <span className={styles.scriptGateRunnerLegs} />
+              </span>
+            </span>
+          ) : null}
         </label>
         <button
+          aria-label={isDrafting ? `${draftWaitingMessage}...` : undefined}
           className={`${styles.primaryButton} ${styles.goblinDraftButton}`}
-          disabled={gateState.status === "drafting"}
+          disabled={isDrafting}
           onClick={requestDraft}
           type="button"
         >
-          {gateState.status === "drafting" ? "Goblin is writing..." : "Please Oh Mighty Goblin. Write a draft."}
+          {isDrafting ? (
+            <>
+              <span>{draftWaitingMessage}</span>
+              <span aria-label="Animated writing ellipsis" className={styles.writingEllipsis} role="img">
+                <span aria-hidden="true">.</span>
+                <span aria-hidden="true">.</span>
+                <span aria-hidden="true">.</span>
+              </span>
+            </>
+          ) : (
+            "Please Oh Mighty Goblin. Write a draft."
+          )}
         </button>
       </div>
 

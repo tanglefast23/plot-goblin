@@ -32,6 +32,12 @@ export const writingStyleOptions: WritingStyleOption[] = [
       "Rapid argument lane: fast snappy dialogue, verbal volleys, idealistic conflict, reversals inside conversations, and scenes that move through debate. Keep action lines clean so dialogue can drive. Do not imitate any specific writer; use these broad craft traits only.",
   },
   {
+    id: "gilroy-thriller",
+    label: "Tony Gilroy (Thriller)",
+    prompt:
+      "Precision thriller lane: clear objectives, procedural pressure, compromised professionals, quiet paranoia, and reversals that expose who really controls the room. Keep scenes tense, specific, and unsentimental. Do not imitate any specific writer; use these broad craft traits only.",
+  },
+  {
     id: "rhimes-medical",
     label: "Shonda Rhimes (medical drama)",
     prompt:
@@ -72,6 +78,12 @@ export const writingStyleOptions: WritingStyleOption[] = [
     label: "Seth MacFarlane (Animated Comedy)",
     prompt:
       "Cutaway chaos lane: elastic reality, rapid joke pivots, blunt comic exaggeration, pop-culture absurdity, and characters saying the rude quiet part aloud. Keep momentum fast and jokes varied. Do not imitate any specific writer; use these broad craft traits only.",
+  },
+  {
+    id: "ephron-romance",
+    label: "Nora Ephron (Romance)",
+    prompt:
+      "Romantic clarity lane: emotionally readable longing, witty vulnerability, social texture, desire complicated by self-protection, and turns that make the audience want the honest conversation. Keep warmth and bite in balance. Do not imitate any specific writer; use these broad craft traits only.",
   },
   {
     id: "cameron-adventure",
@@ -146,6 +158,39 @@ export const writingStyleOptions: WritingStyleOption[] = [
       "Long-take tension talk lane: extended pressure conversations, bold genre collision, sudden tonal pivots, menace under casual talk, and playful chapter-like turns. Mix patient dialogue build with explosive reversals. Do not imitate any specific writer; use these broad craft traits only.",
   },
 ];
+
+const genreDefaultWritingStyles = [
+  { pattern: /\bcrime\b/i, styleId: "scorsese-crime" },
+  { pattern: /\bdrama\b|\bdramatic\b/i, styleId: "simon-tv-drama" },
+  { pattern: /\blegal\b/i, styleId: "sorkin-legal" },
+  { pattern: /\bthriller\b/i, styleId: "gilroy-thriller" },
+  { pattern: /\bmedical\b/i, styleId: "rhimes-medical" },
+  { pattern: /\banimated\b/i, styleId: "macfarlane-animated" },
+  { pattern: /\bcomedy\b|\bcomic\b|\bfunny\b/i, styleId: "fey-comedy" },
+  { pattern: /\bromance\b|\bromantic\b/i, styleId: "ephron-romance" },
+  { pattern: /\badventure\b|\baction\b/i, styleId: "cameron-adventure" },
+  { pattern: /\bsci[- ]?fi\b|\bscience fiction\b/i, styleId: "nolan-scifi" },
+  { pattern: /\bfantasy\b/i, styleId: "martin-fantasy" },
+  { pattern: /\bsuperhero\b/i, styleId: "gunn-superhero" },
+  { pattern: /\bhorror\b/i, styleId: "carpenter-horror" },
+  { pattern: /\bmystery\b/i, styleId: "johnson-mystery" },
+  { pattern: /\bindie\b/i, styleId: "gerwig-indie" },
+];
+
+export function defaultWritingStyleIdForGenre(genre: string | undefined) {
+  const trimmedGenre = genre?.trim();
+  if (!trimmedGenre) return defaultWritingStyleId;
+
+  const match = genreDefaultWritingStyles
+    .map((candidate) => {
+      const result = candidate.pattern.exec(trimmedGenre);
+      return result?.index === undefined ? null : { index: result.index, styleId: candidate.styleId };
+    })
+    .filter((candidate): candidate is { index: number; styleId: string } => candidate !== null)
+    .sort((first, second) => first.index - second.index)[0];
+
+  return match?.styleId ?? defaultWritingStyleId;
+}
 
 export function writingStylePrompt(styleId: string | undefined) {
   const option = writingStyleOptions.find((candidate) => candidate.id === styleId) ?? writingStyleOptions[0];

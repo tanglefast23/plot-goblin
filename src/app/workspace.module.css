@@ -2459,10 +2459,148 @@
   width: min(100%, 420px);
 }
 
+.scriptGateRunner {
+  position: relative;
+  display: block;
+  height: 34px;
+  margin-top: 2px;
+  overflow: hidden;
+  border-bottom: 1px solid rgb(var(--goblin-night-rgb) / 0.18);
+}
+
+.scriptGateRunnerGoblin {
+  position: absolute;
+  left: 0;
+  bottom: 3px;
+  width: 38px;
+  height: 25px;
+  border-radius: 14px 14px 8px 8px;
+  background: var(--goblin-moss);
+  box-shadow: inset 0 -4px 0 rgb(var(--goblin-night-rgb) / 0.16);
+  animation: scriptGateRunnerScoot 2.2s ease-in-out infinite alternate;
+}
+
+.scriptGateRunnerGoblin::before,
+.scriptGateRunnerGoblin::after {
+  position: absolute;
+  top: 7px;
+  width: 15px;
+  height: 10px;
+  background: var(--goblin-moss);
+  content: "";
+}
+
+.scriptGateRunnerGoblin::before {
+  left: -10px;
+  clip-path: polygon(100% 0, 0 50%, 100% 100%);
+}
+
+.scriptGateRunnerGoblin::after {
+  right: -10px;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+.scriptGateRunnerEye {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--goblin-night);
+}
+
+.scriptGateRunnerLegs {
+  position: absolute;
+  right: 7px;
+  bottom: -7px;
+  width: 26px;
+  height: 9px;
+  background:
+    linear-gradient(90deg, var(--goblin-night) 0 7px, transparent 7px 18px, var(--goblin-night) 18px 25px)
+      center / 100% 100% no-repeat;
+  animation: scriptGateRunnerLegs 260ms ease-in-out infinite alternate;
+}
+
+.writingEllipsis {
+  display: inline-flex;
+  width: 1.15em;
+  justify-content: flex-start;
+}
+
+.writingEllipsis span {
+  animation: writingEllipsisDot 900ms ease-in-out infinite;
+}
+
+.writingEllipsis span:nth-child(2) {
+  animation-delay: 120ms;
+}
+
+.writingEllipsis span:nth-child(3) {
+  animation-delay: 240ms;
+}
+
 .goblinDraftButton {
+  gap: 1px;
   min-height: 50px;
   padding-inline: 22px;
   white-space: normal;
+}
+
+@keyframes scriptGateRunnerScoot {
+  0% {
+    left: 0;
+    transform: scaleX(1);
+  }
+
+  48% {
+    left: calc(100% - 48px);
+    transform: scaleX(1);
+  }
+
+  52% {
+    left: calc(100% - 48px);
+    transform: scaleX(-1);
+  }
+
+  100% {
+    left: 0;
+    transform: scaleX(-1);
+  }
+}
+
+@keyframes scriptGateRunnerLegs {
+  from {
+    transform: skewX(-18deg);
+  }
+
+  to {
+    transform: skewX(18deg);
+  }
+}
+
+@keyframes writingEllipsisDot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.28;
+    transform: translateY(0);
+  }
+
+  40% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scriptSaveConfirmation,
+  .scriptSaveSpark,
+  .scriptGateRunnerGoblin,
+  .scriptGateRunnerLegs,
+  .writingEllipsis span {
+    animation: none;
+  }
 }
 
 .scriptGateNotice {

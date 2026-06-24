@@ -88,7 +88,6 @@ export default function Home() {
             <article className={styles.roomCard} key={room.slug}>
               <div className={styles.roomTopline}>
                 <span>{String(index + 1).padStart(2, "0")}</span>
-                <code>{room.markdownFile}</code>
               </div>
               <h3>{room.title}</h3>
               <p>{room.purpose}</p>
@@ -118,7 +117,6 @@ export default function Home() {
             <article className={styles.soonCard} key={room.slug} data-disabled="true">
               <div className={styles.roomTopline}>
                 <span>Coming soon</span>
-                <code>{room.markdownFile}</code>
               </div>
               <h3>{room.title}</h3>
               <p>{room.purpose}</p>
