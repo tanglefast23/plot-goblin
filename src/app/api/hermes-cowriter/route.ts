@@ -7,8 +7,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const execFileAsync = promisify(execFile);
-const rateLimitPerMinute = Number.parseInt(process.env.PLOT_GOBLIN_RATE_LIMIT_PER_MINUTE ?? "8", 10);
-const checkRateLimit = createMemoryRateLimiter(Number.isFinite(rateLimitPerMinute) ? rateLimitPerMinute : 8, 60_000);
+const rateLimitPerMinute = Number.parseInt(process.env.PLOT_GOBLIN_RATE_LIMIT_PER_MINUTE ?? "30", 10);
+const checkRateLimit = createMemoryRateLimiter(Number.isFinite(rateLimitPerMinute) ? rateLimitPerMinute : 30, 60_000);
 const maxRequestBodyBytes = 64_000;
 const maxPromptSourceChars = 36_000;
 const maxSerializedContextChars = 12_000;
@@ -29,7 +29,9 @@ function isCowriterRequest(value: unknown): value is CowriterRequest {
     mode === "beat" ||
     mode === "draft" ||
     mode === "scene" ||
-    mode === "scene-suggest"
+    mode === "scene-suggest" ||
+    mode === "plan" ||
+    mode === "chunk"
   );
 }
 
@@ -61,6 +63,9 @@ function validateCowriterRequest(value: CowriterRequest) {
     validateOptionalString(value.sceneList, "Scene list", maxPromptSourceChars),
     validateOptionalRecord(value.answers, "Answers"),
     validateOptionalRecord(value.summary, "Summary"),
+    value.targetPages !== undefined && (typeof value.targetPages !== "number" || value.targetPages < 1 || value.targetPages > 200)
+      ? "Target pages must be a number between 1 and 200."
+      : null,
   ].filter(Boolean);
 
   return issues[0] ?? null;
@@ -198,6 +203,8 @@ export async function GET(request: Request) {
   }
 }
 
+export const isCowriterRequestForTest = isCowriterRequest;
+
 export async function POST(request: Request) {
   const contentLength = Number(request.headers.get("content-length") ?? 0);
   if (Number.isFinite(contentLength) && contentLength > maxRequestBodyBytes) {
@@ -236,7 +243,7 @@ export async function POST(request: Request) {
     const limit = checkRateLimit(clientIdFromRequest(request));
     if (!limit.allowed) {
       return jsonResponse(
-        { error: `Too many goblin summons. Try again in ${limit.retryAfterSeconds}s.` },
+        { error: `Too many goblin summons. Try again in ${limit.retryAfterSeconds}s.`, retryAfterSeconds: limit.retryAfterSeconds },
         429,
         { "Retry-After": String(limit.retryAfterSeconds) },
       );

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { isCowriterRequestForTest } from "./route";
 import { GET, POST } from "./route";
 
 const originalEnv = {
@@ -203,5 +204,16 @@ describe("Hermes co-writer API route", () => {
 
     expect(response.status).toBe(400);
     expect(data.error).toContain("Invalid co-writer request");
+  });
+});
+
+describe("cowriter request validation", () => {
+  it("accepts the new plan and chunk modes", () => {
+    expect(isCowriterRequestForTest({ mode: "plan" })).toBe(true);
+    expect(isCowriterRequestForTest({ mode: "chunk" })).toBe(true);
+  });
+
+  it("rejects an unknown mode", () => {
+    expect(isCowriterRequestForTest({ mode: "nonsense" })).toBe(false);
   });
 });
