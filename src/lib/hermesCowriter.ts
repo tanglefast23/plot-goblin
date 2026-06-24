@@ -223,6 +223,10 @@ Drafting rules:
 - Use standard screenplay style with scene headings, action lines, character cues, and dialogue.
 - Base the draft on the filled rooms: premise, characters, theme, beats, scenes, and script parameters.
 - Keep the selected genre/movie promise visible in situation, tone, pacing, dialogue, set pieces, and stakes.
+- Make the protagonist active: give them visible choices, tactics, and consequences instead of letting the plot happen around them.
+- Keep the story driven by clear, high stakes: either external danger, personal loss, or a threat to the characters' deepest personal values.
+- Put strong opposition in every major movement: a person, system, force, secret, flaw, or clock that actively fights the protagonist's want.
+- Treat the midpoint as a real midpoint reversal: new information, a win that curdles, a loss that opens a harder path, or a shift that changes the protagonist's plan.
 - Approved-story continuity rules: Do not change the protagonist, want, stakes, false belief, opposition, theme, genre, rating, POV, or ending direction unless the room export explicitly changes them.
 - Carry forward named characters, locations, relationships, and decisions from prior rooms; do not rename, merge, resurrect, kill, or replace them for convenience.
 - If two room details conflict, preserve the newest or most specific user-written choice and make the draft quietly consistent with that choice.
