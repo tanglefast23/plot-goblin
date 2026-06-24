@@ -8,6 +8,126 @@ const DRAFT_STORAGE_KEY = "plot-goblin-saved-drafts";
 
 const routeState = vi.hoisted(() => ({ slug: "premise" }));
 
+const completePremiseMarkdown = `# Premise Room
+
+## Story promise
+A scrappy sports comedy about pride, help, and one impossible tryout.
+
+## Raw idea
+Rafa wants to pitch professionally after losing an arm.
+
+## Protagonist
+Rafa, a stubborn one-armed pitcher.
+
+## Surface want
+He wants to win a professional baseball tryout.
+
+## Stakes
+If he fails, he loses his last shot and the people backing him lose faith.
+
+## Opposition
+A scout, stronger players, and Rafa's own pride.
+
+## Dramatic question
+Can Rafa earn a real shot before pride erases it?
+
+## Polished logline
+When a stubborn one-armed pitcher gets one final tryout, he must accept help before pride costs him the dream.
+`;
+
+const completeCharactersMarkdown = `# Characters Room
+
+## Protagonist
+Rafa, a stubborn one-armed pitcher.
+
+### Surface want
+He wants to become a professional baseball player.
+
+### Deeper need
+He needs to accept help without treating it as humiliation.
+
+### False belief
+He believes asking for help makes him weak.
+
+### Flaw / defense mechanism
+He turns every kindness into an insult.
+
+### Antagonist / opposition
+A scout and better players who think he is a novelty act.
+`;
+
+const completeThemeMarkdown = `# Theme Room
+
+## Theme question
+Is asking for help weakness, or the price of doing hard things honestly?
+
+## Starting belief
+Rafa believes effort alone should be enough.
+
+## Ending statement
+The ending proves accepting help can be a braver kind of effort.
+`;
+
+const completeBeatsMarkdown = `# Beats Room
+
+## Opening Image
+Rafa tapes a glove alone before dawn.
+
+## Inciting Incident
+A scout offers one public tryout.
+
+## Act One Break
+Rafa accepts the tryout and refuses help.
+
+## Midpoint
+He gets attention for the wrong reason.
+
+## All Is Lost
+His pride costs him the one person who could catch for him.
+
+## Climax
+He chooses trust during the final pitch.
+
+## Final Image
+He tapes the glove with someone beside him.
+`;
+
+const completeScriptParametersMarkdown = `# Script Parameters Room
+
+## Runtime / page target
+Length format: Feature film.
+Target page count: 100 pages.
+
+## Genre / movie promise
+Current genre: Sports comedy.
+Audience feeling: Hopeful and tense.
+Tone words: Warm, sharp, underdog funny.
+
+## Structure and pacing
+Structure mode: Classic 3-act spine.
+Pacing bias: Lean and fast.
+Scene length rule: Short and punchy.
+
+## Format rules
+Format: Standard spec screenplay format.
+Dialogue density: Naturalistic.
+Voiceover / narration: No voiceover.
+
+## Rating and boundaries
+Target rating: PG-13.
+No-go content: No graphic injury.
+
+## Production constraints
+Cast size: 6 major speaking roles.
+Location limits: Baseball fields, diner, tiny apartment.
+Time period / setting rules: Modern day minor-league town.
+Budget reality: Cheap.
+
+## Point of view
+Primary POV: Rafa.
+Scene access: Stay close.
+`;
+
 vi.mock("next/navigation", () => ({
   useParams: () => ({ slug: routeState.slug }),
 }));
@@ -91,6 +211,57 @@ describe("RoomEditorClient", () => {
     expect(screen.getByRole("button", { name: "Goblin Suggest for Stakes" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Suggest improvements, don't rewrite" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "Ask the Hermes goblin" })).toBeNull();
+  });
+
+  it("shows the next suggested room at the bottom until every tracked room is complete", async () => {
+    const project = buildScriptBase({
+      rawIdea: "A one-armed pitcher tries to make the majors.",
+      genre: "Comedy",
+      audienceFeeling: "hopeful and tense",
+      protagonist: "Stubborn one-armed pitcher",
+      surfaceWant: "become a professional baseball player",
+      stakes: "he loses the only dream he has left",
+      falseBelief: "asking for help makes him weak",
+      opposition: "better players who have two arms",
+      endingDirection: "He changes and wins",
+      structurePreference: "Classic 3-act spine",
+    });
+    project.rooms.premise = completePremiseMarkdown;
+    project.rooms.characters = "# Characters Room\n\n## Protagonist\nRafa.";
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+
+    render(<RoomEditorClient />);
+
+    await screen.findByRole("region", { name: "Premise questions" });
+    const nextSuggestedRoom = screen.getByRole("navigation", { name: "Next suggested room" });
+    expect(within(nextSuggestedRoom).getByText("Next suggested room:")).toBeTruthy();
+    expect(within(nextSuggestedRoom).getByRole("link", { name: "Characters" }).getAttribute("href")).toBe("/rooms/characters");
+  });
+
+  it("hides the next suggested room footer once every tracked room is complete", async () => {
+    const project = buildScriptBase({
+      rawIdea: "A one-armed pitcher tries to make the majors.",
+      genre: "Comedy",
+      audienceFeeling: "hopeful and tense",
+      protagonist: "Stubborn one-armed pitcher",
+      surfaceWant: "become a professional baseball player",
+      stakes: "he loses the only dream he has left",
+      falseBelief: "asking for help makes him weak",
+      opposition: "better players who have two arms",
+      endingDirection: "He changes and wins",
+      structurePreference: "Classic 3-act spine",
+    });
+    project.rooms.premise = completePremiseMarkdown;
+    project.rooms.characters = completeCharactersMarkdown;
+    project.rooms.theme = completeThemeMarkdown;
+    project.rooms.beats = completeBeatsMarkdown;
+    project.rooms["script-parameters"] = completeScriptParametersMarkdown;
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+
+    render(<RoomEditorClient />);
+
+    await screen.findByRole("region", { name: "Premise questions" });
+    expect(screen.queryByRole("navigation", { name: "Next suggested room" })).toBeNull();
   });
 
   it("places guided field suggest buttons directly above their text boxes", async () => {
@@ -1483,6 +1654,24 @@ Rafa wants to hide the injury.
       expect(parameters).toContain("Target rating: PG-13.");
       expect(parameters).toContain("No-go content: No graphic gore.");
     });
+  });
+
+  it("labels the budget reality choice buttons", async () => {
+    routeState.slug = "script-parameters";
+    const project = buildScriptBase({
+      genre: "Comedy",
+      audienceFeeling: "hopeful and tense",
+      structurePreference: "Classic 3-act spine",
+    });
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+
+    render(<RoomEditorClient />);
+
+    await screen.findByRole("region", { name: "Script parameter questions" });
+    const budgetChoices = screen.getByRole("group", { name: "Budget reality" });
+
+    expect(within(budgetChoices).getByRole("button", { name: "Cheap" })).toBeTruthy();
+    expect(within(budgetChoices).getByRole("button", { name: "Impossible dream" })).toBeTruthy();
   });
 
   it("hides script-parameter placeholder examples while a field is focused", async () => {

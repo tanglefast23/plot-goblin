@@ -24,6 +24,7 @@ function isCowriterRequest(value: unknown): value is CowriterRequest {
   return (
     mode === "followup" ||
     mode === "suggestions" ||
+    mode === "logline" ||
     mode === "room" ||
     mode === "beat" ||
     mode === "draft" ||
@@ -67,6 +68,33 @@ function validateCowriterRequest(value: CowriterRequest) {
 
 function bridgeUrl() {
   return process.env.PLOT_GOBLIN_HERMES_BRIDGE_URL?.replace(/\/$/, "");
+}
+
+function isPrivateIpv4(hostname: string) {
+  const pieces = hostname.split(".").map((piece) => Number.parseInt(piece, 10));
+  if (pieces.length !== 4 || pieces.some((piece) => !Number.isInteger(piece) || piece < 0 || piece > 255)) {
+    return false;
+  }
+
+  const [first, second] = pieces;
+  return first === 10 || first === 127 || (first === 172 && second >= 16 && second <= 31) || (first === 192 && second === 168);
+}
+
+function isLocalNetworkRequest(request: Request) {
+  const hostname = new URL(request.url).hostname.toLowerCase().replace(/^\[|\]$/g, "");
+
+  return (
+    hostname === "localhost" ||
+    hostname === "::1" ||
+    hostname === "0.0.0.0" ||
+    hostname.endsWith(".local") ||
+    (hostname.includes(":") && (hostname.startsWith("fe80:") || hostname.startsWith("fc") || hostname.startsWith("fd"))) ||
+    isPrivateIpv4(hostname)
+  );
+}
+
+function shouldUsePublicBridge(request: Request) {
+  return process.env.VERCEL === "1" && !isLocalNetworkRequest(request);
 }
 
 async function callLocalHermes(prompt: string) {
@@ -147,7 +175,7 @@ function publicBridgeFailureMessage(caught: unknown) {
 }
 
 export async function GET(request: Request) {
-  if (process.env.VERCEL !== "1") {
+  if (!shouldUsePublicBridge(request)) {
     return jsonResponse({ ok: true });
   }
 
@@ -193,7 +221,7 @@ export async function POST(request: Request) {
     return jsonResponse({ error: `Invalid co-writer request. ${validationError}` }, status);
   }
 
-  if (process.env.VERCEL === "1") {
+  if (shouldUsePublicBridge(request)) {
     const expectedAccessKey = process.env.PLOT_GOBLIN_AI_ACCESS_KEY;
     const providedAccessKey = request.headers.get("x-plot-goblin-key");
 

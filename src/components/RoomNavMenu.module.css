@@ -45,7 +45,6 @@
   left: auto;
 }
 
-.overviewLink,
 .roomLink {
   display: grid;
   gap: 3px;
@@ -53,16 +52,6 @@
   padding: 10px 12px;
   color: var(--goblin-night);
   text-decoration: none;
-}
-
-.overviewLink {
-  border: 1px solid rgb(var(--goblin-night-rgb) / 0.16);
-  margin-bottom: 8px;
-  background: rgb(var(--goblin-gold-rgb) / 0.36);
-  font-size: 0.68rem;
-  font-weight: 950;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .roomList {

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildExportMarkdown, buildScriptBase } from "@/lib/guidedSetup";
 import { ACCESS_KEY_STORAGE_KEY, ACCESS_MODE_STORAGE_KEY } from "@/lib/cowriterAccess";
@@ -33,6 +33,18 @@ describe("WorkspaceShell", () => {
     );
 
     expect(await screen.findByRole("link", { name: /guided setup/i })).toBeDefined();
+  });
+
+  it("shows Home as a topbar button next to the rooms dropdown", async () => {
+    render(
+      <WorkspaceShell>
+        <p>Workspace content</p>
+      </WorkspaceShell>,
+    );
+
+    const navigation = screen.getByRole("navigation", { name: "Plot Goblin navigation" });
+    expect((await within(navigation).findByRole("link", { name: "Home" })).getAttribute("href")).toBe("/rooms");
+    expect(within(navigation).getByRole("button", { name: "Rooms" })).toBeTruthy();
   });
 
   it("keeps the guided setup shortcut for an auto-created blank rooms project", async () => {
@@ -130,6 +142,57 @@ describe("WorkspaceShell", () => {
     expect(window.localStorage.getItem(PROJECT_STORAGE_KEY)).toBeTruthy();
     expect(window.localStorage.getItem(ACCESS_KEY_STORAGE_KEY)).toBeNull();
     expect(window.localStorage.getItem(ACCESS_MODE_STORAGE_KEY)).toBeNull();
+  });
+
+  it("tests and saves a bridge access key from settings", async () => {
+    const fetchSpy = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ ok: true }),
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    render(
+      <WorkspaceShell>
+        <p>Workspace content</p>
+      </WorkspaceShell>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    fireEvent.change(await screen.findByLabelText("Bridge access key"), {
+      target: { value: "friend-public-key" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Test and save bridge key" }));
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "/api/hermes-cowriter",
+      expect.objectContaining({
+        method: "GET",
+        headers: expect.objectContaining({ "x-plot-goblin-key": "friend-public-key" }),
+      }),
+    );
+    await waitFor(() => {
+      expect(window.localStorage.getItem(ACCESS_KEY_STORAGE_KEY)).toBe("friend-public-key");
+      expect(window.localStorage.getItem(ACCESS_MODE_STORAGE_KEY)).toBe("public");
+      expect(screen.getByText("Bridge key saved.")).toBeTruthy();
+    });
+  });
+
+  it("switches AI access back to local from settings", async () => {
+    window.localStorage.setItem(ACCESS_KEY_STORAGE_KEY, "friend-key");
+    window.localStorage.setItem(ACCESS_MODE_STORAGE_KEY, "public");
+
+    render(
+      <WorkspaceShell>
+        <p>Workspace content</p>
+      </WorkspaceShell>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Use local" }));
+
+    expect(window.localStorage.getItem(ACCESS_KEY_STORAGE_KEY)).toBeNull();
+    expect(window.localStorage.getItem(ACCESS_MODE_STORAGE_KEY)).toBe("local");
+    expect(screen.getByText("Local AI access selected.")).toBeTruthy();
   });
 
   it("opens screenplay export choices and downloads every format from the all option", async () => {

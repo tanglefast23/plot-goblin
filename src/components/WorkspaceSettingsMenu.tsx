@@ -2,7 +2,7 @@
 
 import { useId, useRef, useState } from "react";
 import styles from "@/app/workspace.module.css";
-import { clearCowriterAccess } from "@/lib/cowriterAccess";
+import { ACCESS_KEY_STORAGE_KEY, ACCESS_MODE_STORAGE_KEY, clearCowriterAccess } from "@/lib/cowriterAccess";
 import { clearProject, ensureProject, importProjectMarkdown, loadProject } from "@/lib/projectStorage";
 import {
   buildMarkdownArchiveFile,
@@ -48,15 +48,22 @@ function downloadAllScreenplayFormats() {
 export function WorkspaceSettingsMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [bridgeKey, setBridgeKey] = useState("");
+  const [isTestingBridgeKey, setIsTestingBridgeKey] = useState(false);
   const [status, setStatus] = useState("");
   const menuId = useId();
   const exportMenuId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
 
+  function syncAiAccessFields() {
+    setBridgeKey(window.localStorage.getItem(ACCESS_KEY_STORAGE_KEY) ?? "");
+  }
+
   function toggleSettingsMenu() {
     setIsOpen((current) => {
       const next = !current;
       if (!next) setExportMenuOpen(false);
+      if (next) syncAiAccessFields();
       return next;
     });
   }
@@ -72,7 +79,56 @@ export function WorkspaceSettingsMenu() {
 
   function resetAiAccess() {
     clearCowriterAccess();
+    setBridgeKey("");
     setStatus("AI access reset.");
+    setExportMenuOpen(false);
+    setIsOpen(false);
+  }
+
+  async function saveBridgeKey() {
+    const trimmed = bridgeKey.trim();
+
+    if (!trimmed) {
+      setStatus("Paste a bridge key or use local.");
+      return;
+    }
+
+    setIsTestingBridgeKey(true);
+    setStatus("");
+
+    try {
+      const response = await fetch("/api/hermes-cowriter", {
+        method: "GET",
+        headers: {
+          "x-plot-goblin-key": trimmed,
+        },
+      });
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+
+      if (!response.ok) {
+        setStatus(data.error ?? "Bridge key test failed.");
+        return;
+      }
+
+      window.localStorage.setItem(ACCESS_KEY_STORAGE_KEY, trimmed);
+      window.localStorage.setItem(ACCESS_MODE_STORAGE_KEY, "public");
+      setBridgeKey(trimmed);
+      setStatus("Bridge key saved.");
+      setExportMenuOpen(false);
+      setIsOpen(false);
+    } catch (caught) {
+      const detail = caught instanceof Error ? caught.message : "Unknown test failure.";
+      setStatus(`Bridge key test could not run. ${detail}`);
+    } finally {
+      setIsTestingBridgeKey(false);
+    }
+  }
+
+  function useLocalAiAccess() {
+    window.localStorage.removeItem(ACCESS_KEY_STORAGE_KEY);
+    window.localStorage.setItem(ACCESS_MODE_STORAGE_KEY, "local");
+    setBridgeKey("");
+    setStatus("Local AI access selected.");
     setExportMenuOpen(false);
     setIsOpen(false);
   }
@@ -139,6 +195,27 @@ export function WorkspaceSettingsMenu() {
                 ))}
               </div>
             ) : null}
+          </div>
+          <span className={styles.settingsLabel}>AI access</span>
+          <div className={styles.settingsAccessPanel}>
+            <label className={styles.settingsAccessField}>
+              <span>Bridge access key</span>
+              <input
+                autoComplete="off"
+                onChange={(event) => setBridgeKey(event.target.value)}
+                placeholder="Paste bridge key"
+                type="password"
+                value={bridgeKey}
+              />
+            </label>
+            <div className={styles.settingsAccessActions}>
+              <button className={styles.settingsAction} disabled={isTestingBridgeKey} onClick={saveBridgeKey} type="button">
+                {isTestingBridgeKey ? "Testing..." : "Test and save bridge key"}
+              </button>
+              <button className={styles.settingsAction} disabled={isTestingBridgeKey} onClick={useLocalAiAccess} type="button">
+                Use local
+              </button>
+            </div>
           </div>
           <span className={styles.settingsLabel}>Backup</span>
           <button className={styles.settingsAction} onClick={downloadMarkdownArchive} type="button">

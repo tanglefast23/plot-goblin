@@ -32,6 +32,9 @@ export function WorkspaceNavigation() {
           Guided setup
         </Link>
       ) : null}
+      <Link className={styles.linkButton} href="/rooms">
+        Home
+      </Link>
       <RoomNavMenu align="end" buttonClassName={styles.linkButton} />
       <WorkspaceSettingsMenu />
     </nav>

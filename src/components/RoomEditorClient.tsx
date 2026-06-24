@@ -43,10 +43,18 @@ export function RoomEditorClient() {
   const firstBeatTextareaRef = useRef<HTMLTextAreaElement>(null);
   const sceneTitleRef = useRef<HTMLInputElement>(null);
   const sceneBoardRef = useRef<SceneBoardHandle>(null);
-  const createScriptRoomProgress = useMemo(
-    () => (project ? getScriptReadiness(project.rooms).roomProgress : []),
-    [project],
-  );
+  const scriptReadiness = useMemo(() => {
+    if (!project) return null;
+
+    return getScriptReadiness({ ...project.rooms, [slug]: markdown });
+  }, [markdown, project, slug]);
+  const createScriptRoomProgress = scriptReadiness?.roomProgress ?? [];
+  const nextSuggestedRoom = useMemo(() => {
+    if (!scriptReadiness) return null;
+
+    const progressBySlug = new Map(scriptReadiness.roomProgress.map((progress) => [progress.room.slug, progress]));
+    return storyRooms.find((candidate) => (progressBySlug.get(candidate.slug)?.percent ?? 100) < 100) ?? null;
+  }, [scriptReadiness]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -162,6 +170,15 @@ export function RoomEditorClient() {
           )}
         </aside>
       </div>
+
+      {nextSuggestedRoom ? (
+        <nav aria-label="Next suggested room" className={styles.nextSuggestedRoomFooter}>
+          <span>Next suggested room:</span>
+          <Link className={styles.primaryButton} href={`/rooms/${nextSuggestedRoom.slug}`}>
+            {nextSuggestedRoom.title}
+          </Link>
+        </nav>
+      ) : null}
     </section>
   );
 }

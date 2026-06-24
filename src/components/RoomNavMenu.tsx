@@ -38,9 +38,6 @@ export function RoomNavMenu({ align = "start", buttonClassName }: RoomNavMenuPro
 
       {isOpen ? (
         <div className={styles.panel}>
-          <Link className={styles.overviewLink} href="/rooms" onClick={() => setIsOpen(false)}>
-            Home
-          </Link>
           <ul aria-label="All screenplay rooms" className={styles.roomList} id={roomListId}>
             {activeRooms.map((room) => (
               <li key={room.slug}>

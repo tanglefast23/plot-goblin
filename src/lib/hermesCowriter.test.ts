@@ -35,6 +35,30 @@ describe("Hermes co-writer prompt", () => {
     expect(prompt).toContain("helpfully annoying");
   });
 
+  it("asks for one polished logline from the strongest known setup facts", () => {
+    const prompt = buildCowriterPrompt({
+      mode: "logline",
+      answers: {
+        rawIdea: "A one-armed pitcher gets one last shot at the majors.",
+        protagonist: "Joe, a proud pitcher who refuses help.",
+        surfaceWant: "Earn a contract at an open tryout.",
+        stakes: "He loses his home and the last proof that he still belongs.",
+      },
+      summary: {
+        strongestKnownPieces: [
+          "Joe, a proud pitcher who refuses help.",
+          "Earn a contract at an open tryout.",
+        ],
+      },
+    });
+
+    expect(prompt).toContain("Draft the single strongest, most succinct, proper screenplay logline");
+    expect(prompt).toContain("Use the strongest known pieces first");
+    expect(prompt).toContain("Return exactly one logline");
+    expect(prompt).toContain("Joe, a proud pitcher who refuses help.");
+    expect(prompt).toContain("Earn a contract at an open tryout.");
+  });
+
   it("asks for one beat replacement using full script context", () => {
     const prompt = buildCowriterPrompt({
       mode: "beat",

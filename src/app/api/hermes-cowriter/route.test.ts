@@ -84,6 +84,20 @@ describe("Hermes co-writer API route", () => {
     );
   });
 
+  it("keeps local-network requests on local Hermes even when Vercel env vars are present", async () => {
+    process.env.VERCEL = "1";
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await GET(new Request("http://localhost:3000/api/hermes-cowriter"));
+    const data = (await response.json()) as { ok?: boolean; error?: string };
+
+    expect(response.status).toBe(200);
+    expect(data.ok).toBe(true);
+    expect(data.error).toBeUndefined();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("rejects oversized markdown before building or forwarding a prompt", async () => {
     process.env.VERCEL = "1";
     process.env.PLOT_GOBLIN_AI_ACCESS_KEY = "correct-key";
@@ -140,6 +154,37 @@ describe("Hermes co-writer API route", () => {
     expect(data.error).toBeUndefined();
     expect(data.output).toContain("1. Scene title: Last Tryout");
     expect(fetchSpy).toHaveBeenCalledWith("https://live-tunnel.example/cowriter", expect.anything());
+  });
+
+  it("accepts the logline mode and forwards strongest setup facts to the Hermes bridge", async () => {
+    process.env.VERCEL = "1";
+    process.env.PLOT_GOBLIN_AI_ACCESS_KEY = "correct-key";
+    process.env.PLOT_GOBLIN_HERMES_BRIDGE_TOKEN = "bridge-token";
+    process.env.PLOT_GOBLIN_HERMES_BRIDGE_URL = "https://live-tunnel.example";
+    const fetchSpy = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ output: "PLOT_GOBLIN_FINAL:\nWhen Joe risks one last tryout, rival players force him to accept help before he loses his home." }),
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await POST(
+      new Request("https://plot-goblin.test/api/hermes-cowriter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-plot-goblin-key": "correct-key" },
+        body: JSON.stringify({
+          mode: "logline",
+          answers: { rawIdea: "A one-armed pitcher gets one last shot at the majors." },
+          summary: { strongestKnownPieces: ["Joe refuses help.", "The tryout is his last chance."] },
+        }),
+      }),
+    );
+    const data = (await response.json()) as { output?: string; error?: string };
+
+    expect(response.status).toBe(200);
+    expect(data.error).toBeUndefined();
+    expect(data.output).toContain("When Joe risks one last tryout");
+    expect(fetchSpy).toHaveBeenCalledWith("https://live-tunnel.example/cowriter", expect.anything());
+    expect(JSON.parse(fetchSpy.mock.calls[0][1].body).prompt).toContain("Joe refuses help.");
   });
 
   it("rejects malformed co-writer fields before Hermes work", async () => {

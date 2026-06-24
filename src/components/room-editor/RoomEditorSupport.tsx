@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import styles from "@/app/workspace.module.css";
-import { ACCESS_KEY_STORAGE_KEY } from "@/lib/cowriterAccess";
+import { cowriterRequestHeaders } from "@/lib/cowriterAccess";
 import { type CowriterChoice } from "@/lib/cowriterChoices";
 import { NEEDS_ANSWER, NEEDS_WRITING, type SetupAnswers } from "@/lib/guidedSetup";
 
@@ -80,6 +80,7 @@ export const SAVED_SCENES_HEADING = "## Saved scenes";
 export const SCENE_LIST_HEADING = "## Scene list";
 export const GUIDED_ROOM_SLUGS = new Set(["premise", "characters", "theme"]);
 export const SUGGESTION_GOBLIN_POP_MS = 1900;
+export { cowriterRequestHeaders };
 
 export const DEFAULT_SCENE_CARD = `### Scene: [Short title]
 
@@ -102,18 +103,6 @@ ${NEEDS_WRITING} What is the last image, line, or action?
 
 **Purpose:**
 Plot / character / theme / tension / setup / payoff`;
-
-export function cowriterRequestHeaders() {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  const accessKey =
-    typeof window === "undefined" ? "" : (window.localStorage.getItem(ACCESS_KEY_STORAGE_KEY) ?? "").trim();
-
-  if (accessKey) {
-    headers["x-plot-goblin-key"] = accessKey;
-  }
-
-  return headers;
-}
 
 export type AudioContextFactory = new () => AudioContext;
 export type BrowserAudioWindow = Window & typeof globalThis & { AudioContext?: AudioContextFactory; webkitAudioContext?: AudioContextFactory };

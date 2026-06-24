@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { type CSSProperties, type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import styles from "@/app/workspace.module.css";
+import { cowriterRequestHeaders } from "@/lib/cowriterAccess";
+import { parseCowriterChoices } from "@/lib/cowriterChoices";
 import {
   buildScriptBase,
   createLoglineSuggestions,
@@ -56,6 +58,8 @@ export function GuidedSetupClient() {
   const [completedProject, setCompletedProject] = useState<ScriptBase | null>(null);
   const [loglineSuggestions, setLoglineSuggestions] = useState<string[]>([]);
   const [loglineSuggestionIndex, setLoglineSuggestionIndex] = useState(0);
+  const [loglineError, setLoglineError] = useState("");
+  const [loglineLoading, setLoglineLoading] = useState(false);
   const answerBoxRef = useRef<HTMLTextAreaElement>(null);
 
   const question = guidedSetupQuestions[step];
@@ -157,7 +161,7 @@ export function GuidedSetupClient() {
     setLoglineSuggestionIndex(0);
   }
 
-  function suggestLogline() {
+  function showFallbackLogline() {
     if (!completedProject) return;
 
     const nextSuggestions = createLoglineSuggestions(completedProject.answers);
@@ -167,6 +171,47 @@ export function GuidedSetupClient() {
     setLoglineSuggestionIndex(nextIndex);
   }
 
+  async function suggestLogline() {
+    if (!completedProject || loglineLoading) return;
+
+    setLoglineError("");
+    setLoglineLoading(true);
+
+    try {
+      const response = await fetch("/api/hermes-cowriter", {
+        method: "POST",
+        headers: cowriterRequestHeaders(),
+        body: JSON.stringify({
+          mode: "logline",
+          answers: completedProject.answers,
+          summary: completedProject.summary,
+        }),
+      });
+      const data = (await response.json().catch(() => ({}))) as { error?: string; output?: string };
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "The logline goblin failed.");
+      }
+
+      const output = data.output?.trim() ?? "";
+      const choice = parseCowriterChoices(output)[0];
+      const suggestedLogline = choice?.text ?? output;
+
+      if (!suggestedLogline) {
+        throw new Error("The logline goblin came back empty.");
+      }
+
+      setLoglineSuggestions([suggestedLogline]);
+      setLoglineSuggestionIndex(0);
+    } catch (caught) {
+      const detail = caught instanceof Error ? caught.message : "Unknown logline failure.";
+      setLoglineError(`Hermes could not draft the logline, so this is a local house guess. ${detail}`);
+      showFallbackLogline();
+    } finally {
+      setLoglineLoading(false);
+    }
+  }
+
   function restartSetup() {
     setAnswers({ structurePreference: "Classic 3-act spine" });
     setStep(0);
@@ -174,6 +219,8 @@ export function GuidedSetupClient() {
     setCompletedProject(null);
     setLoglineSuggestions([]);
     setLoglineSuggestionIndex(0);
+    setLoglineError("");
+    setLoglineLoading(false);
   }
 
   if (completedProject) {
@@ -220,12 +267,14 @@ export function GuidedSetupClient() {
           <div className={styles.actionRow}>
             <button
               className={`${styles.fieldSuggestButton} ${styles.goblinSuggestButton} ${styles.loglineSuggestButton}`}
+              disabled={loglineLoading}
               onClick={suggestLogline}
               type="button"
             >
-              Annoy the goblin for logline
+              {loglineLoading ? "Drafting logline" : "Annoy the goblin for logline"}
             </button>
           </div>
+          {loglineError ? <p className={styles.fieldSuggestionError}>{loglineError}</p> : null}
           {acceptedLogline ? (
             <div className={styles.acceptedLogline}>
               <p className={styles.acceptedLabel}>Accepted logline</p>
@@ -242,10 +291,11 @@ export function GuidedSetupClient() {
                 </button>
                 <button
                   className={`${styles.fieldUseSuggestionButton} ${styles.goblinSuggestButton}`}
+                  disabled={loglineLoading}
                   onClick={suggestLogline}
                   type="button"
                 >
-                  Another suggestion
+                  {loglineLoading ? "Drafting" : "Another suggestion"}
                 </button>
               </div>
             </div>
