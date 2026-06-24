@@ -251,9 +251,6 @@ function createRoomGuesses(answers: SetupAnswers) {
   const stakes = answerPhrase(answers, "stakes");
   const falseBelief = answerPhrase(answers, "falseBelief");
   const opposition = answerPhrase(answers, "opposition");
-  const endingDirection = answerPhrase(answers, "endingDirection");
-  const genreLabel = moviePromiseLabel(answerPhrase(answers, "genre"));
-  const audienceFeeling = answerPhrase(answers, "audienceFeeling");
   const effortLie = effortBased(falseBelief);
   const deeperNeed = effortLie
     ? `They may need to accept that effort alone is not enough and adapt before the stakes become real: ${clause(stakes)}`
@@ -273,18 +270,18 @@ function createRoomGuesses(answers: SetupAnswers) {
       : `${opposition} may be right because they expose the cost of ${protagonist} chasing ${surfaceWant} while believing ${falseBelief}`,
     supportingCharacter: `Name a helper, rival, or mirror who pressures ${protagonist} to confront ${falseBelief}`,
     storyProof: `Show choices where ${protagonist} pursues ${surfaceWant}, pays ${stakes}, and learns whether ${falseBelief} can survive pressure`,
-    openingImage: `Show ${protagonist} chasing ${surfaceWant} before pressure exposes ${falseBelief}`,
-    incitingIncident: `An event makes ${surfaceWant} urgent and impossible to ignore`,
-    debate: `${protagonist} hesitates because ${falseBelief} still feels safer than change`,
-    actOneBreak: `${protagonist} commits to ${surfaceWant} even though ${opposition} makes the cost real`,
-    promise: `Build a sequence that delivers the ${genreLabel} promise and makes the audience feel ${audienceFeeling}`,
-    midpoint: `A reveal or reversal proves the old plan for ${surfaceWant} will not survive`,
-    badGuysCloseIn: `${opposition} tightens the trap until ${protagonist} cannot dodge the lie anymore`,
-    allIsLost: `Make the cost feel personal, public, moral, or irreversible: ${stakes}`,
-    darkNight: `${protagonist} finally names the damage caused by believing ${falseBelief}`,
-    actThreeBreak: `A new choice points toward ${endingDirection}`,
-    climax: `${protagonist} makes the hardest choice and proves what has changed`,
-    finalImage: `Echo the opening image, but show how ${protagonist} has changed`,
+    openingImage: `Describe the first visual snapshot: who, where, and what feels normal before the story applies pressure`,
+    incitingIncident: `Name the event that disrupts normal life and makes inaction impossible`,
+    debate: `Show why the protagonist hesitates, rationalizes, or tries the wrong safer path`,
+    actOneBreak: `Make the protagonist choose the visible goal, cross into the main story, and accept that the cost is now real`,
+    promise: `Write the sequence that proves the movie's core promise: the fun, dread, longing, awe, or tension the audience came for`,
+    midpoint: `Create the reveal, reversal, false victory, or false defeat that makes the old plan impossible`,
+    badGuysCloseIn: `Let pressure pile up from rivals, flaws, consequences, and the clock until escape routes close and the protagonist cannot dodge the lie anymore`,
+    allIsLost: `Write the moment where the cost lands as personal, public, moral, or seemingly irreversible`,
+    darkNight: `Show the quiet aftermath where the protagonist has to face the lie, wound, or mistake`,
+    actThreeBreak: `Name the new choice or plan that sends the story into its final movement`,
+    climax: `Describe the maximum-pressure choice that proves what has changed`,
+    finalImage: `Create the closing visual that answers, twists, or contrasts the opening image`,
     sceneCharacters: `${protagonist}, plus whoever can apply the most pressure in this moment`,
     sceneWant: `${protagonist} wants a concrete step toward ${surfaceWant}`,
     sceneOpposition: `${opposition} blocks the scene goal or makes the cost sharper`,
@@ -395,7 +392,7 @@ Hybrid default: ${structurePreference}. Rename, skip, add, or reorder beats when
 ${writingPrompt(roomGuesses.openingImage)}
 
 ## Setup
-Establish the world, the want (${surfaceWant}), the lie (${falseBelief}), and the cost of staying the same.
+Establish the ordinary world, core want, false belief, relationships, and cost of staying the same.
 
 ## Inciting Incident
 ${writingPrompt(roomGuesses.incitingIncident)}
@@ -512,7 +509,7 @@ Treat these as strict rules when generating script pages.
 `,
     "create-script": `# Create the Script Room
 
-This room checks whether the first six rooms contain enough story material for a tailored screenplay draft.
+This room checks whether the core story rooms contain enough material for a tailored screenplay draft.
 
 ## Draft request
 Press the goblin button when you believe the script has enough bones.
@@ -522,7 +519,7 @@ Press the goblin button when you believe the script has enough bones.
 - Premise and Characters must be strong enough to define the story spine.
 - Theme must name the central question and ending direction.
 - Beats must cover the major pressure turns.
-- Scenes must include at least a starter scene list or usable scene card.
+- Scenes can help later, but they are not required to start a draft.
 `,
   };
 
@@ -594,12 +591,160 @@ export function buildExportMarkdown(rooms: RoomMarkdown) {
   const activeSlugs = getActiveRooms().map((room) => room.slug);
   const otherSlugs = Object.keys(rooms).filter((slug) => !activeSlugs.includes(slug));
   const orderedSlugs = [...activeSlugs, ...otherSlugs];
+  const roomBySlug = new Map([...getActiveRooms(), ...getComingSoonRooms()].map((room) => [room.slug, room]));
 
   return [
     "# Plot Goblin Export",
     "",
     "Generated from local browser storage. The goblin recommends backing this up somewhere less snackable.",
     "",
-    ...orderedSlugs.flatMap((slug) => [`## ${slug}.md`, "", rooms[slug] ?? "", ""]),
+    ...orderedSlugs.flatMap((slug) => [
+      `<!-- plot-goblin-room: ${slug} -->`,
+      `## ${roomBySlug.get(slug)?.markdownFile ?? `${slug}.md`}`,
+      "",
+      rooms[slug] ?? "",
+      `<!-- /plot-goblin-room: ${slug} -->`,
+      "",
+    ]),
   ].join("\n");
+}
+
+const DRAFT_CONTEXT_ROOM_SLUGS = ["premise", "characters", "theme", "beats", "scenes", "script-parameters"] as const;
+const SCENE_FIELD_LABELS = ["Location / time", "Characters", "Scene want", "Opposition", "Turn", "Button", "Purpose"] as const;
+
+function compactText(value: string, maxChars: number) {
+  const compacted = value
+    .replace(/\[(?:needs your answer|needs answer|needs writing)\]\s*/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (compacted.length <= maxChars) return compacted;
+
+  return `${compacted.slice(0, maxChars).trim()} [...]`;
+}
+
+function capMarkdown(markdown: string, maxChars: number) {
+  const compacted = markdown.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+
+  if (compacted.length <= maxChars) return compacted;
+
+  return `${compacted.slice(0, maxChars).trim()}\n\n[...capped for draft prompt]`;
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function sceneCards(markdown: string) {
+  const savedScenes = /##\s+Saved scenes\s*\n([\s\S]*?)(?=\n##\s+Scene list|\n##\s+\w|$)/i.exec(markdown)?.[1] ?? markdown;
+
+  return savedScenes
+    .split(/(?=^###\s+Scene:)/m)
+    .map((card) => card.trim())
+    .filter((card) => /^###\s+Scene:/m.test(card));
+}
+
+function sceneField(card: string, label: string) {
+  const pattern = new RegExp(
+    `\\*\\*${escapeRegExp(label)}:\\*\\*\\s*\\n([\\s\\S]*?)(?=\\n\\*\\*[^\\n]+:\\*\\*|\\n---|\\n###\\s+Scene:|$)`,
+    "i",
+  );
+
+  return pattern.exec(card)?.[1] ?? "";
+}
+
+function compactScenesMarkdown(markdown: string) {
+  const cards = sceneCards(markdown).slice(0, 40);
+
+  if (cards.length === 0) return capMarkdown(markdown, 4_000);
+
+  return cards
+    .map((card, index) => {
+      const title = compactText(/^###\s+Scene:\s*(.+)$/m.exec(card)?.[1] ?? `Scene ${index + 1}`, 100);
+      const fields = SCENE_FIELD_LABELS.map((label) => {
+        const value = compactText(sceneField(card, label), 220);
+        return value ? `${label}: ${value}` : "";
+      }).filter(Boolean);
+
+      return [`${index + 1}. ${title}`, ...fields].join("\n");
+    })
+    .join("\n\n");
+}
+
+export function buildDraftContextMarkdown(rooms: RoomMarkdown) {
+  const activeRoomBySlug = new Map(getActiveRooms().map((room) => [room.slug, room]));
+
+  return [
+    "# Plot Goblin Draft Context",
+    "Compact source. Same story facts, fewer snack crumbs.",
+    ...DRAFT_CONTEXT_ROOM_SLUGS.flatMap((slug) => {
+      const markdown = rooms[slug]?.trim();
+      const room = activeRoomBySlug.get(slug);
+      if (!markdown || !room) return [];
+
+      const body = slug === "scenes" ? compactScenesMarkdown(markdown) : capMarkdown(markdown, slug === "beats" ? 8_000 : 6_000);
+
+      return [`## ${room.markdownFile}`, body];
+    }),
+  ].join("\n\n");
+}
+
+function stripRoomExportHeading(slug: string, block: string) {
+  const room = [...getActiveRooms(), ...getComingSoonRooms()].find((candidate) => candidate.slug === slug);
+  const heading = `## ${room?.markdownFile ?? `${slug}.md`}`;
+  const lines = block.replace(/\r\n/g, "\n").split("\n");
+
+  if (lines[0] === heading && lines[1] === "") {
+    return lines.slice(2).join("\n").replace(/\n+$/, "");
+  }
+
+  return block.trim();
+}
+
+function parseMarkedExport(markdown: string) {
+  const rooms: RoomMarkdown = {};
+  const pattern = /<!-- plot-goblin-room: ([a-z0-9-]+) -->\n([\s\S]*?)\n<!-- \/plot-goblin-room: \1 -->/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(markdown)) !== null) {
+    const [, slug, block] = match;
+    rooms[slug] = stripRoomExportHeading(slug, block);
+  }
+
+  return rooms;
+}
+
+function parseLegacyExport(markdown: string) {
+  const rooms: RoomMarkdown = {};
+  const knownRooms = [...getActiveRooms(), ...getComingSoonRooms()];
+  const fileHeadingBySlug = new Map(knownRooms.map((room) => [room.slug, `## ${room.markdownFile}`]));
+  const slugByHeading = new Map(knownRooms.map((room) => [`## ${room.markdownFile}`, room.slug]));
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  const headings = lines
+    .map((line, index) => ({ index, slug: slugByHeading.get(line.trim()) }))
+    .filter((heading): heading is { index: number; slug: string } => Boolean(heading.slug));
+
+  headings.forEach((heading, headingIndex) => {
+    const nextHeading = headings[headingIndex + 1]?.index ?? lines.length;
+    const bodyStart = lines[heading.index + 1] === "" ? heading.index + 2 : heading.index + 1;
+    rooms[heading.slug] = lines.slice(bodyStart, nextHeading).join("\n").replace(/\n+$/, "");
+  });
+
+  for (const [slug, heading] of fileHeadingBySlug) {
+    if (!markdown.includes(heading)) continue;
+    if (rooms[slug] === undefined) rooms[slug] = "";
+  }
+
+  return rooms;
+}
+
+export function parseExportMarkdown(markdown: string) {
+  const markedRooms = parseMarkedExport(markdown);
+  const rooms = Object.keys(markedRooms).length > 0 ? markedRooms : parseLegacyExport(markdown);
+
+  if (Object.keys(rooms).length === 0) {
+    throw new Error("This does not look like a Plot Goblin markdown export.");
+  }
+
+  return { rooms };
 }

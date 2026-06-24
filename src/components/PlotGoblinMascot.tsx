@@ -1,16 +1,10 @@
 import Link from "next/link";
 import styles from "./PlotGoblinMascot.module.css";
-import { RoomNavMenu } from "./RoomNavMenu";
 
 export function PlotGoblinMascot() {
   return (
     <header className={styles.mascotBar}>
       <div className={styles.inner}>
-        <nav className={styles.nav} aria-label="Primary navigation">
-          <Link href="/guided-setup">Setup</Link>
-          <RoomNavMenu buttonClassName={styles.navButton} />
-        </nav>
-
         <Link className={styles.brand} href="/">
           <svg
             aria-label="Teasing Plot Goblin mascot"

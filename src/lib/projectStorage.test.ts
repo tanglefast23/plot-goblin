@@ -29,11 +29,15 @@ describe("project storage", () => {
     const migrated = ensureProject();
     const persisted = window.localStorage.getItem(PROJECT_STORAGE_KEY) ?? "";
 
-    expect(migrated.rooms.beats).toContain("[needs your answer] Stubborn one-armed pitcher hesitates");
     expect(migrated.rooms.beats).toContain(
-      "## Setup\nEstablish the world, the want (become a professional baseball player), the lie (asking for help makes him weak)",
+      "[needs your answer] Show why the protagonist hesitates, rationalizes, or tries the wrong safer path.",
     );
-    expect(persisted).toContain("[needs your answer] Stubborn one-armed pitcher hesitates");
+    expect(migrated.rooms.beats).toContain(
+      "## Setup\nEstablish the ordinary world, core want, false belief, relationships, and cost of staying the same.",
+    );
+    expect(persisted).toContain(
+      "[needs your answer] Show why the protagonist hesitates, rationalizes, or tries the wrong safer path.",
+    );
   });
 
   it("does not duplicate migrated scene prompts on later loads", () => {

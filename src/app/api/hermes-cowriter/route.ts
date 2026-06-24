@@ -9,6 +9,10 @@ export const dynamic = "force-dynamic";
 const execFileAsync = promisify(execFile);
 const rateLimitPerMinute = Number.parseInt(process.env.PLOT_GOBLIN_RATE_LIMIT_PER_MINUTE ?? "8", 10);
 const checkRateLimit = createMemoryRateLimiter(Number.isFinite(rateLimitPerMinute) ? rateLimitPerMinute : 8, 60_000);
+const maxRequestBodyBytes = 64_000;
+const maxPromptSourceChars = 36_000;
+const maxSerializedContextChars = 12_000;
+const maxLabelChars = 160;
 
 function jsonResponse(body: unknown, status = 200, headers?: HeadersInit) {
   return Response.json(body, { status, headers });
@@ -17,7 +21,46 @@ function jsonResponse(body: unknown, status = 200, headers?: HeadersInit) {
 function isCowriterRequest(value: unknown): value is CowriterRequest {
   if (!value || typeof value !== "object") return false;
   const mode = (value as { mode?: unknown }).mode;
-  return mode === "followup" || mode === "suggestions" || mode === "room" || mode === "beat";
+  return (
+    mode === "followup" ||
+    mode === "suggestions" ||
+    mode === "room" ||
+    mode === "beat" ||
+    mode === "draft" ||
+    mode === "scene"
+  );
+}
+
+function serializedLength(value: unknown) {
+  return JSON.stringify(value ?? {}).length;
+}
+
+function validateOptionalString(value: unknown, label: string, maxChars: number) {
+  if (value === undefined) return null;
+  if (typeof value !== "string") return `${label} must be text.`;
+  if (value.length > maxChars) return `${label} is too large.`;
+  return null;
+}
+
+function validateOptionalRecord(value: unknown, label: string) {
+  if (value === undefined) return null;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return `${label} must be an object.`;
+  if (serializedLength(value) > maxSerializedContextChars) return `${label} is too large.`;
+  return null;
+}
+
+function validateCowriterRequest(value: CowriterRequest) {
+  const issues = [
+    validateOptionalString(value.room, "Room", maxLabelChars),
+    validateOptionalString(value.beat, "Beat", maxLabelChars),
+    validateOptionalString(value.writingStyle, "Writing style", maxLabelChars),
+    validateOptionalString(value.markdown, "Markdown", maxPromptSourceChars),
+    validateOptionalString(value.beatMarkdown, "Beat markdown", maxPromptSourceChars),
+    validateOptionalRecord(value.answers, "Answers"),
+    validateOptionalRecord(value.summary, "Summary"),
+  ].filter(Boolean);
+
+  return issues[0] ?? null;
 }
 
 function bridgeUrl() {
@@ -126,6 +169,11 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const contentLength = Number(request.headers.get("content-length") ?? 0);
+  if (Number.isFinite(contentLength) && contentLength > maxRequestBodyBytes) {
+    return jsonResponse({ error: "Co-writer request body is too large." }, 413);
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -137,7 +185,11 @@ export async function POST(request: Request) {
     return jsonResponse({ error: "Invalid co-writer request." }, 400);
   }
 
-  const prompt = buildCowriterPrompt(body);
+  const validationError = validateCowriterRequest(body);
+  if (validationError) {
+    const status = validationError.includes("too large") ? 413 : 400;
+    return jsonResponse({ error: `Invalid co-writer request. ${validationError}` }, status);
+  }
 
   if (process.env.VERCEL === "1") {
     const expectedAccessKey = process.env.PLOT_GOBLIN_AI_ACCESS_KEY;
@@ -161,6 +213,7 @@ export async function POST(request: Request) {
     }
 
     try {
+      const prompt = buildCowriterPrompt(body);
       const output = await callRemoteHermesBridge(prompt);
       return jsonResponse({ output: cleanHermesOutput(output), remaining: limit.remaining });
     } catch (caught) {
@@ -169,6 +222,7 @@ export async function POST(request: Request) {
   }
 
   try {
+    const prompt = buildCowriterPrompt(body);
     const output = await callLocalHermes(prompt);
     return jsonResponse({ output: cleanHermesOutput(output) });
   } catch (caught) {

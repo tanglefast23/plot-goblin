@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import styles from "@/app/workspace.module.css";
 import {
   buildScriptBase,
@@ -13,7 +13,6 @@ import {
   type SetupAnswers,
 } from "@/lib/guidedSetup";
 import { saveProject } from "@/lib/projectStorage";
-import { HermesCowriter } from "./HermesCowriter";
 
 function splitSelectedOptions(value: string) {
   return value
@@ -56,10 +55,13 @@ export function GuidedSetupClient() {
   const [draftValue, setDraftValue] = useState("");
   const [completedProject, setCompletedProject] = useState<ScriptBase | null>(null);
   const [loglineSuggestions, setLoglineSuggestions] = useState<string[]>([]);
+  const [loglineSuggestionIndex, setLoglineSuggestionIndex] = useState(0);
   const answerBoxRef = useRef<HTMLTextAreaElement>(null);
 
   const question = guidedSetupQuestions[step];
-  const progress = `${Math.min(step + 1, guidedSetupQuestions.length)} / ${guidedSetupQuestions.length}`;
+  const stepNumber = Math.min(step + 1, guidedSetupQuestions.length);
+  const progress = `${stepNumber} / ${guidedSetupQuestions.length}`;
+  const progressFraction = stepNumber / guidedSetupQuestions.length;
 
   const answerPathAnswers = useMemo(() => {
     return question ? { ...answers, [question.id]: draftValue.trim() } : answers;
@@ -151,17 +153,37 @@ export function GuidedSetupClient() {
     };
     saveProject(updatedProject);
     setCompletedProject(updatedProject);
+    setLoglineSuggestions([]);
+    setLoglineSuggestionIndex(0);
+  }
+
+  function suggestLogline() {
+    if (!completedProject) return;
+
+    const nextSuggestions = createLoglineSuggestions(completedProject.answers);
+    const nextIndex = loglineSuggestions.length > 0 ? (loglineSuggestionIndex + 1) % nextSuggestions.length : 0;
+
+    setLoglineSuggestions(nextSuggestions);
+    setLoglineSuggestionIndex(nextIndex);
+  }
+
+  function restartSetup() {
+    setAnswers({ structurePreference: "Classic 3-act spine" });
+    setStep(0);
+    setDraftValue("");
+    setCompletedProject(null);
+    setLoglineSuggestions([]);
+    setLoglineSuggestionIndex(0);
   }
 
   if (completedProject) {
     const acceptedLogline = getAcceptedLogline(completedProject);
-    const suggestions = loglineSuggestions.length > 0 ? loglineSuggestions : [];
+    const suggestedLogline = loglineSuggestions[loglineSuggestionIndex] ?? "";
 
     return (
       <div className={styles.summaryPanel}>
         <p className={styles.stepMeta}>Setup complete</p>
         <h1>Here is what the goblin thinks your movie is.</h1>
-        <p className={styles.lede}>{completedProject.summary.oneLine}</p>
 
         <div className={styles.summaryGrid}>
           <section className={styles.summaryBox}>
@@ -193,15 +215,15 @@ export function GuidedSetupClient() {
         </div>
 
         <section className={styles.loglineBox}>
-          <h2>Polished logline</h2>
-          <p className={styles.nudge}>Working notes came first. Now you can ask for two cleaner options and accept one.</p>
+          <h2>Polished loglines</h2>
+          <p className={styles.nudge}>Annoy the goblin for a cleaner logline based on the setup answers so far.</p>
           <div className={styles.actionRow}>
             <button
-              className={`${styles.secondaryButton} ${styles.attentionButton}`}
-              onClick={() => setLoglineSuggestions(createLoglineSuggestions(completedProject.answers))}
+              className={`${styles.fieldSuggestButton} ${styles.goblinSuggestButton} ${styles.loglineSuggestButton}`}
+              onClick={suggestLogline}
               type="button"
             >
-              Make it sound less like a parking ticket
+              Annoy the goblin for logline
             </button>
           </div>
           {acceptedLogline ? (
@@ -211,33 +233,32 @@ export function GuidedSetupClient() {
               <p className={styles.savedLine}>Saved to the Premise room.</p>
             </div>
           ) : null}
-          {suggestions.map((suggestion) => {
-            const isAccepted = suggestion === acceptedLogline;
-
-            return (
-              <div className={styles.loglineSuggestion} key={suggestion}>
-                <p>{suggestion}</p>
-                <button className={styles.primaryButton} disabled={isAccepted} onClick={() => acceptLogline(suggestion)} type="button">
-                  {isAccepted ? "Accepted" : "Accept this one"}
+          {suggestedLogline ? (
+            <div className={styles.loglineSuggestion}>
+              <p>{suggestedLogline}</p>
+              <div className={styles.fieldSuggestionActions}>
+                <button className={styles.fieldUseSuggestionButton} onClick={() => acceptLogline(suggestedLogline)} type="button">
+                  Use suggestion
+                </button>
+                <button
+                  className={`${styles.fieldUseSuggestionButton} ${styles.goblinSuggestButton}`}
+                  onClick={suggestLogline}
+                  type="button"
+                >
+                  Another suggestion
                 </button>
               </div>
-            );
-          })}
+            </div>
+          ) : null}
         </section>
-
-        <HermesCowriter
-          label="Ask one annoying follow-up"
-          mode="followup"
-          payload={{ answers: completedProject.answers, summary: completedProject.summary }}
-        />
 
         <div className={styles.actionRow}>
           <Link className={styles.primaryButton} href="/rooms">
             Enter rooms
           </Link>
-          <Link className={styles.ghostButton} href="/guided-setup">
+          <button className={styles.ghostButton} onClick={restartSetup} type="button">
             Start over
-          </Link>
+          </button>
         </div>
       </div>
     );
@@ -246,88 +267,101 @@ export function GuidedSetupClient() {
   return (
     <section className={styles.heroPanel}>
       <p className={styles.stepMeta}>Script Setup Goblin · {progress}</p>
-      <h1>{question.title}</h1>
-      <p className={styles.lede}>{question.goblinNudge}</p>
-
-      <form
-        className={styles.questionForm}
-        onSubmit={(event) => {
-          event.preventDefault();
-          moveNext();
-        }}
+      <div
+        aria-label="Setup progress"
+        aria-valuemax={guidedSetupQuestions.length}
+        aria-valuemin={0}
+        aria-valuenow={stepNumber}
+        className={styles.progressTrack}
+        role="progressbar"
+        style={{ "--progress": progressFraction } as CSSProperties}
       >
-        {question.options ? (
-          <div className={styles.optionRow}>
-            {question.options.map((option) => {
-              const isSelected = question.multiple && optionIsSelected(draftValue, option);
+        <span className={styles.progressFill} />
+      </div>
+      <div className={styles.stepBody} key={step}>
+        <h1>{question.title}</h1>
+        <p className={styles.lede}>{question.goblinNudge}</p>
+
+        <form
+          className={styles.questionForm}
+          onSubmit={(event) => {
+            event.preventDefault();
+            moveNext();
+          }}
+        >
+          {question.options ? (
+            <div className={styles.optionRow}>
+              {question.options.map((option) => {
+                const isSelected = question.multiple && optionIsSelected(draftValue, option);
+
+                return (
+                  <button
+                    aria-pressed={isSelected}
+                    className={`${styles.secondaryButton} ${isSelected ? styles.selectedOption : ""}`}
+                    key={option}
+                    onClick={() => selectOption(option)}
+                    type="button"
+                  >
+                    {option}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+
+          <label>
+            Your answer
+            <textarea
+              className={styles.textarea}
+              onChange={(event) => setDraftValue(event.target.value)}
+              onKeyDown={handleAnswerKeyDown}
+              placeholder={question.placeholder}
+              ref={answerBoxRef}
+              value={draftValue}
+            />
+          </label>
+
+          <p className={styles.nudge}>
+            <strong>Skip rule:</strong> allowed. Cowardly, but allowed. Skipped answers become [needs your answer] goblin guesses.
+          </p>
+
+          <div className={styles.actionRow}>
+            {step > 0 ? (
+              <button className={styles.ghostButton} onClick={moveBack} type="button">
+                Back
+              </button>
+            ) : null}
+            <button className={styles.primaryButton} type="submit">
+              {step >= guidedSetupQuestions.length - 1 ? "Create script base" : "Next"}
+            </button>
+            <button className={styles.ghostButton} onClick={skipQuestion} type="button">
+              Skip, cowardly but allowed
+            </button>
+          </div>
+
+          <nav aria-label="Answer path" className={styles.answerPath}>
+            {guidedSetupQuestions.map((setupQuestion, index) => {
+              const answer = answerPathAnswers[setupQuestion.id]?.trim();
+              const isCurrentStep = index === step;
 
               return (
                 <button
-                  aria-pressed={isSelected}
-                  className={`${styles.secondaryButton} ${isSelected ? styles.selectedOption : ""}`}
-                  key={option}
-                  onClick={() => selectOption(option)}
+                  aria-current={isCurrentStep ? "step" : undefined}
+                  aria-label={`Go to answer ${index + 1}: ${setupQuestion.title}`}
+                  className={`${styles.answerPathButton} ${isCurrentStep ? styles.currentAnswerPathButton : ""}`}
+                  key={setupQuestion.id}
+                  onClick={() => jumpToAnswer(index)}
                   type="button"
                 >
-                  {option}
+                  <span>{index + 1}</span>
+                  <strong>{answerPathLabels[setupQuestion.id]}</strong>
+                  <small>{answer ? "Answered" : "Blank"}</small>
                 </button>
               );
             })}
-          </div>
-        ) : null}
-
-        <label>
-          Your answer
-          <textarea
-            className={styles.textarea}
-            onChange={(event) => setDraftValue(event.target.value)}
-            onKeyDown={handleAnswerKeyDown}
-            placeholder={question.placeholder}
-            ref={answerBoxRef}
-            value={draftValue}
-          />
-        </label>
-
-        <p className={styles.nudge}>
-          <strong>Skip rule:</strong> allowed. Cowardly, but allowed. Skipped answers become [needs your answer] goblin guesses.
-        </p>
-
-        <div className={styles.actionRow}>
-          <button className={styles.primaryButton} type="submit">
-            {step >= guidedSetupQuestions.length - 1 ? "Create script base" : "Next"}
-          </button>
-          {step > 0 ? (
-            <button className={styles.ghostButton} onClick={moveBack} type="button">
-              Back
-            </button>
-          ) : null}
-          <button className={styles.ghostButton} onClick={skipQuestion} type="button">
-            Skip, cowardly but allowed
-          </button>
-        </div>
-
-        <nav aria-label="Answer path" className={styles.answerPath}>
-          {guidedSetupQuestions.map((setupQuestion, index) => {
-            const answer = answerPathAnswers[setupQuestion.id]?.trim();
-            const isCurrentStep = index === step;
-
-            return (
-              <button
-                aria-current={isCurrentStep ? "step" : undefined}
-                aria-label={`Go to answer ${index + 1}: ${setupQuestion.title}`}
-                className={`${styles.answerPathButton} ${isCurrentStep ? styles.currentAnswerPathButton : ""}`}
-                key={setupQuestion.id}
-                onClick={() => jumpToAnswer(index)}
-                type="button"
-              >
-                <span>{index + 1}</span>
-                <strong>{answerPathLabels[setupQuestion.id]}</strong>
-                <small>{answer ? "Answered" : "Blank"}</small>
-              </button>
-            );
-          })}
-        </nav>
-      </form>
+          </nav>
+        </form>
+      </div>
     </section>
   );
 }

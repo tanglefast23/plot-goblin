@@ -1,6 +1,15 @@
-import { buildScriptBase, LEGACY_NEEDS_ANSWER, NEEDS_ANSWER, NEEDS_WRITING, type ScriptBase } from "./guidedSetup";
+import {
+  buildScriptBase,
+  guidedSetupQuestions,
+  LEGACY_NEEDS_ANSWER,
+  NEEDS_ANSWER,
+  NEEDS_WRITING,
+  parseExportMarkdown,
+  type ScriptBase,
+} from "./guidedSetup";
 
 export const PROJECT_STORAGE_KEY = "plot-goblin-current-script";
+export const PROJECT_CHANGED_EVENT = "plot-goblin-project-changed";
 
 const LEGACY_ROOM_PROMPTS = [
   "Replace this with a specific visual snapshot before pressure hits.",
@@ -160,6 +169,11 @@ export function createBlankProject() {
   return buildScriptBase({});
 }
 
+export function hasCompletedGuidedSetup(project: ScriptBase | null) {
+  if (!project) return false;
+  return guidedSetupQuestions.every((question) => Object.hasOwn(project.answers, question.id));
+}
+
 export function loadProject(): ScriptBase | null {
   if (typeof window === "undefined") return null;
 
@@ -180,6 +194,7 @@ export function saveProject(project: ScriptBase) {
     PROJECT_STORAGE_KEY,
     JSON.stringify({ ...project, updatedAt: new Date().toISOString() }),
   );
+  window.dispatchEvent(new Event(PROJECT_CHANGED_EVENT));
 }
 
 export function ensureProject() {
@@ -197,4 +212,18 @@ export function ensureProject() {
 export function clearProject() {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(PROJECT_STORAGE_KEY);
+  window.dispatchEvent(new Event(PROJECT_CHANGED_EVENT));
+}
+
+export function importProjectMarkdown(markdown: string) {
+  const imported = parseExportMarkdown(markdown);
+  const base = loadProject() ?? createBlankProject();
+  const project = {
+    ...base,
+    rooms: { ...base.rooms, ...imported.rooms },
+    updatedAt: new Date().toISOString(),
+  };
+
+  saveProject(project);
+  return project;
 }

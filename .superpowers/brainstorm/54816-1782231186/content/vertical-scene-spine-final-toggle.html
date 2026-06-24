@@ -1,0 +1,300 @@
+<style>
+  .pg-stage {
+    --night: #313e3f;
+    --moss: #567554;
+    --lichen: #9abd85;
+    --mist: #e2e8e3;
+    --gold: #e7ce7c;
+    color: var(--night);
+  }
+
+  .pg-stage .split {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .pg-preview {
+    min-height: 530px;
+    border: 1px solid rgb(49 62 63 / 0.22);
+    border-radius: 8px;
+    padding: 18px;
+    background:
+      linear-gradient(135deg, rgb(226 232 227 / 0.96), rgb(154 189 133 / 0.18)),
+      var(--mist);
+  }
+
+  .pg-room-head {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .pg-kicker {
+    color: var(--moss);
+    font-size: 10px;
+    font-weight: 950;
+    text-transform: uppercase;
+  }
+
+  .pg-title {
+    display: block;
+    margin-top: 4px;
+    font-size: 42px;
+    font-weight: 950;
+    line-height: 0.95;
+    text-transform: uppercase;
+  }
+
+  .pg-shell {
+    display: grid;
+    gap: 14px;
+    align-items: start;
+  }
+
+  .pg-shell-wide {
+    grid-template-columns: 142px minmax(0, 1fr);
+  }
+
+  .pg-shell-thin {
+    grid-template-columns: 82px minmax(0, 1fr);
+  }
+
+  .pg-rail {
+    display: grid;
+    gap: 8px;
+    align-content: start;
+  }
+
+  .pg-toggle {
+    display: flex;
+    width: 100%;
+    height: 34px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    border: 1px solid rgb(49 62 63 / 0.3);
+    border-radius: 999px;
+    padding: 4px 5px 4px 10px;
+    background: rgb(226 232 227 / 0.85);
+    font-size: 8px;
+    font-weight: 950;
+    text-transform: uppercase;
+  }
+
+  .pg-toggle-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    background: var(--moss);
+  }
+
+  .pg-toggle-compact {
+    justify-content: center;
+    padding: 4px;
+  }
+
+  .pg-toggle-compact .pg-toggle-dot {
+    background: var(--gold);
+  }
+
+  .pg-wide-card,
+  .pg-square {
+    display: grid;
+    align-content: center;
+    border: 1px solid rgb(49 62 63 / 0.22);
+    border-radius: 8px;
+    color: var(--night);
+    background: rgb(226 232 227 / 0.88);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.42);
+  }
+
+  .pg-wide-card {
+    min-height: 64px;
+    padding: 9px;
+  }
+
+  .pg-square {
+    width: 70px;
+    height: 70px;
+    justify-items: center;
+    padding: 7px;
+    text-align: center;
+  }
+
+  .pg-add {
+    border-style: dashed;
+    background: rgb(231 206 124 / 0.42);
+    font-size: 34px;
+    font-weight: 950;
+  }
+
+  .pg-active {
+    border-color: var(--night);
+    background:
+      linear-gradient(180deg, rgb(231 206 124 / 0.86), rgb(226 232 227 / 0.75)),
+      var(--gold);
+  }
+
+  .pg-num {
+    color: var(--moss);
+    font-size: 9px;
+    font-weight: 950;
+  }
+
+  .pg-scene-name {
+    overflow: hidden;
+    margin-top: 3px;
+    font-size: 10px;
+    font-weight: 950;
+    line-height: 1.02;
+    text-transform: uppercase;
+  }
+
+  .pg-square .pg-scene-name {
+    font-size: 9px;
+  }
+
+  .pg-meta {
+    overflow: hidden;
+    margin-top: 4px;
+    color: rgb(49 62 63 / 0.65);
+    font-size: 8px;
+    font-weight: 750;
+    line-height: 1.1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pg-workbox {
+    min-height: 398px;
+    border: 1px solid rgb(49 62 63 / 0.2);
+    border-radius: 8px;
+    padding: 14px;
+    background: rgb(226 232 227 / 0.68);
+  }
+
+  .pg-editor {
+    display: grid;
+    gap: 9px;
+  }
+
+  .pg-label {
+    color: var(--moss);
+    font-size: 9px;
+    font-weight: 950;
+    text-transform: uppercase;
+  }
+
+  .pg-input,
+  .pg-textarea {
+    border: 1px solid rgb(49 62 63 / 0.18);
+    border-radius: 7px;
+    background: rgb(226 232 227 / 0.78);
+  }
+
+  .pg-input {
+    height: 34px;
+  }
+
+  .pg-textarea {
+    height: 72px;
+  }
+
+  .pg-caption {
+    margin-top: 14px;
+    border-left: 4px solid var(--gold);
+    padding-left: 9px;
+    color: rgb(49 62 63 / 0.75);
+    font-size: 12px;
+    font-weight: 750;
+    line-height: 1.35;
+  }
+
+  @media (max-width: 980px) {
+    .pg-stage .split {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="pg-stage">
+  <h2>Chosen direction: vertical scene rail with a compact toggle</h2>
+  <p class="subtitle">Default is the readable rectangular rail. Tapping the small control above “+” switches the same sequence into the compact square rail; tapping again restores the wider rail.</p>
+
+  <div class="split">
+    <div class="mockup">
+      <div class="mockup-header">Default view: readable rectangular rail</div>
+      <div class="mockup-body">
+        <div class="pg-preview">
+          <div class="pg-room-head">
+            <div>
+              <span class="pg-kicker">Scenes.md</span>
+              <span class="pg-title">Scenes</span>
+            </div>
+          </div>
+          <div class="pg-shell pg-shell-wide">
+            <div class="pg-rail">
+              <div class="pg-toggle"><span>Compact</span><span class="pg-toggle-dot"></span></div>
+              <div class="pg-wide-card pg-add">+</div>
+              <div class="pg-wide-card pg-active"><span class="pg-num">01</span><span class="pg-scene-name">Opening Image</span><span class="pg-meta">EXT. STREET - NIGHT</span></div>
+              <div class="pg-wide-card"><span class="pg-num">02</span><span class="pg-scene-name">Setup</span><span class="pg-meta">Kitchen argument</span></div>
+              <div class="pg-wide-card"><span class="pg-num">03</span><span class="pg-scene-name">Midpoint</span><span class="pg-meta">The plan flips</span></div>
+              <div class="pg-wide-card"><span class="pg-num">04</span><span class="pg-scene-name">Bad Guys Close In</span><span class="pg-meta">Pressure rises</span></div>
+            </div>
+            <div class="pg-workbox">
+              <div class="pg-editor">
+                <span class="pg-label">Selected scene</span>
+                <div class="pg-input"></div>
+                <span class="pg-label">Location / time</span>
+                <div class="pg-input"></div>
+                <span class="pg-label">Characters</span>
+                <div class="pg-textarea"></div>
+                <span class="pg-label">Scene want</span>
+                <div class="pg-textarea"></div>
+              </div>
+            </div>
+          </div>
+          <p class="pg-caption">Use this as the normal state because the writer can actually read the scene names.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mockup">
+      <div class="mockup-header">Compact view: thin square rail</div>
+      <div class="mockup-body">
+        <div class="pg-preview">
+          <div class="pg-room-head">
+            <div>
+              <span class="pg-kicker">Scenes.md</span>
+              <span class="pg-title">Scenes</span>
+            </div>
+          </div>
+          <div class="pg-shell pg-shell-thin">
+            <div class="pg-rail">
+              <div class="pg-toggle pg-toggle-compact"><span class="pg-toggle-dot"></span></div>
+              <div class="pg-square pg-add">+</div>
+              <div class="pg-square pg-active"><span class="pg-num">01</span><span class="pg-scene-name">Opening</span></div>
+              <div class="pg-square"><span class="pg-num">02</span><span class="pg-scene-name">Setup</span></div>
+              <div class="pg-square"><span class="pg-num">03</span><span class="pg-scene-name">Midpoint</span></div>
+              <div class="pg-square"><span class="pg-num">04</span><span class="pg-scene-name">Bad Guys</span></div>
+            </div>
+            <div class="pg-workbox">
+              <div class="pg-editor">
+                <span class="pg-label">Selected scene</span>
+                <div class="pg-input"></div>
+                <span class="pg-label">Location / time</span>
+                <div class="pg-input"></div>
+                <span class="pg-label">Characters</span>
+                <div class="pg-textarea"></div>
+                <span class="pg-label">Scene want</span>
+                <div class="pg-textarea"></div>
+              </div>
+            </div>
+          </div>
+          <p class="pg-caption">Use this when the writer wants more editor width and can rely on numbers or short titles.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

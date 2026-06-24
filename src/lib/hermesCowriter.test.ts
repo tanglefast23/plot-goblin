@@ -51,6 +51,85 @@ describe("Hermes co-writer prompt", () => {
     expect(prompt).toContain("1. Midpoint: Replacement text");
   });
 
+  it("asks for a full scene built from one beat using the eight field labels", () => {
+    const prompt = buildCowriterPrompt({
+      mode: "scene",
+      beat: "Inciting Incident",
+      beatMarkdown: "Joe spots a flyer for one last open tryout taped to the batting cage.",
+      markdown: "# Plot Goblin Export\n\n## premise.md\n\nA one-armed hitter tries to make the majors.",
+    });
+
+    expect(prompt).toContain("Build the actual scene for the Inciting Incident beat");
+    expect(prompt).toContain("Joe spots a flyer for one last open tryout taped to the batting cage.");
+    expect(prompt).toContain("Full script markdown");
+    expect(prompt).toContain("## premise.md");
+    expect(prompt).toContain("Return exactly 8 numbered lines, one per field");
+    expect(prompt).toContain("1. Scene title:");
+    expect(prompt).toContain("2. Location / time:");
+    expect(prompt).toContain("3. Characters:");
+    expect(prompt).toContain("4. Scene want:");
+    expect(prompt).toContain("5. Opposition:");
+    expect(prompt).toContain("6. Turn:");
+    expect(prompt).toContain("7. Button:");
+    expect(prompt).toContain("8. Purpose:");
+  });
+
+  it("gives the guided setup movie kind high weight in suggestions", () => {
+    const prompt = buildCowriterPrompt({
+      mode: "suggestions",
+      answers: {
+        genre: "Comedy",
+        rawIdea: "A substitute teacher accidentally becomes a spy.",
+      },
+    });
+
+    expect(prompt).toContain("Current movie kind: Comedy.");
+    expect(prompt).toContain("high-priority creative constraint");
+    expect(prompt).toContain("Comedy choices should be genuinely funny");
+  });
+
+  it("uses the Script Parameters genre as a high-weight draft rule for room and screenplay help", () => {
+    const prompt = buildCowriterPrompt({
+      mode: "room",
+      room: "Create the Script",
+      markdown:
+        "# Plot Goblin Export\n\n## script-parameters.md\n\n## Genre / movie promise\nCurrent genre: Horror.\nAudience feeling: dread and suspense.\n\n## premise.md\n\nA babysitter hears a second baby monitor in an empty house.",
+    });
+
+    expect(prompt).toContain("Current movie kind: Horror.");
+    expect(prompt).toContain("Horror choices should prioritize dread");
+    expect(prompt).toContain("When generating screenplay pages");
+  });
+
+  it("builds an explicit screenplay draft prompt from the full room export", () => {
+    const prompt = buildCowriterPrompt({
+      mode: "draft",
+      writingStyle: "tarantino-genre",
+      markdown:
+        "# Plot Goblin Export\n\n## script-parameters.md\n\nLength format: Short film.\nTarget page count: 8 pages.\n\n## premise.md\n\nA cursed wedding videographer saves his sister's wedding.",
+    });
+
+    expect(prompt).toContain("Generate screenplay pages");
+    expect(prompt).toContain("Writing style lane: Quentin Tarantino (Genre mash-up)");
+    expect(prompt).toContain("extended pressure conversations");
+    expect(prompt).toContain("Do not imitate any specific writer");
+    expect(prompt).toContain("explicit draft request");
+    expect(prompt).toContain("standard screenplay style");
+    expect(prompt).toContain("Short film");
+    expect(prompt).toContain("A cursed wedding videographer");
+  });
+
+  it("uses the goblin house writing style by default", () => {
+    const prompt = buildCowriterPrompt({
+      mode: "draft",
+      markdown: "# Plot Goblin Draft Context",
+    });
+
+    expect(prompt).toContain("Writing style lane: Goblin House Style (Mischief)");
+    expect(prompt).toContain("helpful cave-scribe");
+    expect(prompt).toContain("goblin-flavored word choice");
+  });
+
   it("strips Hermes CLI noise when a final marker exists", () => {
     const cleaned = cleanHermesOutput(
       "Warning: Unknown toolsets: messaging\n\n┌─ Reasoning ──\nthinking...\nPLOT_GOBLIN_FINAL:\nWhat visible thing does he want?",

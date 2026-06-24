@@ -14,13 +14,6 @@
   margin: 0 auto;
 }
 
-.nav {
-  display: flex;
-  gap: 18px;
-}
-
-.nav a,
-.navButton,
 .name,
 .tease {
   color: var(--goblin-night);
@@ -30,15 +23,9 @@
   text-transform: uppercase;
 }
 
-.navButton {
-  border: 0;
-  padding: 0;
-  background: transparent;
-  cursor: pointer;
-}
-
 .brand {
   display: inline-flex;
+  grid-column: 2;
   align-items: center;
   gap: 8px;
   justify-self: center;
@@ -48,6 +35,12 @@
   width: 52px;
   height: auto;
   filter: drop-shadow(0 10px 14px rgb(var(--goblin-night-rgb) / 0.14));
+  transform-origin: 50% 80%;
+}
+
+/* The goblin gives a quick mischievous tilt when you reach for the logo. */
+.brand:hover .goblin {
+  animation: goblinWiggle 600ms var(--ease-out-quart);
 }
 
 .hat,
@@ -80,6 +73,7 @@
 }
 
 .tease {
+  grid-column: 3;
   justify-self: end;
 }
 
@@ -91,11 +85,8 @@
     gap: 12px;
   }
 
-  .nav {
-    display: none;
-  }
-
   .brand {
+    grid-column: 1;
     justify-self: start;
   }
 

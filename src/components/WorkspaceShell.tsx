@@ -1,6 +1,6 @@
 import Link from "next/link";
 import styles from "@/app/workspace.module.css";
-import { RoomNavMenu } from "./RoomNavMenu";
+import { WorkspaceNavigation } from "./WorkspaceNavigation";
 
 export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   return (
@@ -10,12 +10,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
           <Link className={styles.brand} href="/">
             Plot Goblin
           </Link>
-          <nav className={styles.nav} aria-label="Plot Goblin navigation">
-            <Link className={styles.linkButton} href="/guided-setup">
-              Guided setup
-            </Link>
-            <RoomNavMenu align="end" buttonClassName={styles.linkButton} />
-          </nav>
+          <WorkspaceNavigation />
         </header>
         {children}
       </div>

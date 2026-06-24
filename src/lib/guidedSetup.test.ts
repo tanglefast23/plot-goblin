@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   NEEDS_ANSWER,
+  buildDraftContextMarkdown,
   buildExportMarkdown,
   buildScriptBase,
   createLoglineSuggestions,
   guidedSetupQuestions,
+  parseExportMarkdown,
 } from "./guidedSetup";
 
 describe("guided setup model", () => {
@@ -76,7 +78,9 @@ describe("guided setup model", () => {
     expect(base.rooms.premise).toContain(`## Polished logline\n${needsYourAnswer} When Stubborn one-armed pitcher must`);
     expect(base.rooms.characters).toContain(`### Deeper need\n${needsYourAnswer}`);
     expect(base.rooms.theme).toContain(`## Story proof\n${needsYourAnswer}`);
-    expect(base.rooms.beats).toContain(`## Debate / Refusal\n${needsYourAnswer} Stubborn one-armed pitcher hesitates`);
+    expect(base.rooms.beats).toContain(
+      `## Debate / Refusal\n${needsYourAnswer} Show why the protagonist hesitates, rationalizes, or tries the wrong safer path.`,
+    );
     expect(base.rooms.scenes).toContain(`**Scene want:**\n${needsYourAnswer}`);
     expect(base.rooms.beats).not.toContain(`## Setup\n${needsYourAnswer}`);
     expect(base.summary.needsAnswerCount).toBeGreaterThan(0);
@@ -105,6 +109,34 @@ describe("guided setup model", () => {
     expect(Object.values(base.rooms).join("\n")).not.toContain("[Needs answer]");
   });
 
+  it("uses beat-purpose prompts instead of repeating setup answers on beat stickies", () => {
+    const storyFacts = {
+      genre: "Comedy",
+      audienceFeeling: "hopeful and tense",
+      protagonist: "Joe, a determined one-armed pitcher",
+      surfaceWant: "become a professional baseball player",
+      stakes: "he loses the only dream he has left",
+      falseBelief: "determination and hard work is enough to be a pro baseball player",
+      opposition: "the fact that they only have one arm and baseball needs 2",
+      endingDirection: "He changes and wins",
+    };
+    const base = buildScriptBase({
+      rawIdea: "A one-armed pitcher tries to make the majors.",
+      ...storyFacts,
+      structurePreference: "Classic 3-act spine",
+    });
+
+    expect(base.rooms.beats).toContain(
+      "## Opening Image\n[needs your answer] Describe the first visual snapshot: who, where, and what feels normal before the story applies pressure.",
+    );
+    expect(base.rooms.beats).toContain(
+      "## Bad Guys Close In\n[needs your answer] Let pressure pile up from rivals, flaws, consequences, and the clock until escape routes close and the protagonist cannot dodge the lie anymore.",
+    );
+    for (const fact of Object.values(storyFacts)) {
+      expect(base.rooms.beats).not.toContain(fact);
+    }
+  });
+
   it("treats multiple movie kinds as a hybrid promise", () => {
     const genreQuestion = guidedSetupQuestions.find((question) => question.id === "genre");
     const base = buildScriptBase({
@@ -115,7 +147,7 @@ describe("guided setup model", () => {
     expect(genreQuestion?.multiple).toBe(true);
     expect(base.rooms.premise).toContain("A horror / romance hybrid built to make the audience feel dread and longing.");
     expect(base.rooms.beats).toContain(
-      "[needs your answer] Build a sequence that delivers the Horror / Romance hybrid promise and makes the audience feel dread and longing.",
+      "[needs your answer] Write the sequence that proves the movie's core promise: the fun, dread, longing, awe, or tension the audience came for.",
     );
   });
 
@@ -156,10 +188,67 @@ describe("guided setup model", () => {
     const exported = buildExportMarkdown(base.rooms);
 
     expect(exported).toContain("# Plot Goblin Export");
+    expect(exported).toContain("<!-- plot-goblin-room: premise -->");
     expect(exported).toContain("## premise.md");
     expect(exported).toContain("## scenes.md");
     expect(exported).toContain("## script-parameters.md");
     expect(exported).toContain("## create-script.md");
     expect(exported).toContain("A detective investigates a murder on the moon.");
+  });
+
+  it("builds a compact draft context without create-script and with capped scenes", () => {
+    const base = buildScriptBase({
+      rawIdea: "A chef has to save a haunted diner before sunrise.",
+      protagonist: "Mina",
+      surfaceWant: "save the diner",
+      stakes: "she loses the only home she has",
+      falseBelief: "asking for help means failure",
+      opposition: "a landlord hiding a ghost problem",
+      structurePreference: "Classic 3-act spine",
+    });
+    base.rooms["create-script"] = "# Create the Script Room\n\nOld draft output that should not feed the next draft.";
+    base.rooms.scenes = `# Scenes Room
+
+## Saved scenes
+
+### Scene: First Haunting
+
+**Location / time:** INT. DINER - NIGHT
+
+**Characters:**
+Mina, The Landlord
+
+**Scene want:**
+Mina wants the landlord to admit what happened.
+
+**Opposition:**
+${"The landlord dodges the truth. ".repeat(120)}
+
+**Turn:**
+Mina hears the freezer answer.
+`;
+
+    const compact = buildDraftContextMarkdown(base.rooms);
+
+    expect(compact.length).toBeLessThan(buildExportMarkdown(base.rooms).length);
+    expect(compact).toContain("## premise.md");
+    expect(compact).toContain("## scenes.md");
+    expect(compact).toContain("First Haunting");
+    expect(compact).toContain("Mina wants the landlord");
+    expect(compact).not.toContain("create-script.md");
+    expect(compact).not.toContain("Old draft output");
+    expect(compact).not.toContain("The landlord dodges the truth. ".repeat(20));
+  });
+
+  it("imports the same room markdown that export writes", () => {
+    const base = buildScriptBase({ rawIdea: "A detective investigates a murder on the moon." });
+    base.rooms.premise = "# Premise Room\n\n## Stakes\nMoon murder evidence melts at sunrise.";
+    base.rooms.scenes = "# Scenes Room\n\n## Saved scenes\n\n### Scene: crater chase";
+
+    const exported = buildExportMarkdown(base.rooms);
+    const imported = parseExportMarkdown(exported);
+
+    expect(imported.rooms.premise).toBe(base.rooms.premise);
+    expect(imported.rooms.scenes).toBe(base.rooms.scenes);
   });
 });
