@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from "vitest";
-import { clearDraftRun, loadDraftRun, saveDraftRun, type DraftRun } from "./draftRunStorage";
+import { clearDraftRun, DRAFT_RUN_STORAGE_KEY, loadDraftRun, saveDraftRun, type DraftRun } from "./draftRunStorage";
 
 const run: DraftRun = {
   beatSheet: [{ index: 1, pageBudget: 3, title: "A", intent: "x", setups: [] }],
@@ -23,8 +23,8 @@ describe("draftRunStorage", () => {
   });
 
   it("returns null and clears storage on corrupt JSON", () => {
-    window.localStorage.setItem("plot-goblin-draft-run", "{not json");
+    window.localStorage.setItem(DRAFT_RUN_STORAGE_KEY, "{not json");
     expect(loadDraftRun()).toBeNull();
-    expect(window.localStorage.getItem("plot-goblin-draft-run")).toBeNull();
+    expect(window.localStorage.getItem(DRAFT_RUN_STORAGE_KEY)).toBeNull();
   });
 });
