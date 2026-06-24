@@ -56,6 +56,16 @@ describe("advanceDraft", () => {
     expect(next.nextBeatIndex).toBe(4);
     expect(next.status).toBe("done");
   });
+
+  it("newline-joins a new summary onto an existing running summary", () => {
+    const first = advanceDraft(baseRun(), [baseRun().beatSheet[0], baseRun().beatSheet[1]], {
+      pages: "PAGES 1-2",
+      summary: "Mara escapes.",
+      setups: [],
+    });
+    const second = advanceDraft(first, [first.beatSheet[2]], { pages: "PAGES 3", summary: "Mara wins.", setups: [] });
+    expect(second.runningSummary).toBe("Mara escapes.\nMara wins.");
+  });
 });
 
 describe("stitchDraft", () => {
