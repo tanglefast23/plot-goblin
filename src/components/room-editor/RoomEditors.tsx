@@ -24,6 +24,7 @@ import {
   type ScriptBase,
 } from "@/lib/guidedSetup";
 import {
+  buildSavedDraftExportFile,
   buildScreenplayExportFile,
   screenplayExportFormats,
   type ScreenplayExportFile,
@@ -1560,6 +1561,7 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
   const [gateState, setGateState] = useState<CreateScriptGateState>({ status: "idle" });
   const [writingStyle, setWritingStyle] = useState(defaultWritingStyle);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [selectedDraftExportFormat, setSelectedDraftExportFormat] = useState<ScreenplayExportFormatId | null>(null);
   const [saveStatus, setSaveStatus] = useState("");
   const [savedDraftConfirmation, setSavedDraftConfirmation] = useState<SavedDraft | null>(null);
   const [draftWaitingMessageIndex, setDraftWaitingMessageIndex] = useState(0);
@@ -1626,10 +1628,11 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
       }
 
       const output = data.output?.trim() || "The goblin came back empty. Rude.";
+      const savedDraft = saveNewDraft(output);
       onMarkdownChange(`# Create the Script Room\n\n## Generated screenplay draft\n${output}\n`);
       setExportMenuOpen(false);
       setSaveStatus("");
-      setSavedDraftConfirmation(null);
+      setSavedDraftConfirmation(savedDraft);
       setGateState({ status: "drafted" });
     } catch (caught) {
       setGateState({
@@ -1663,15 +1666,29 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
   }
 
   function exportDraft(format: ScreenplayExportFormatId) {
+    setSelectedDraftExportFormat(format);
     downloadFile(buildScreenplayExportFile({ ...project.rooms, "create-script": markdown }, format));
-    setExportMenuOpen(false);
   }
 
-  function exportAllDraftFormats() {
-    const rooms = { ...project.rooms, "create-script": markdown };
-    for (const format of screenplayExportFormats) {
-      downloadFile(buildScreenplayExportFile(rooms, format.id));
+  function exportAllSavedDrafts() {
+    if (!selectedDraftExportFormat) {
+      setSaveStatus("Select a format before exporting all drafts.");
+      return;
     }
+
+    const savedDrafts = loadSavedDrafts();
+    if (savedDrafts.length === 0) {
+      setSaveStatus("No saved drafts to export.");
+      return;
+    }
+
+    for (const draft of savedDrafts) {
+      downloadFile(buildSavedDraftExportFile(draft, selectedDraftExportFormat));
+    }
+
+    const formatLabel =
+      screenplayExportFormats.find((format) => format.id === selectedDraftExportFormat)?.label ?? "selected format";
+    setSaveStatus(`Exported ${savedDrafts.length} drafts as ${formatLabel}.`);
     setExportMenuOpen(false);
   }
 
@@ -1804,10 +1821,10 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
                 <div className={styles.scriptExportChoices} id={exportMenuId}>
                   <button
                     className={`${styles.settingsAction} ${styles.settingsAllAction}`}
-                    onClick={exportAllDraftFormats}
+                    onClick={exportAllSavedDrafts}
                     type="button"
                   >
-                    Export all formats
+                    Export all drafts
                   </button>
                   {screenplayExportFormats.map((format) => (
                     <button
@@ -1832,7 +1849,7 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
             <div className={styles.scriptSaveConfirmation} key={savedDraftConfirmation.id} role="status">
               <span aria-hidden="true" className={styles.scriptSaveSpark} />
               <div>
-                <strong>Draft tucked into the Drafts room.</strong>
+                <strong>Draft automatically tucked into the Drafts room.</strong>
                 <small>{savedDraftConfirmation.title} is waiting there with a tiny clipboard.</small>
               </div>
               <Link className={`${styles.primaryButton} ${styles.scriptSaveTakeMeThere}`} href="/rooms/drafts">

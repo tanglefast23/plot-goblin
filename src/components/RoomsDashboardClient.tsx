@@ -1,43 +1,46 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import styles from "@/app/workspace.module.css";
-import { buildExportMarkdown, LEGACY_NEEDS_ANSWER, NEEDS_ANSWER, NEEDS_WRITING, type ScriptBase } from "@/lib/guidedSetup";
-import { clearProject, ensureProject } from "@/lib/projectStorage";
+import { clearSavedDrafts } from "@/lib/draftStorage";
+import { LEGACY_NEEDS_ANSWER, NEEDS_ANSWER, NEEDS_WRITING, type ScriptBase } from "@/lib/guidedSetup";
+import { clearProject, ensureProject, hasCompletedGuidedSetup } from "@/lib/projectStorage";
 import { getActiveRooms, getComingSoonRooms, getScriptReadiness } from "@/lib/storyRooms";
 
-function downloadMarkdown(project: ScriptBase) {
-  const blob = new Blob([buildExportMarkdown(project.rooms)], { type: "text/markdown;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = "plot-goblin-export.md";
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
-}
-
 export function RoomsDashboardClient() {
+  const router = useRouter();
   const [project, setProject] = useState<ScriptBase | null>(null);
+  const [showResetDialog, setShowResetDialog] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setProject(ensureProject()), 0);
     return () => window.clearTimeout(timer);
   }, []);
 
-  function resetLocalProject() {
-    if (!window.confirm("Reset the saved script in this browser? Export first if you want a backup.")) return;
+  function startNewProject() {
+    const confirmed = window.confirm(
+      "Start a new project? This will wipe all information for this script from this browser, including saved drafts. It cannot be retrieved again.",
+    );
+    if (!confirmed) return;
 
     clearProject();
-    setProject(ensureProject());
+    clearSavedDrafts();
+    setProject(null);
+    setShowResetDialog(true);
+  }
+
+  function runGuidedSetupAgain() {
+    setShowResetDialog(false);
+    router.push("/guided-setup");
   }
 
   const activeRooms = getActiveRooms();
   const comingSoonRooms = getComingSoonRooms();
   const readiness = project ? getScriptReadiness(project.rooms) : null;
   const nextRoom = readiness?.missingRooms[0]?.room;
+  const guidedSetupLabel = hasCompletedGuidedSetup(project) ? "Run guided setup again" : "Run guided setup";
 
   return (
     <>
@@ -49,16 +52,12 @@ export function RoomsDashboardClient() {
         </p>
         <div className={styles.actionRow}>
           <Link className={styles.primaryButton} href="/guided-setup">
-            Run guided setup
+            {guidedSetupLabel}
           </Link>
-          <button className={styles.secondaryButton} disabled={!project} onClick={() => project && downloadMarkdown(project)} type="button">
-            Export one giant .md
-          </button>
-          <button className={styles.dangerButton} onClick={resetLocalProject} type="button">
-            Reset local script
+          <button className={styles.dangerButton} onClick={startNewProject} type="button">
+            Start a new project
           </button>
         </div>
-        <p className={styles.exportHint}>Saved locally{project?.updatedAt ? ` · last update ${new Date(project.updatedAt).toLocaleString()}` : ""}</p>
         {nextRoom ? (
           <div className={styles.nextRoomCallout}>
             <div>
@@ -120,6 +119,26 @@ export function RoomsDashboardClient() {
           ))}
         </div>
       </section>
+
+      {showResetDialog ? (
+        <div className={styles.modalOverlay}>
+          <section aria-label="Script wiped" aria-modal="true" className={styles.modalDialog} role="dialog">
+            <div className={styles.modalHeader}>
+              <p>Script wiped</p>
+            </div>
+            <p className={styles.modalLede}>All information for this script has been wiped from this browser.</p>
+            <p className={styles.modalLede}>Would you like to run the guided setup again?</p>
+            <div className={styles.actionRow}>
+              <button className={styles.primaryButton} onClick={runGuidedSetupAgain} type="button">
+                Yes
+              </button>
+              <button className={styles.secondaryButton} onClick={() => setShowResetDialog(false)} type="button">
+                No
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </>
   );
 }

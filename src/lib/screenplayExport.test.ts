@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildScriptBase } from "./guidedSetup";
-import { buildScreenplayExportFile, screenplayExportFormats } from "./screenplayExport";
+import { buildMarkdownArchiveFile, buildScreenplayExportFile, screenplayExportFormats } from "./screenplayExport";
 
 describe("screenplay export files", () => {
   it("offers the five screenplay-friendly export formats", () => {
@@ -160,5 +160,23 @@ Nobody leaves.
     expect(packageText).toContain('w:pStyle w:val="SceneHeading"');
     expect(packageText).toContain('w:pStyle w:val="Character"');
     expect(packageText).toContain("Courier New");
+  });
+
+  it("includes saved drafts in the markdown backup when provided", () => {
+    const project = buildScriptBase({ rawIdea: "A detective investigates a murder on the moon." });
+
+    const exported = buildMarkdownArchiveFile(project.rooms, [
+      {
+        body: "TITLE: MOON DUST\n\nINT. MOON BASE - NIGHT\nThe detective finds silver dust.",
+        createdAt: "2026-06-24T00:00:00.000Z",
+        id: "draft-1",
+        title: "MOON DUST",
+        updatedAt: "2026-06-24T00:00:00.000Z",
+      },
+    ]);
+
+    expect(exported.contents).toContain("# Saved Screenplay Drafts");
+    expect(exported.contents).toContain("## MOON DUST");
+    expect(exported.contents).toContain("INT. MOON BASE - NIGHT");
   });
 });

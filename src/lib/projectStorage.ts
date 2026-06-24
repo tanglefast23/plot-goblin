@@ -6,6 +6,7 @@ import {
   NEEDS_WRITING,
   parseExportMarkdown,
   type ScriptBase,
+  type SetupAnswers,
 } from "./guidedSetup";
 
 export const PROJECT_STORAGE_KEY = "plot-goblin-current-script";
@@ -195,6 +196,21 @@ export function saveProject(project: ScriptBase) {
     JSON.stringify({ ...project, updatedAt: new Date().toISOString() }),
   );
   window.dispatchEvent(new Event(PROJECT_CHANGED_EVENT));
+}
+
+export function saveSetupProject(answers: SetupAnswers) {
+  const generated = buildScriptBase(answers);
+  const existing = loadProject();
+  const project: ScriptBase = existing
+    ? {
+        ...generated,
+        createdAt: existing.createdAt,
+        rooms: { ...generated.rooms, ...existing.rooms },
+      }
+    : generated;
+
+  saveProject(project);
+  return project;
 }
 
 export function ensureProject() {

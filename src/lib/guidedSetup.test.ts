@@ -263,6 +263,37 @@ Mina hears the freezer answer.
     expect(compact).not.toContain("The landlord dodges the truth. ".repeat(20));
   });
 
+  it("builds the draft context from every saved source room markdown", () => {
+    const base = buildScriptBase({ rawIdea: "A detective investigates a murder on the moon." });
+    base.rooms.premise = "# Premise Room\n\nPremise saved from local markdown.";
+    base.rooms.characters = "# Characters Room\n\nCharacter saved from local markdown.";
+    base.rooms.theme = "# Theme Room\n\nTheme saved from local markdown.";
+    base.rooms.beats = "# Beats Room\n\nBeats saved from local markdown.";
+    base.rooms.scenes = "# Scenes Room\n\nScenes saved from local markdown.";
+    base.rooms["script-parameters"] = "# Script Parameters Room\n\nParameters saved from local markdown.";
+    base.rooms["create-script"] = "# Create the Script Room\n\nOld generated draft should stay out.";
+    base.rooms.drafts = "# Drafts Room\n\nOld saved draft shelf should stay out.";
+
+    const compact = buildDraftContextMarkdown(base.rooms);
+
+    expect(compact).toContain("## premise.md");
+    expect(compact).toContain("Premise saved from local markdown.");
+    expect(compact).toContain("## characters.md");
+    expect(compact).toContain("Character saved from local markdown.");
+    expect(compact).toContain("## theme.md");
+    expect(compact).toContain("Theme saved from local markdown.");
+    expect(compact).toContain("## beats.md");
+    expect(compact).toContain("Beats saved from local markdown.");
+    expect(compact).toContain("## scenes.md");
+    expect(compact).toContain("Scenes saved from local markdown.");
+    expect(compact).toContain("## script-parameters.md");
+    expect(compact).toContain("Parameters saved from local markdown.");
+    expect(compact).not.toContain("create-script.md");
+    expect(compact).not.toContain("Old generated draft should stay out.");
+    expect(compact).not.toContain("drafts.md");
+    expect(compact).not.toContain("Old saved draft shelf should stay out.");
+  });
+
   it("imports the same room markdown that export writes", () => {
     const base = buildScriptBase({ rawIdea: "A detective investigates a murder on the moon." });
     base.rooms.premise = "# Premise Room\n\n## Stakes\nMoon murder evidence melts at sunrise.";

@@ -6,7 +6,6 @@ import styles from "@/app/workspace.module.css";
 import { cowriterRequestHeaders } from "@/lib/cowriterAccess";
 import { parseCowriterChoices } from "@/lib/cowriterChoices";
 import {
-  buildScriptBase,
   createLoglineSuggestions,
   guidedSetupQuestions,
   NEEDS_ANSWER,
@@ -14,7 +13,7 @@ import {
   type ScriptBase,
   type SetupAnswers,
 } from "@/lib/guidedSetup";
-import { saveProject } from "@/lib/projectStorage";
+import { loadProject, saveProject, saveSetupProject } from "@/lib/projectStorage";
 
 function splitSelectedOptions(value: string) {
   return value
@@ -51,8 +50,17 @@ const answerPathLabels: Record<(typeof guidedSetupQuestions)[number]["id"], stri
   structurePreference: "Shape",
 };
 
+function defaultSetupAnswers(): SetupAnswers {
+  return { structurePreference: "Classic 3-act spine" };
+}
+
+function savedSetupAnswers() {
+  const existing = loadProject();
+  return existing ? { ...defaultSetupAnswers(), ...existing.answers } : null;
+}
+
 export function GuidedSetupClient() {
-  const [answers, setAnswers] = useState<SetupAnswers>({ structurePreference: "Classic 3-act spine" });
+  const [answers, setAnswers] = useState<SetupAnswers>(defaultSetupAnswers);
   const [step, setStep] = useState(0);
   const [draftValue, setDraftValue] = useState("");
   const [completedProject, setCompletedProject] = useState<ScriptBase | null>(null);
@@ -76,6 +84,18 @@ export function GuidedSetupClient() {
       answerBoxRef.current?.focus({ preventScroll: true });
     }
   }, [completedProject, step]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const nextAnswers = savedSetupAnswers();
+      if (!nextAnswers) return;
+
+      setAnswers(nextAnswers);
+      setDraftValue(nextAnswers[guidedSetupQuestions[0].id] ?? "");
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
 
   function selectOption(option: string) {
     if (!question.multiple) {
@@ -110,10 +130,9 @@ export function GuidedSetupClient() {
     const nextAnswers = question ? { ...answers, [question.id]: value.trim() } : answers;
 
     if (step >= guidedSetupQuestions.length - 1) {
-      const project = buildScriptBase(nextAnswers);
+      const project = saveSetupProject(nextAnswers);
       setAnswers(nextAnswers);
       setDraftValue("");
-      saveProject(project);
       setCompletedProject(project);
       return;
     }
@@ -213,9 +232,10 @@ export function GuidedSetupClient() {
   }
 
   function restartSetup() {
-    setAnswers({ structurePreference: "Classic 3-act spine" });
+    const nextAnswers = savedSetupAnswers() ?? defaultSetupAnswers();
+    setAnswers(nextAnswers);
     setStep(0);
-    setDraftValue("");
+    setDraftValue(nextAnswers[guidedSetupQuestions[0].id] ?? "");
     setCompletedProject(null);
     setLoglineSuggestions([]);
     setLoglineSuggestionIndex(0);

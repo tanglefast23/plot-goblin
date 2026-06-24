@@ -3,9 +3,11 @@
 import { useId, useRef, useState } from "react";
 import styles from "@/app/workspace.module.css";
 import { ACCESS_KEY_STORAGE_KEY, ACCESS_MODE_STORAGE_KEY, clearCowriterAccess } from "@/lib/cowriterAccess";
+import { loadSavedDrafts } from "@/lib/draftStorage";
 import { clearProject, ensureProject, importProjectMarkdown, loadProject } from "@/lib/projectStorage";
 import {
   buildMarkdownArchiveFile,
+  buildSavedDraftExportFile,
   buildScreenplayExportFile,
   screenplayExportFormats,
   type ScreenplayExportFile,
@@ -30,19 +32,12 @@ function downloadFile(file: ScreenplayExportFile) {
 
 function downloadMarkdownArchive() {
   const project = loadProject() ?? ensureProject();
-  downloadFile(buildMarkdownArchiveFile(project.rooms));
+  downloadFile(buildMarkdownArchiveFile(project.rooms, loadSavedDrafts()));
 }
 
 function downloadScreenplayFormat(format: ScreenplayExportFormatId) {
   const project = loadProject() ?? ensureProject();
   downloadFile(buildScreenplayExportFile(project.rooms, format));
-}
-
-function downloadAllScreenplayFormats() {
-  const project = loadProject() ?? ensureProject();
-  for (const format of screenplayExportFormats) {
-    downloadFile(buildScreenplayExportFile(project.rooms, format.id));
-  }
 }
 
 function currentAiAccessLabel() {
@@ -61,6 +56,7 @@ export function WorkspaceSettingsMenu() {
   const [aiAccessLabel, setAiAccessLabel] = useState("Not set");
   const [isTestingBridgeKey, setIsTestingBridgeKey] = useState(false);
   const [bridgeKeyTestResult, setBridgeKeyTestResult] = useState<"idle" | "saved" | "failed">("idle");
+  const [selectedDraftExportFormat, setSelectedDraftExportFormat] = useState<ScreenplayExportFormatId | null>(null);
   const [status, setStatus] = useState("");
   const menuId = useId();
   const exportMenuId = useId();
@@ -175,6 +171,33 @@ export function WorkspaceSettingsMenu() {
     }
   }
 
+  function selectAndDownloadScreenplayFormat(format: ScreenplayExportFormatId) {
+    setSelectedDraftExportFormat(format);
+    downloadScreenplayFormat(format);
+  }
+
+  function downloadAllSavedDrafts() {
+    if (!selectedDraftExportFormat) {
+      setStatus("Select a format before exporting all drafts.");
+      return;
+    }
+
+    const drafts = loadSavedDrafts();
+    if (drafts.length === 0) {
+      setStatus("No saved drafts to export.");
+      return;
+    }
+
+    for (const draft of drafts) {
+      downloadFile(buildSavedDraftExportFile(draft, selectedDraftExportFormat));
+    }
+
+    const formatLabel =
+      screenplayExportFormats.find((format) => format.id === selectedDraftExportFormat)?.label ?? "selected format";
+    setStatus(`Exported ${drafts.length} drafts as ${formatLabel}.`);
+    setExportMenuOpen(false);
+  }
+
   return (
     <div className={styles.settingsMenu}>
       <button
@@ -212,11 +235,11 @@ export function WorkspaceSettingsMenu() {
             </button>
             {exportMenuOpen ? (
               <div className={styles.settingsSubmenuChoices} id={exportMenuId}>
-                <button className={`${styles.settingsAction} ${styles.settingsAllAction}`} onClick={downloadAllScreenplayFormats} type="button">
-                  Export all formats
+                <button className={`${styles.settingsAction} ${styles.settingsAllAction}`} onClick={downloadAllSavedDrafts} type="button">
+                  Export all drafts
                 </button>
                 {screenplayExportFormats.map((format) => (
-                  <button className={styles.settingsAction} key={format.id} onClick={() => downloadScreenplayFormat(format.id)} type="button">
+                  <button className={styles.settingsAction} key={format.id} onClick={() => selectAndDownloadScreenplayFormat(format.id)} type="button">
                     Export {format.label}
                   </button>
                 ))}

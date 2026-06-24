@@ -32,6 +32,45 @@ function completeSetupWithAnswers() {
 }
 
 describe("GuidedSetupClient", () => {
+  it("prefills saved setup answers when the writer runs guided setup again", async () => {
+    window.localStorage.setItem(
+      PROJECT_STORAGE_KEY,
+      JSON.stringify({
+        answers: {
+          rawIdea: "A one-armed pitcher gets one last shot at the majors.",
+          genre: "Sports drama",
+          audienceFeeling: "Hope and pressure",
+          protagonist: "Joe, a proud pitcher who refuses help.",
+          surfaceWant: "Earn a contract at an open tryout.",
+          stakes: "He loses his home and the last proof that he still belongs.",
+          falseBelief: "Needing help means he is weak.",
+          opposition: "Two gifted rival players and his own stubborn pride.",
+          endingDirection: "They change and win",
+          structurePreference: "Classic 3-act spine",
+        },
+        rooms: {},
+        summary: { strongestKnownPieces: [], goblinWarnings: [], needsAnswerCount: 0 },
+        createdAt: "2026-06-24T00:00:00.000Z",
+        updatedAt: "2026-06-24T00:00:00.000Z",
+      }),
+    );
+
+    render(<GuidedSetupClient />);
+
+    expect(await screen.findByRole("heading", { name: "What's the movie idea, badly explained?" })).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: /your answer/i })).toHaveProperty(
+        "value",
+        "A one-armed pitcher gets one last shot at the majors.",
+      );
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(await screen.findByRole("heading", { name: "What kind of movie is this?" })).toBeTruthy();
+    expect(screen.getByRole("textbox", { name: /your answer/i })).toHaveProperty("value", "Sports drama");
+  });
+
   it("places Back before Next once the writer can return to a previous question", () => {
     render(<GuidedSetupClient />);
 
@@ -237,12 +276,10 @@ describe("GuidedSetupClient", () => {
     expect(window.localStorage.getItem(PROJECT_STORAGE_KEY)).toContain(suggestion);
   });
 
-  it("starts the guided setup over from the completed summary", async () => {
+  it("starts the guided setup over from the completed summary with saved answers ready to revise", async () => {
     render(<GuidedSetupClient />);
 
-    for (let questionIndex = 0; questionIndex < guidedSetupQuestions.length; questionIndex += 1) {
-      fireEvent.click(screen.getByRole("button", { name: /skip/i }));
-    }
+    completeSetupWithAnswers();
 
     await screen.findByRole("heading", { name: "Here is what the goblin thinks your movie is." });
 
@@ -250,7 +287,10 @@ describe("GuidedSetupClient", () => {
 
     expect(await screen.findByRole("heading", { name: "What's the movie idea, badly explained?" })).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "Here is what the goblin thinks your movie is." })).toBeNull();
-    expect(screen.getByRole("textbox", { name: /your answer/i })).toHaveProperty("value", "");
+    expect(screen.getByRole("textbox", { name: /your answer/i })).toHaveProperty(
+      "value",
+      "A one-armed pitcher gets one last shot at the majors.",
+    );
   });
 
   it("lets a later accepted suggestion replace the saved logline", async () => {

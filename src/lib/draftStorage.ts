@@ -83,3 +83,8 @@ export function deleteSavedDraft(id: string) {
   writeSavedDrafts(updatedDrafts);
   return updatedDrafts;
 }
+
+export function clearSavedDrafts() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+}

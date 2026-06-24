@@ -1,4 +1,5 @@
 import { buildExportMarkdown, type RoomMarkdown } from "./guidedSetup";
+import type { SavedDraft } from "./draftStorage";
 import { getActiveRooms, getComingSoonRooms } from "./storyRooms";
 
 export type ScreenplayExportFormatId = "fountain" | "fdx" | "pdf" | "docx" | "rtf";
@@ -31,6 +32,17 @@ export const screenplayExportFormats: { id: ScreenplayExportFormatId; label: str
   { id: "docx", label: "Word" },
   { id: "rtf", label: "RTF" },
 ];
+
+function safeFilenamePart(value: string) {
+  return (
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 72) || "untitled-draft"
+  );
+}
 
 function orderedRoomEntries(rooms: RoomMarkdown) {
   const knownRooms = [...getActiveRooms(), ...getComingSoonRooms()];
@@ -574,9 +586,34 @@ export function buildScreenplayExportFile(rooms: RoomMarkdown, format: Screenpla
   }
 }
 
-export function buildMarkdownArchiveFile(rooms: RoomMarkdown): ScreenplayExportFile {
+export function buildSavedDraftExportFile(draft: SavedDraft, format: ScreenplayExportFormatId): ScreenplayExportFile {
+  const file = buildScreenplayExportFile({ "create-script": `# ${draft.title}\n\n${draft.body}` }, format);
+  const extension = file.filename.split(".").pop() ?? format;
+
   return {
-    contents: buildExportMarkdown(rooms),
+    ...file,
+    filename: `plot-goblin-draft-${safeFilenamePart(draft.title)}.${extension}`,
+  };
+}
+
+function savedDraftsMarkdown(savedDrafts: SavedDraft[]) {
+  if (savedDrafts.length === 0) return "";
+
+  const lines = ["", "# Saved Screenplay Drafts", ""];
+
+  for (const draft of savedDrafts) {
+    lines.push(`## ${draft.title}`, "", `Saved: ${draft.updatedAt}`, "", draft.body.trim(), "");
+  }
+
+  return lines.join("\n").trimEnd();
+}
+
+export function buildMarkdownArchiveFile(rooms: RoomMarkdown, savedDrafts: SavedDraft[] = []): ScreenplayExportFile {
+  const draftMarkdown = savedDraftsMarkdown(savedDrafts);
+  const contents = draftMarkdown ? `${buildExportMarkdown(rooms).trimEnd()}\n\n${draftMarkdown}\n` : buildExportMarkdown(rooms);
+
+  return {
+    contents,
     filename: "plot-goblin-export.md",
     mimeType: "text/markdown;charset=utf-8",
   };

@@ -141,13 +141,6 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function fakeAudioParam() {
-  return {
-    exponentialRampToValueAtTime: vi.fn(),
-    setValueAtTime: vi.fn(),
-  };
-}
-
 describe("RoomEditorClient", () => {
   it("does not keep autosaving when loaded room markdown is unchanged", async () => {
     const project = buildScriptBase({
@@ -2083,37 +2076,10 @@ Lena sees a frame that should not exist.
     expect(["simon-tv-drama", "fey-comedy"]).toContain(writingStyleSelect.value);
   });
 
-  it("saves generated screenplay pages into the Drafts room", async () => {
+  it("automatically saves generated screenplay pages into the Drafts room", async () => {
     routeState.slug = "create-script";
     const project = completedDraftableProject();
     window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
-    const audioInstances: FakeAudioContext[] = [];
-    class FakeAudioContext {
-      currentTime = 0;
-      destination = {};
-      sampleRate = 8_000;
-      state = "running";
-
-      constructor() {
-        audioInstances.push(this);
-      }
-
-      close = vi.fn().mockResolvedValue(undefined);
-      createBiquadFilter = () => ({ connect: vi.fn(), frequency: fakeAudioParam(), type: "lowpass" });
-      createBuffer = (_channels: number, length: number) => ({
-        getChannelData: () => new Float32Array(length),
-      });
-      createBufferSource = () => ({ buffer: null, connect: vi.fn(), start: vi.fn(), stop: vi.fn() });
-      createGain = () => ({ connect: vi.fn(), gain: fakeAudioParam() });
-      createOscillator = () => ({
-        connect: vi.fn(),
-        frequency: fakeAudioParam(),
-        start: vi.fn(),
-        stop: vi.fn(),
-        type: "triangle",
-      });
-    }
-    vi.stubGlobal("AudioContext", FakeAudioContext);
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValueOnce({
@@ -2127,9 +2093,7 @@ Lena sees a frame that should not exist.
     await screen.findByRole("region", { name: "Create the Script draft gate" });
     fireEvent.click(screen.getByRole("button", { name: "Please Oh Mighty Goblin. Write a draft." }));
 
-    await screen.findByRole("button", { name: "Save draft" });
-    expect(screen.getByText("Saves to Drafts room.")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+    await screen.findByText(/The goblin wrote a draft/i);
 
     const savedDrafts = JSON.parse(window.localStorage.getItem(DRAFT_STORAGE_KEY) ?? "[]");
     expect(savedDrafts).toHaveLength(1);
@@ -2139,8 +2103,7 @@ Lena sees a frame that should not exist.
         body: expect.stringContaining("INT. WEDDING VENUE - DAY"),
       }),
     );
-    expect(audioInstances).toHaveLength(1);
-    expect(screen.getByText("Draft tucked into the Drafts room.")).toBeTruthy();
+    expect(screen.getByText("Draft automatically tucked into the Drafts room.")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Take me there" }).getAttribute("href")).toBe("/rooms/drafts");
   });
 
@@ -2183,7 +2146,7 @@ Lena sees a frame that should not exist.
     );
   });
 
-  it("offers export choices after a draft is written and downloads every format from the all option", async () => {
+  it("offers export choices after a draft is written and exports saved drafts after a format is selected", async () => {
     routeState.slug = "create-script";
     const project = completedDraftableProject();
     window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
@@ -2205,17 +2168,24 @@ Lena sees a frame that should not exist.
     await screen.findByRole("button", { name: "Export draft" });
 
     fireEvent.click(screen.getByRole("button", { name: "Export draft" }));
-    expect(await screen.findByRole("button", { name: "Export all formats" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "Export all drafts" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Export all formats" })).toBeNull();
     expect(screen.getByRole("button", { name: "Export Fountain" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Export Final Draft" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Export PDF" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Export Word" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Export RTF" })).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Export all formats" }));
+    fireEvent.click(screen.getByRole("button", { name: "Export all drafts" }));
 
-    expect(clickSpy).toHaveBeenCalledTimes(5);
-    expect(createObjectUrlSpy).toHaveBeenCalledTimes(5);
+    expect(clickSpy).not.toHaveBeenCalled();
+    expect(screen.getByText("Select a format before exporting all drafts.")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Export Fountain" }));
+    fireEvent.click(screen.getByRole("button", { name: "Export all drafts" }));
+
+    expect(clickSpy).toHaveBeenCalledTimes(2);
+    expect(createObjectUrlSpy).toHaveBeenCalledTimes(2);
     expect(revokeObjectUrlSpy).toHaveBeenCalledWith("blob:plot-goblin");
   });
 
