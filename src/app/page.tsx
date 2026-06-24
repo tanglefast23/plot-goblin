@@ -19,7 +19,7 @@ export default function Home() {
   const comingSoonRooms = getComingSoonRooms();
 
   return (
-    <main className={styles.page}>
+    <main className={styles.page} style={{ paddingBottom: "clamp(42px, 5vw, 72px)" }}>
       <section className={styles.hero} aria-labelledby="home-title">
         <p className={styles.eyebrow}>Plot Goblin</p>
         <div className={styles.heroGrid}>
