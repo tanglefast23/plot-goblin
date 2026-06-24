@@ -8,6 +8,6 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
-    exclude: [...configDefaults.exclude, "output/**", "test-results/**"],
+    exclude: [...configDefaults.exclude, "output/**", "test-results/**", ".tmp-playwright/**"],
   },
 });

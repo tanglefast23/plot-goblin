@@ -83,4 +83,80 @@ describe("Hermes co-writer API route", () => {
       }),
     );
   });
+
+  it("rejects oversized markdown before building or forwarding a prompt", async () => {
+    process.env.VERCEL = "1";
+    process.env.PLOT_GOBLIN_AI_ACCESS_KEY = "correct-key";
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await POST(
+      new Request("https://plot-goblin.test/api/hermes-cowriter", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-plot-goblin-key": "correct-key",
+        },
+        body: JSON.stringify({
+          mode: "room",
+          markdown: "x".repeat(36_001),
+          room: "Premise",
+        }),
+      }),
+    );
+    const data = (await response.json()) as { error?: string };
+
+    expect(response.status).toBe(413);
+    expect(data.error).toContain("too large");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("accepts the scene mode and forwards it to the Hermes bridge", async () => {
+    process.env.VERCEL = "1";
+    process.env.PLOT_GOBLIN_AI_ACCESS_KEY = "correct-key";
+    process.env.PLOT_GOBLIN_HERMES_BRIDGE_TOKEN = "bridge-token";
+    process.env.PLOT_GOBLIN_HERMES_BRIDGE_URL = "https://live-tunnel.example";
+    const fetchSpy = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ output: "PLOT_GOBLIN_FINAL:\n1. Scene title: Last Tryout" }),
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await POST(
+      new Request("https://plot-goblin.test/api/hermes-cowriter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-plot-goblin-key": "correct-key" },
+        body: JSON.stringify({
+          mode: "scene",
+          beat: "Inciting Incident",
+          beatMarkdown: "Joe spots a flyer for one last open tryout.",
+          markdown: "# Plot Goblin Export",
+        }),
+      }),
+    );
+    const data = (await response.json()) as { output?: string; error?: string };
+
+    expect(response.status).toBe(200);
+    expect(data.error).toBeUndefined();
+    expect(data.output).toContain("1. Scene title: Last Tryout");
+    expect(fetchSpy).toHaveBeenCalledWith("https://live-tunnel.example/cowriter", expect.anything());
+  });
+
+  it("rejects malformed co-writer fields before Hermes work", async () => {
+    const response = await POST(
+      new Request("https://plot-goblin.test/api/hermes-cowriter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "beat",
+          beat: ["Opening Image"],
+          beatMarkdown: "Write the opening.",
+        }),
+      }),
+    );
+    const data = (await response.json()) as { error?: string };
+
+    expect(response.status).toBe(400);
+    expect(data.error).toContain("Invalid co-writer request");
+  });
 });

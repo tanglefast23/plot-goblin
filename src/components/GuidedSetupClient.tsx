@@ -167,6 +167,15 @@ export function GuidedSetupClient() {
     setLoglineSuggestionIndex(nextIndex);
   }
 
+  function restartSetup() {
+    setAnswers({ structurePreference: "Classic 3-act spine" });
+    setStep(0);
+    setDraftValue("");
+    setCompletedProject(null);
+    setLoglineSuggestions([]);
+    setLoglineSuggestionIndex(0);
+  }
+
   if (completedProject) {
     const acceptedLogline = getAcceptedLogline(completedProject);
     const suggestedLogline = loglineSuggestions[loglineSuggestionIndex] ?? "";
@@ -247,9 +256,9 @@ export function GuidedSetupClient() {
           <Link className={styles.primaryButton} href="/rooms">
             Enter rooms
           </Link>
-          <Link className={styles.ghostButton} href="/guided-setup">
+          <button className={styles.ghostButton} onClick={restartSetup} type="button">
             Start over
-          </Link>
+          </button>
         </div>
       </div>
     );

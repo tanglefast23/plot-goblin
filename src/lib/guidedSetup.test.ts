@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   NEEDS_ANSWER,
+  buildDraftContextMarkdown,
   buildExportMarkdown,
   buildScriptBase,
   createLoglineSuggestions,
   guidedSetupQuestions,
+  parseExportMarkdown,
 } from "./guidedSetup";
 
 describe("guided setup model", () => {
@@ -186,10 +188,67 @@ describe("guided setup model", () => {
     const exported = buildExportMarkdown(base.rooms);
 
     expect(exported).toContain("# Plot Goblin Export");
+    expect(exported).toContain("<!-- plot-goblin-room: premise -->");
     expect(exported).toContain("## premise.md");
     expect(exported).toContain("## scenes.md");
     expect(exported).toContain("## script-parameters.md");
     expect(exported).toContain("## create-script.md");
     expect(exported).toContain("A detective investigates a murder on the moon.");
+  });
+
+  it("builds a compact draft context without create-script and with capped scenes", () => {
+    const base = buildScriptBase({
+      rawIdea: "A chef has to save a haunted diner before sunrise.",
+      protagonist: "Mina",
+      surfaceWant: "save the diner",
+      stakes: "she loses the only home she has",
+      falseBelief: "asking for help means failure",
+      opposition: "a landlord hiding a ghost problem",
+      structurePreference: "Classic 3-act spine",
+    });
+    base.rooms["create-script"] = "# Create the Script Room\n\nOld draft output that should not feed the next draft.";
+    base.rooms.scenes = `# Scenes Room
+
+## Saved scenes
+
+### Scene: First Haunting
+
+**Location / time:** INT. DINER - NIGHT
+
+**Characters:**
+Mina, The Landlord
+
+**Scene want:**
+Mina wants the landlord to admit what happened.
+
+**Opposition:**
+${"The landlord dodges the truth. ".repeat(120)}
+
+**Turn:**
+Mina hears the freezer answer.
+`;
+
+    const compact = buildDraftContextMarkdown(base.rooms);
+
+    expect(compact.length).toBeLessThan(buildExportMarkdown(base.rooms).length);
+    expect(compact).toContain("## premise.md");
+    expect(compact).toContain("## scenes.md");
+    expect(compact).toContain("First Haunting");
+    expect(compact).toContain("Mina wants the landlord");
+    expect(compact).not.toContain("create-script.md");
+    expect(compact).not.toContain("Old draft output");
+    expect(compact).not.toContain("The landlord dodges the truth. ".repeat(20));
+  });
+
+  it("imports the same room markdown that export writes", () => {
+    const base = buildScriptBase({ rawIdea: "A detective investigates a murder on the moon." });
+    base.rooms.premise = "# Premise Room\n\n## Stakes\nMoon murder evidence melts at sunrise.";
+    base.rooms.scenes = "# Scenes Room\n\n## Saved scenes\n\n### Scene: crater chase";
+
+    const exported = buildExportMarkdown(base.rooms);
+    const imported = parseExportMarkdown(exported);
+
+    expect(imported.rooms.premise).toBe(base.rooms.premise);
+    expect(imported.rooms.scenes).toBe(base.rooms.scenes);
   });
 });

@@ -166,6 +166,22 @@ describe("GuidedSetupClient", () => {
     expect(window.localStorage.getItem(PROJECT_STORAGE_KEY)).toContain(suggestion);
   });
 
+  it("starts the guided setup over from the completed summary", async () => {
+    render(<GuidedSetupClient />);
+
+    for (let questionIndex = 0; questionIndex < guidedSetupQuestions.length; questionIndex += 1) {
+      fireEvent.click(screen.getByRole("button", { name: /skip/i }));
+    }
+
+    await screen.findByRole("heading", { name: "Here is what the goblin thinks your movie is." });
+
+    fireEvent.click(screen.getByRole("button", { name: "Start over" }));
+
+    expect(await screen.findByRole("heading", { name: "What's the movie idea, badly explained?" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Here is what the goblin thinks your movie is." })).toBeNull();
+    expect(screen.getByRole("textbox", { name: /your answer/i })).toHaveProperty("value", "");
+  });
+
   it("lets a later accepted suggestion replace the saved logline", async () => {
     render(<GuidedSetupClient />);
 

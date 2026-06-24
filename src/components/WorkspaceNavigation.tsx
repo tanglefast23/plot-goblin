@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import styles from "@/app/workspace.module.css";
 import { hasCompletedGuidedSetup, loadProject, PROJECT_CHANGED_EVENT } from "@/lib/projectStorage";
 import { RoomNavMenu } from "./RoomNavMenu";
+import { WorkspaceSettingsMenu } from "./WorkspaceSettingsMenu";
 
 export function WorkspaceNavigation() {
   const [hasCompletedSetup, setHasCompletedSetup] = useState(true);
@@ -32,6 +33,7 @@ export function WorkspaceNavigation() {
         </Link>
       ) : null}
       <RoomNavMenu align="end" buttonClassName={styles.linkButton} />
+      <WorkspaceSettingsMenu />
     </nav>
   );
 }

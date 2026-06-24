@@ -1,6 +1,7 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { buildScriptBase } from "@/lib/guidedSetup";
+import { buildExportMarkdown, buildScriptBase } from "@/lib/guidedSetup";
+import { ACCESS_KEY_STORAGE_KEY, ACCESS_MODE_STORAGE_KEY } from "@/lib/cowriterAccess";
 import { PROJECT_STORAGE_KEY, saveProject } from "@/lib/projectStorage";
 import { WorkspaceShell } from "./WorkspaceShell";
 
@@ -72,6 +73,85 @@ describe("WorkspaceShell", () => {
 
     await waitFor(() => {
       expect(screen.queryByRole("link", { name: /guided setup/i })).toBeNull();
+    });
+  });
+
+  it("resets saved script data without clearing AI access", async () => {
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(buildScriptBase(completedSetupAnswers)));
+    window.localStorage.setItem(ACCESS_KEY_STORAGE_KEY, "friend-key");
+    window.localStorage.setItem(ACCESS_MODE_STORAGE_KEY, "public");
+
+    render(
+      <WorkspaceShell>
+        <p>Workspace content</p>
+      </WorkspaceShell>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Reset saved script" }));
+
+    expect(window.localStorage.getItem(PROJECT_STORAGE_KEY)).toBeNull();
+    expect(window.localStorage.getItem(ACCESS_KEY_STORAGE_KEY)).toBe("friend-key");
+    expect(window.localStorage.getItem(ACCESS_MODE_STORAGE_KEY)).toBe("public");
+  });
+
+  it("resets AI access without clearing saved script data", async () => {
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(buildScriptBase(completedSetupAnswers)));
+    window.localStorage.setItem(ACCESS_KEY_STORAGE_KEY, "friend-key");
+    window.localStorage.setItem(ACCESS_MODE_STORAGE_KEY, "public");
+
+    render(
+      <WorkspaceShell>
+        <p>Workspace content</p>
+      </WorkspaceShell>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Reset AI access" }));
+
+    expect(window.localStorage.getItem(PROJECT_STORAGE_KEY)).toBeTruthy();
+    expect(window.localStorage.getItem(ACCESS_KEY_STORAGE_KEY)).toBeNull();
+    expect(window.localStorage.getItem(ACCESS_MODE_STORAGE_KEY)).toBeNull();
+  });
+
+  it("offers screenplay export formats from topbar settings", async () => {
+    render(
+      <WorkspaceShell>
+        <p>Workspace content</p>
+      </WorkspaceShell>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+
+    expect(await screen.findByRole("button", { name: "Export Fountain" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Export Final Draft" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Export PDF" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Export Word" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Export RTF" })).toBeTruthy();
+  });
+
+  it("imports an exported markdown bundle from topbar settings", async () => {
+    const project = buildScriptBase({ rawIdea: "A detective investigates a murder on the moon." });
+    project.rooms.premise = "# Premise Room\n\n## Stakes\nMoon murder evidence melts at sunrise.";
+    const exported = buildExportMarkdown(project.rooms);
+
+    render(
+      <WorkspaceShell>
+        <p>Workspace content</p>
+      </WorkspaceShell>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+
+    const file = new File([exported], "plot-goblin-export.md", { type: "text/markdown" });
+    Object.defineProperty(file, "text", { value: async () => exported });
+    fireEvent.change(await screen.findByLabelText("Import Plot Goblin markdown"), {
+      target: { files: [file] },
+    });
+
+    await waitFor(() => {
+      const storedProject = JSON.parse(window.localStorage.getItem(PROJECT_STORAGE_KEY) ?? "{}");
+      expect(storedProject.rooms.premise).toBe(project.rooms.premise);
     });
   });
 });

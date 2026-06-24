@@ -112,6 +112,11 @@ select {
   font: inherit;
 }
 
+input:focus::placeholder,
+textarea:focus::placeholder {
+  color: transparent;
+}
+
 /* Accessibility: respect users who ask the OS to reduce motion. */
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -31,7 +31,134 @@
 .nav {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
+}
+
+.settingsMenu {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.iconButton {
+  display: inline-grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.18);
+  border-radius: 999px;
+  color: var(--goblin-night);
+  background: rgb(var(--goblin-mist-rgb) / 0.66);
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    background-color 180ms ease;
+}
+
+.iconButton:hover {
+  background: rgb(var(--goblin-gold-rgb) / 0.24);
+  transform: translateY(-1px);
+}
+
+.settingsIcon {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  border: 3px solid currentColor;
+  border-radius: 999px;
+  box-shadow:
+    0 -8px 0 -5px currentColor,
+    0 8px 0 -5px currentColor,
+    8px 0 0 -5px currentColor,
+    -8px 0 0 -5px currentColor,
+    5px 5px 0 -5px currentColor,
+    -5px 5px 0 -5px currentColor,
+    5px -5px 0 -5px currentColor,
+    -5px -5px 0 -5px currentColor;
+}
+
+.settingsIcon::after {
+  position: absolute;
+  inset: 4px;
+  border-radius: inherit;
+  background: currentColor;
+  content: "";
+}
+
+.settingsPanel {
+  position: absolute;
+  z-index: 45;
+  top: calc(100% + 10px);
+  right: 0;
+  display: grid;
+  width: min(82vw, 270px);
+  gap: 6px;
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.18);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgb(var(--goblin-mist-rgb) / 0.96);
+  box-shadow: 0 18px 42px rgb(var(--goblin-night-rgb) / 0.16);
+}
+
+.settingsLabel {
+  padding: 4px 4px 0;
+  color: rgb(var(--goblin-night-rgb) / 0.58);
+  font-size: 0.6rem;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.settingsAction {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0 12px;
+  color: var(--goblin-night);
+  background: rgb(var(--goblin-mist-rgb) / 0.62);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.07em;
+  text-align: left;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.settingsAction:hover,
+.settingsAction:focus-within,
+.settingsAction:focus-visible {
+  border-color: rgb(var(--goblin-night-rgb) / 0.18);
+  background: rgb(var(--goblin-lichen-rgb) / 0.34);
+  outline: none;
+}
+
+.settingsDanger {
+  background: rgb(var(--goblin-gold-rgb) / 0.24);
+}
+
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.settingsStatus {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  min-width: 170px;
+  color: rgb(var(--goblin-night-rgb) / 0.72);
+  font-size: 0.68rem;
+  font-weight: 850;
+  text-align: right;
 }
 
 .linkButton,
@@ -185,8 +312,7 @@
 .heroPanel,
 .card,
 .editorPanel,
-.summaryPanel,
-.cowriterPanel {
+.summaryPanel {
   border: 1px solid rgb(var(--goblin-night-rgb) / 0.16);
   border-radius: 8px;
   background: rgb(var(--goblin-mist-rgb) / 0.78);
@@ -480,7 +606,6 @@
 
 .card h2,
 .card h3,
-.cowriterPanel h2,
 .summaryBox h2,
 .guidanceBox h2,
 .loglineBox h2 {
@@ -509,8 +634,7 @@
 }
 
 .summaryPanel,
-.editorPanel,
-.cowriterPanel {
+.editorPanel {
   padding: 30px;
 }
 
@@ -520,6 +644,21 @@
   grid-template-columns: minmax(0, 0.8fr) minmax(320px, 0.45fr);
   gap: 18px;
   margin-top: 22px;
+}
+
+.sceneEditorGrid {
+  --scene-rail-width: 219px;
+  --scene-rail-width-gain: 73px;
+  --scene-editor-left-track-offset: calc(var(--scene-rail-width-gain) - 11.52px);
+  --scene-guidance-track-offset: calc(var(--scene-rail-width-gain) + 6.48px);
+}
+
+@media (min-width: 1041px) {
+  .sceneEditorGrid {
+    grid-template-columns:
+      minmax(0, calc(64% + var(--scene-editor-left-track-offset)))
+      minmax(247px, calc(36% - var(--scene-guidance-track-offset)));
+  }
 }
 
 .editorGrid > div {
@@ -555,6 +694,18 @@
   gap: 9px;
   padding-top: 13px;
   border-top: 1px solid rgb(var(--goblin-night-rgb) / 0.12);
+}
+
+.guidanceReadyEnough {
+  margin: 0;
+  padding: 11px 13px;
+  border: 1px solid rgb(var(--goblin-moss-rgb) / 0.28);
+  border-radius: 12px;
+  color: var(--goblin-night);
+  background: rgb(var(--goblin-gold-rgb) / 0.24);
+  font-size: 0.78rem;
+  font-weight: 850;
+  line-height: 1.4;
 }
 
 .guidanceMeterHeader,
@@ -1299,6 +1450,14 @@
   resize: vertical;
 }
 
+.beatStickyTextarea::placeholder {
+  color: rgb(var(--goblin-night-rgb) / 0.56);
+}
+
+.beatStickyPlaceholderTextarea::placeholder {
+  color: rgb(var(--goblin-night-rgb) / 0.48);
+}
+
 .beatStickyTextarea:focus {
   outline: 2px solid rgb(var(--goblin-night-rgb) / 0.5);
   outline-offset: 2px;
@@ -1340,35 +1499,95 @@
   gap: 14px;
 }
 
-.sceneStripShell {
+.sceneBoardLayout {
+  display: grid;
+  grid-template-columns: var(--scene-rail-width, 146px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  min-width: 0;
+  transition: grid-template-columns 160ms ease;
+}
+
+.sceneBoardLayoutCompact {
+  grid-template-columns: 78px minmax(0, 1fr);
+}
+
+.sceneRailShell {
   position: relative;
   min-width: 0;
 }
 
-.sceneStrip {
-  display: flex;
+.sceneRail {
+  display: grid;
   width: 100%;
   max-width: 100%;
-  min-height: 142px;
-  gap: 12px;
-  overflow-x: auto;
+  max-height: min(72vh, 720px);
+  gap: 10px;
+  overflow-y: auto;
   border: 1px solid rgb(var(--goblin-night-rgb) / 0.2);
   border-radius: 8px;
-  padding: 14px;
+  padding: 10px;
   background:
-    linear-gradient(90deg, rgb(var(--goblin-mist-rgb) / 0.82), rgb(var(--goblin-lichen-rgb) / 0.28)),
+    linear-gradient(135deg, rgb(var(--goblin-mist-rgb) / 0.86), rgb(var(--goblin-lichen-rgb) / 0.24)),
     rgb(var(--goblin-mist-rgb) / 0.72);
-  scroll-padding-inline: 14px;
+  scroll-padding-block: 10px;
+}
+
+.sceneRailToggle {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.3);
+  border-radius: 999px;
+  padding: 4px 5px 4px 10px;
+  color: var(--goblin-night);
+  background: rgb(var(--goblin-mist-rgb) / 0.88);
+  box-shadow: inset 0 1px 0 rgb(var(--goblin-mist-rgb) / 0.9);
+  font: inherit;
+  font-size: 0.56rem;
+  font-weight: 950;
+  line-height: 1;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.sceneRailToggleKnob {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--goblin-moss);
+  box-shadow: inset 0 1px 0 rgb(var(--goblin-mist-rgb) / 0.38);
+}
+
+.sceneRailCompact .sceneRailToggle {
+  justify-content: center;
+  padding: 4px;
+}
+
+.sceneRailCompact .sceneRailToggleText {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.sceneRailCompact .sceneRailToggleKnob {
+  background: var(--goblin-gold);
 }
 
 .sceneTrashTarget {
   position: absolute;
   z-index: 2;
-  top: 14px;
-  bottom: 14px;
-  left: 14px;
+  top: 10px;
+  right: 10px;
+  bottom: 10px;
+  left: 10px;
   display: grid;
-  width: 120px;
   place-items: center;
   align-content: center;
   gap: 8px;
@@ -1435,7 +1654,7 @@
 
 .sceneAddTile,
 .sceneMiniCard {
-  flex: 0 0 190px;
+  width: 100%;
   border: 1px solid rgb(var(--goblin-night-rgb) / 0.22);
   border-radius: 8px;
   color: var(--goblin-night);
@@ -1445,10 +1664,10 @@
 
 .sceneAddTile {
   display: grid;
-  min-height: 112px;
+  min-height: 64px;
   place-items: center;
   font: inherit;
-  font-size: 3.1rem;
+  font-size: 2.8rem;
   font-weight: 900;
   line-height: 1;
   cursor: pointer;
@@ -1457,12 +1676,19 @@
     transform 160ms ease;
 }
 
+.sceneMiniCardShell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  gap: 6px;
+  align-items: stretch;
+}
+
 .sceneMiniCard {
   display: grid;
-  min-height: 112px;
+  min-height: 64px;
   align-content: start;
-  gap: 7px;
-  padding: 12px;
+  gap: 5px;
+  padding: 10px;
   font: inherit;
   text-align: left;
   cursor: grab;
@@ -1484,11 +1710,108 @@
   cursor: grabbing;
 }
 
+.sceneMiniTopline {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.sceneDragPill {
+  flex: 0 0 auto;
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.24);
+  border-radius: 999px;
+  padding: 3px 5px;
+  color: rgb(var(--goblin-night-rgb) / 0.72);
+  background: rgb(var(--goblin-lichen-rgb) / 0.22);
+  font-size: 0.48rem;
+  font-weight: 950;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.sceneOrderControls {
+  display: grid;
+  gap: 4px;
+}
+
+.sceneOrderButton {
+  display: grid;
+  place-items: center;
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.22);
+  border-radius: 999px;
+  padding: 0;
+  color: var(--goblin-night);
+  background: rgb(var(--goblin-mist-rgb) / 0.78);
+  box-shadow: inset 0 1px 0 rgb(var(--goblin-mist-rgb) / 0.86);
+  font: inherit;
+  font-size: 0.52rem;
+  font-weight: 950;
+  line-height: 1;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.sceneOrderButton:hover:not(:disabled),
+.sceneOrderButton:focus-visible {
+  border-color: rgb(var(--goblin-night-rgb) / 0.44);
+  background: var(--goblin-gold);
+}
+
+.sceneOrderButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.36;
+}
+
+.sceneOrderChevron {
+  width: 13px;
+  height: 13px;
+}
+
 .sceneMiniCardActive {
   border-color: var(--goblin-night);
   background:
     linear-gradient(180deg, rgb(var(--goblin-gold-rgb) / 0.82), rgb(var(--goblin-mist-rgb) / 0.72)),
     var(--goblin-gold);
+}
+
+.sceneRailCompact .sceneMiniCardShell {
+  grid-template-columns: 56px;
+  justify-content: center;
+}
+
+.sceneRailCompact .sceneAddTile,
+.sceneRailCompact .sceneMiniCard {
+  width: 56px;
+  height: 56px;
+  min-height: 56px;
+  justify-self: center;
+}
+
+.sceneRailCompact .sceneAddTile {
+  font-size: 2rem;
+}
+
+.sceneRailCompact .sceneMiniCard {
+  align-content: center;
+  justify-items: center;
+  gap: 4px;
+  padding: 6px;
+  text-align: center;
+}
+
+.sceneRailCompact .sceneMiniTopline {
+  justify-content: center;
+}
+
+.sceneRailCompact .sceneDragPill,
+.sceneRailCompact .sceneOrderControls {
+  display: none;
 }
 
 .sceneMiniNumber {
@@ -1511,6 +1834,12 @@
   -webkit-line-clamp: 2;
 }
 
+.sceneRailCompact .sceneMiniTitle {
+  font-size: 0.58rem;
+  line-height: 1;
+  -webkit-line-clamp: 2;
+}
+
 .sceneMiniMeta {
   overflow: hidden;
   color: rgb(var(--goblin-night-rgb) / 0.7);
@@ -1521,6 +1850,10 @@
   white-space: nowrap;
 }
 
+.sceneRailCompact .sceneMiniMeta {
+  display: none;
+}
+
 .sceneDraftPanel {
   display: grid;
   gap: 10px;
@@ -1528,7 +1861,7 @@
 
 .sceneDraftHeader {
   display: flex;
-  min-height: 42px;
+  min-height: 24px;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -1540,6 +1873,28 @@
   font-weight: 950;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+}
+
+.sceneGoblinFill {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.16);
+  border-radius: 12px;
+  background: rgb(var(--goblin-lichen-rgb) / 0.22);
+}
+
+.sceneGoblinFill select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.2);
+  border-radius: 8px;
+  color: var(--goblin-night);
+  background: rgb(var(--goblin-mist-rgb) / 0.7);
+  box-shadow: inset 0 1px 0 rgb(var(--goblin-mist-rgb) / 0.86);
+  font: inherit;
+  font-size: 0.94rem;
 }
 
 .sceneDraftTextarea {
@@ -1687,6 +2042,13 @@
   text-transform: uppercase;
 }
 
+.parameterChoiceDescription {
+  max-width: 520px;
+  color: rgb(var(--goblin-night-rgb) / 0.68);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
 .parameterPill {
   min-height: 38px;
   border: 1px solid rgb(var(--goblin-night-rgb) / 0.18);
@@ -1756,6 +2118,15 @@
   line-height: 1.45;
 }
 
+.parameterField input::placeholder,
+.parameterField textarea::placeholder {
+  color: rgb(var(--goblin-night-rgb) / 0.48);
+}
+
+.parameterField textarea.guidedPlaceholderField::placeholder {
+  color: rgb(var(--goblin-night-rgb) / 0.46);
+}
+
 .parameterField input {
   min-height: 44px;
   padding: 0 14px;
@@ -1793,6 +2164,13 @@
   border-radius: 8px;
   padding: 18px;
   background: rgb(var(--goblin-mist-rgb) / 0.54);
+}
+
+.sceneDraftFooter {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .scenePopulatePanel {
@@ -2090,85 +2468,6 @@
   text-transform: uppercase;
 }
 
-.cowriterPanel {
-  margin-top: 18px;
-}
-
-.accessKeyLabel {
-  display: grid;
-  gap: 8px;
-  margin-top: 16px;
-  color: var(--goblin-night);
-  font-size: 0.72rem;
-  font-weight: 950;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.accessKeyInput {
-  width: min(100%, 520px);
-  min-height: 44px;
-  border: 1px solid rgb(var(--goblin-night-rgb) / 0.22);
-  border-radius: 999px;
-  padding: 0 16px;
-  color: var(--goblin-night);
-  background: rgb(var(--goblin-mist-rgb) / 0.78);
-  font-size: 0.92rem;
-  font-weight: 700;
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-.cowriterOutput {
-  margin-top: 14px;
-  white-space: pre-wrap;
-  color: var(--goblin-night);
-  line-height: 1.55;
-}
-
-.cowriterChoices {
-  display: grid;
-  gap: 10px;
-  margin-top: 16px;
-}
-
-.cowriterChoice {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 10px;
-  width: 100%;
-  border: 1px solid rgb(var(--goblin-night-rgb) / 0.18);
-  border-radius: 8px;
-  padding: 12px 14px;
-  color: var(--goblin-night);
-  background: rgb(var(--goblin-lichen-rgb) / 0.26);
-  font: inherit;
-  line-height: 1.45;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    border-color 160ms ease,
-    background-color 160ms ease,
-    transform 160ms ease;
-}
-
-.cowriterChoice:hover,
-.cowriterChoice:focus-visible {
-  border-color: rgb(var(--goblin-night-rgb) / 0.42);
-  background: rgb(var(--goblin-gold-rgb) / 0.28);
-  transform: translateY(-1px);
-}
-
-.cowriterChoiceNumber {
-  color: var(--goblin-moss);
-  font-weight: 950;
-}
-
-.appliedCowriterChoice {
-  border-color: var(--goblin-night);
-  background: rgb(var(--goblin-gold-rgb) / 0.42);
-}
-
 .errorText {
   margin-top: 12px;
   color: var(--goblin-night);
@@ -2213,6 +2512,12 @@
     flex-direction: column;
   }
 
+  .settingsPanel,
+  .settingsStatus {
+    right: auto;
+    left: 0;
+  }
+
   .summaryGrid,
   .editorGrid,
   .grid {
@@ -2221,8 +2526,7 @@
 
   .heroPanel,
   .summaryPanel,
-  .editorPanel,
-  .cowriterPanel {
+  .editorPanel {
     padding: 20px;
   }
 
@@ -2297,15 +2601,32 @@
     transform: none;
   }
 
-  .sceneStrip {
-    min-height: 124px;
+  .sceneBoardLayout,
+  .sceneBoardLayoutCompact {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sceneRail {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+    max-height: none;
+    overflow: visible;
     padding: 12px;
+  }
+
+  .sceneRailCompact {
+    grid-template-columns: repeat(auto-fit, minmax(62px, 1fr));
   }
 
   .sceneAddTile,
   .sceneMiniCard {
-    flex-basis: 168px;
-    min-height: 100px;
+    min-height: 76px;
+  }
+
+  .sceneRailCompact .sceneAddTile,
+  .sceneRailCompact .sceneMiniCard {
+    width: 56px;
+    height: 56px;
   }
 
   .sceneAddTile {

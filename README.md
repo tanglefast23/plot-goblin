@@ -107,9 +107,9 @@ Structure preference
 
 ---
 
-## MVP Rooms
+## MVP Rooms And Draft Checkpoint
 
-Active rooms:
+Active MVP build:
 
 ```txt
 Premise
@@ -118,7 +118,10 @@ Theme
 Beats
 Scenes
 Script Parameters
+Create the Script
 ```
+
+`Create the Script` is intentionally included in the MVP build as the draft checkpoint after the content rooms. It checks whether the writer has fed the goblin enough premise, character, theme, beats, and drafting rules before exposing the draft action.
 
 Coming-soon rooms should remain visible but greyed out:
 

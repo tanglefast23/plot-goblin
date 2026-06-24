@@ -6,6 +6,7 @@ import {
   storyRooms,
   structureModes,
 } from "./storyRooms";
+import { buildScriptBase } from "./guidedSetup";
 
 describe("story room model", () => {
   it("starts with the active writing rooms in flow order", () => {
@@ -36,7 +37,7 @@ describe("story room model", () => {
     expect(storyRooms.find((room) => room.slug === "beats")?.markdownFile).toBe("beats.md");
   });
 
-  it("blocks Create the Script until Script Parameters is fully filled out", () => {
+  it("blocks Create the Script until Script Parameters has enough drafting rules", () => {
     const readiness = getScriptReadiness({
       premise: completePremise,
       characters: completeCharacters,
@@ -97,7 +98,7 @@ describe("story room model", () => {
     expect(readiness.missingRooms).toEqual([]);
   });
 
-  it("keeps Script Parameters in the meter when tone and no-go are blank", () => {
+  it("keeps Script Parameters in the meter without blocking once enough drafting rules are filled", () => {
     const readiness = getScriptReadiness({
       premise: completePremise,
       characters: completeCharacters,
@@ -109,8 +110,8 @@ describe("story room model", () => {
         .replace("No-go content: No graphic injury.", "No-go content: [needs your answer]"),
     });
 
-    expect(readiness.ready).toBe(false);
-    expect(readiness.missingRooms[0]?.reason).toBe("Fill out Tone words.");
+    expect(readiness.ready).toBe(true);
+    expect(readiness.missingRooms).toEqual([]);
     expect(readiness.roomProgress.find((progress) => progress.room.slug === "script-parameters")).toEqual(
       expect.objectContaining({
         completed: 17,
@@ -122,7 +123,7 @@ describe("story room model", () => {
     );
   });
 
-  it("reports the exact Script Parameter labels still missing", () => {
+  it("reports exact Script Parameter labels still missing after the room is ready enough", () => {
     const readiness = getScriptReadiness({
       premise: completePremise,
       characters: completeCharacters,
@@ -134,7 +135,8 @@ describe("story room model", () => {
         .replace("Target page count: 100 pages.\n", ""),
     });
 
-    expect(readiness.ready).toBe(false);
+    expect(readiness.ready).toBe(true);
+    expect(readiness.missingRooms).toEqual([]);
     expect(readiness.roomProgress.find((progress) => progress.room.slug === "script-parameters")).toEqual(
       expect.objectContaining({
         completed: 17,
@@ -144,6 +146,54 @@ describe("story room model", () => {
         total: 19,
       }),
     );
+  });
+
+  it("passes when each Create the Script source room meets its enough-to-draft threshold", () => {
+    const readiness = getScriptReadiness({
+      premise: completePremise.replace("Can Rafa earn a real shot before pride erases it?", "[needs your answer]"),
+      characters: completeCharacters.replace("He needs to accept help without treating it as humiliation.", "[needs your answer]"),
+      theme: completeTheme.replace("The ending proves accepting help can be a braver kind of effort.", "[needs your answer]"),
+      beats: completeBeats.replace("He tapes the glove with someone beside him.", "[needs your answer]"),
+      scenes: completeScenes,
+      "script-parameters": completeScriptParameters
+        .replace("Tone words: Warm, sharp, underdog funny.", "Tone words: [needs your answer]")
+        .replace("No-go content: No graphic injury.", "No-go content: [needs your answer]"),
+    });
+
+    expect(readiness.ready).toBe(true);
+    expect(readiness.missingRooms).toEqual([]);
+    expect(readiness.roomProgress.map((progress) => [progress.room.slug, progress.completed, progress.total])).toEqual([
+      ["script-parameters", 17, 19],
+      ["premise", 7, 8],
+      ["characters", 5, 6],
+      ["theme", 2, 3],
+      ["beats", 6, 7],
+    ]);
+    expect(readiness.roomProgress.every((progress) => !progress.blocksDraft)).toBe(true);
+  });
+
+  it("blocks rooms that are below the enough-to-draft threshold", () => {
+    const readiness = getScriptReadiness({
+      premise: completePremise
+        .replace("Can Rafa earn a real shot before pride erases it?", "[needs your answer]")
+        .replace("Rafa must win a pro tryout before injury, money, and pride erase his last chance.", "[needs your answer]"),
+      characters: completeCharacters,
+      theme: completeTheme,
+      beats: completeBeats,
+      scenes: completeScenes,
+      "script-parameters": completeScriptParameters
+        .replace("Tone words: Warm, sharp, underdog funny.", "Tone words: [needs your answer]")
+        .replace("No-go content: No graphic injury.", "No-go content: [needs your answer]")
+        .replace("Scene access: Stay close.", "Scene access: [needs your answer]"),
+    });
+
+    expect(readiness.ready).toBe(false);
+    expect(readiness.missingRooms.map((issue) => [issue.room.slug, issue.reason])).toEqual([
+      ["script-parameters", "Fill out Tone words."],
+      ["premise", "Fill out Dramatic question."],
+    ]);
+    expect(readiness.roomProgress.find((progress) => progress.room.slug === "script-parameters")?.blocksDraft).toBe(true);
+    expect(readiness.roomProgress.find((progress) => progress.room.slug === "characters")?.blocksDraft).toBe(false);
   });
 
   it("does not keep Characters in the meter when only the pressure test is blank", () => {
@@ -158,6 +208,35 @@ describe("story room model", () => {
 
     expect(readiness.ready).toBe(true);
     expect(readiness.missingRooms).toEqual([]);
+    expect(readiness.roomProgress.find((progress) => progress.room.slug === "characters")).toEqual(
+      expect.objectContaining({ completed: 6, percent: 100, remaining: 0, total: 6 }),
+    );
+  });
+
+  it("counts story-specific guided setup guesses as filled character answers", () => {
+    const project = buildScriptBase({
+      rawIdea: "A one-armed pitcher tries to make the majors.",
+      genre: "Comedy",
+      audienceFeeling: "hopeful and tense",
+      protagonist: "Stubborn one-armed pitcher",
+      surfaceWant: "become a professional baseball player",
+      stakes: "he loses the only dream he has left",
+      falseBelief: "effort alone is enough",
+      opposition: "better players who have two arms",
+      endingDirection: "He changes and wins",
+      structurePreference: "Classic 3-act spine",
+    });
+
+    const readiness = getScriptReadiness({
+      premise: completePremise,
+      characters: project.rooms.characters,
+      theme: completeTheme,
+      beats: completeBeats,
+      scenes: completeScenes,
+      "script-parameters": completeScriptParameters,
+    });
+
+    expect(readiness.missingRooms.find((issue) => issue.room.slug === "characters")).toBeUndefined();
     expect(readiness.roomProgress.find((progress) => progress.room.slug === "characters")).toEqual(
       expect.objectContaining({ completed: 6, percent: 100, remaining: 0, total: 6 }),
     );

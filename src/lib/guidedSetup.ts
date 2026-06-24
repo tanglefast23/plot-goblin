@@ -591,12 +591,160 @@ export function buildExportMarkdown(rooms: RoomMarkdown) {
   const activeSlugs = getActiveRooms().map((room) => room.slug);
   const otherSlugs = Object.keys(rooms).filter((slug) => !activeSlugs.includes(slug));
   const orderedSlugs = [...activeSlugs, ...otherSlugs];
+  const roomBySlug = new Map([...getActiveRooms(), ...getComingSoonRooms()].map((room) => [room.slug, room]));
 
   return [
     "# Plot Goblin Export",
     "",
     "Generated from local browser storage. The goblin recommends backing this up somewhere less snackable.",
     "",
-    ...orderedSlugs.flatMap((slug) => [`## ${slug}.md`, "", rooms[slug] ?? "", ""]),
+    ...orderedSlugs.flatMap((slug) => [
+      `<!-- plot-goblin-room: ${slug} -->`,
+      `## ${roomBySlug.get(slug)?.markdownFile ?? `${slug}.md`}`,
+      "",
+      rooms[slug] ?? "",
+      `<!-- /plot-goblin-room: ${slug} -->`,
+      "",
+    ]),
   ].join("\n");
+}
+
+const DRAFT_CONTEXT_ROOM_SLUGS = ["premise", "characters", "theme", "beats", "scenes", "script-parameters"] as const;
+const SCENE_FIELD_LABELS = ["Location / time", "Characters", "Scene want", "Opposition", "Turn", "Button", "Purpose"] as const;
+
+function compactText(value: string, maxChars: number) {
+  const compacted = value
+    .replace(/\[(?:needs your answer|needs answer|needs writing)\]\s*/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (compacted.length <= maxChars) return compacted;
+
+  return `${compacted.slice(0, maxChars).trim()} [...]`;
+}
+
+function capMarkdown(markdown: string, maxChars: number) {
+  const compacted = markdown.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+
+  if (compacted.length <= maxChars) return compacted;
+
+  return `${compacted.slice(0, maxChars).trim()}\n\n[...capped for draft prompt]`;
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function sceneCards(markdown: string) {
+  const savedScenes = /##\s+Saved scenes\s*\n([\s\S]*?)(?=\n##\s+Scene list|\n##\s+\w|$)/i.exec(markdown)?.[1] ?? markdown;
+
+  return savedScenes
+    .split(/(?=^###\s+Scene:)/m)
+    .map((card) => card.trim())
+    .filter((card) => /^###\s+Scene:/m.test(card));
+}
+
+function sceneField(card: string, label: string) {
+  const pattern = new RegExp(
+    `\\*\\*${escapeRegExp(label)}:\\*\\*\\s*\\n([\\s\\S]*?)(?=\\n\\*\\*[^\\n]+:\\*\\*|\\n---|\\n###\\s+Scene:|$)`,
+    "i",
+  );
+
+  return pattern.exec(card)?.[1] ?? "";
+}
+
+function compactScenesMarkdown(markdown: string) {
+  const cards = sceneCards(markdown).slice(0, 40);
+
+  if (cards.length === 0) return capMarkdown(markdown, 4_000);
+
+  return cards
+    .map((card, index) => {
+      const title = compactText(/^###\s+Scene:\s*(.+)$/m.exec(card)?.[1] ?? `Scene ${index + 1}`, 100);
+      const fields = SCENE_FIELD_LABELS.map((label) => {
+        const value = compactText(sceneField(card, label), 220);
+        return value ? `${label}: ${value}` : "";
+      }).filter(Boolean);
+
+      return [`${index + 1}. ${title}`, ...fields].join("\n");
+    })
+    .join("\n\n");
+}
+
+export function buildDraftContextMarkdown(rooms: RoomMarkdown) {
+  const activeRoomBySlug = new Map(getActiveRooms().map((room) => [room.slug, room]));
+
+  return [
+    "# Plot Goblin Draft Context",
+    "Compact source. Same story facts, fewer snack crumbs.",
+    ...DRAFT_CONTEXT_ROOM_SLUGS.flatMap((slug) => {
+      const markdown = rooms[slug]?.trim();
+      const room = activeRoomBySlug.get(slug);
+      if (!markdown || !room) return [];
+
+      const body = slug === "scenes" ? compactScenesMarkdown(markdown) : capMarkdown(markdown, slug === "beats" ? 8_000 : 6_000);
+
+      return [`## ${room.markdownFile}`, body];
+    }),
+  ].join("\n\n");
+}
+
+function stripRoomExportHeading(slug: string, block: string) {
+  const room = [...getActiveRooms(), ...getComingSoonRooms()].find((candidate) => candidate.slug === slug);
+  const heading = `## ${room?.markdownFile ?? `${slug}.md`}`;
+  const lines = block.replace(/\r\n/g, "\n").split("\n");
+
+  if (lines[0] === heading && lines[1] === "") {
+    return lines.slice(2).join("\n").replace(/\n+$/, "");
+  }
+
+  return block.trim();
+}
+
+function parseMarkedExport(markdown: string) {
+  const rooms: RoomMarkdown = {};
+  const pattern = /<!-- plot-goblin-room: ([a-z0-9-]+) -->\n([\s\S]*?)\n<!-- \/plot-goblin-room: \1 -->/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(markdown)) !== null) {
+    const [, slug, block] = match;
+    rooms[slug] = stripRoomExportHeading(slug, block);
+  }
+
+  return rooms;
+}
+
+function parseLegacyExport(markdown: string) {
+  const rooms: RoomMarkdown = {};
+  const knownRooms = [...getActiveRooms(), ...getComingSoonRooms()];
+  const fileHeadingBySlug = new Map(knownRooms.map((room) => [room.slug, `## ${room.markdownFile}`]));
+  const slugByHeading = new Map(knownRooms.map((room) => [`## ${room.markdownFile}`, room.slug]));
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  const headings = lines
+    .map((line, index) => ({ index, slug: slugByHeading.get(line.trim()) }))
+    .filter((heading): heading is { index: number; slug: string } => Boolean(heading.slug));
+
+  headings.forEach((heading, headingIndex) => {
+    const nextHeading = headings[headingIndex + 1]?.index ?? lines.length;
+    const bodyStart = lines[heading.index + 1] === "" ? heading.index + 2 : heading.index + 1;
+    rooms[heading.slug] = lines.slice(bodyStart, nextHeading).join("\n").replace(/\n+$/, "");
+  });
+
+  for (const [slug, heading] of fileHeadingBySlug) {
+    if (!markdown.includes(heading)) continue;
+    if (rooms[slug] === undefined) rooms[slug] = "";
+  }
+
+  return rooms;
+}
+
+export function parseExportMarkdown(markdown: string) {
+  const markedRooms = parseMarkedExport(markdown);
+  const rooms = Object.keys(markedRooms).length > 0 ? markedRooms : parseLegacyExport(markdown);
+
+  if (Object.keys(rooms).length === 0) {
+    throw new Error("This does not look like a Plot Goblin markdown export.");
+  }
+
+  return { rooms };
 }

@@ -4,6 +4,7 @@ import {
   LEGACY_NEEDS_ANSWER,
   NEEDS_ANSWER,
   NEEDS_WRITING,
+  parseExportMarkdown,
   type ScriptBase,
 } from "./guidedSetup";
 
@@ -212,4 +213,17 @@ export function clearProject() {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(PROJECT_STORAGE_KEY);
   window.dispatchEvent(new Event(PROJECT_CHANGED_EVENT));
+}
+
+export function importProjectMarkdown(markdown: string) {
+  const imported = parseExportMarkdown(markdown);
+  const base = loadProject() ?? createBlankProject();
+  const project = {
+    ...base,
+    rooms: { ...base.rooms, ...imported.rooms },
+    updatedAt: new Date().toISOString(),
+  };
+
+  saveProject(project);
+  return project;
 }
