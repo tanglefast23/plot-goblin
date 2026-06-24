@@ -167,6 +167,50 @@
   padding-left: 8px;
 }
 
+.settingsAccessPanel {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.12);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgb(var(--goblin-lichen-rgb) / 0.18);
+}
+
+.settingsAccessField {
+  display: grid;
+  gap: 6px;
+  color: rgb(var(--goblin-night-rgb) / 0.66);
+  font-size: 0.64rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.settingsAccessField input {
+  min-height: 38px;
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.2);
+  border-radius: 8px;
+  padding: 0 10px;
+  color: var(--goblin-night);
+  background: rgb(var(--goblin-mist-rgb) / 0.82);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.settingsAccessField input:focus {
+  border-color: rgb(var(--goblin-night-rgb) / 0.42);
+  outline: 2px solid rgb(var(--goblin-gold-rgb) / 0.42);
+  outline-offset: 1px;
+}
+
+.settingsAccessActions {
+  display: grid;
+  gap: 6px;
+}
+
 .settingsAllAction {
   border-color: rgb(var(--goblin-night-rgb) / 0.2);
   background: rgb(var(--goblin-gold-rgb) / 0.42);
@@ -619,6 +663,24 @@
 .nextRoomCallout p {
   color: rgb(var(--goblin-night-rgb) / 0.72);
   line-height: 1.45;
+}
+
+.nextSuggestedRoomFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid rgb(var(--goblin-night-rgb) / 0.14);
+}
+
+.nextSuggestedRoomFooter span {
+  color: var(--goblin-moss);
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .grid {
@@ -2657,6 +2719,11 @@
 
   .nextRoomCallout .primaryButton {
     width: 100%;
+  }
+
+  .nextSuggestedRoomFooter {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .answerPath {

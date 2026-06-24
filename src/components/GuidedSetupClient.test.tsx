@@ -1,13 +1,35 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { GuidedSetupClient } from "./GuidedSetupClient";
 import { guidedSetupQuestions } from "@/lib/guidedSetup";
+import { ACCESS_KEY_STORAGE_KEY } from "@/lib/cowriterAccess";
 import { PROJECT_STORAGE_KEY } from "@/lib/projectStorage";
 
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
+  vi.unstubAllGlobals();
 });
+
+function completeSetupWithAnswers() {
+  const answers = [
+    "A one-armed pitcher gets one last shot at the majors.",
+    "Sports drama",
+    "Hope and pressure",
+    "Joe, a proud pitcher who refuses help.",
+    "Earn a contract at an open tryout.",
+    "He loses his home and the last proof that he still belongs.",
+    "Needing help means he is weak.",
+    "Two gifted rival players and his own stubborn pride.",
+    "They change and win",
+    "Classic 3-act spine",
+  ];
+
+  answers.forEach((answer, index) => {
+    fireEvent.change(screen.getByRole("textbox", { name: /your answer/i }), { target: { value: answer } });
+    fireEvent.click(screen.getByRole("button", { name: index === answers.length - 1 ? "Create script base" : "Next" }));
+  });
+}
 
 describe("GuidedSetupClient", () => {
   it("places Back before Next once the writer can return to a previous question", () => {
@@ -149,7 +171,56 @@ describe("GuidedSetupClient", () => {
     expect(loglineButton.className).toContain("goblinSuggestButton");
   });
 
-  it("shows a saved logline confirmation after accepting a suggestion", () => {
+  it("asks Hermes to draft a succinct logline from the strongest known setup pieces", async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        output:
+          "When proud one-armed pitcher Joe gets one last shot at the majors, two gifted rivals force him to accept help before he loses his home and his dream.",
+      }),
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+    window.localStorage.setItem(ACCESS_KEY_STORAGE_KEY, "public-key");
+    render(<GuidedSetupClient />);
+
+    completeSetupWithAnswers();
+    fireEvent.click(await screen.findByRole("button", { name: /annoy the goblin for logline/i }));
+
+    expect(
+      await screen.findByText(
+        "When proud one-armed pitcher Joe gets one last shot at the majors, two gifted rivals force him to accept help before he loses his home and his dream.",
+      ),
+    ).toBeTruthy();
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "/api/hermes-cowriter",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          "Content-Type": "application/json",
+          "x-plot-goblin-key": "public-key",
+        }),
+      }),
+    );
+
+    const request = JSON.parse(fetchSpy.mock.calls[0][1].body as string) as {
+      answers: Record<string, string>;
+      mode: string;
+      summary: { strongestKnownPieces: string[] };
+    };
+    expect(request.mode).toBe("logline");
+    expect(request.answers.rawIdea).toBe("A one-armed pitcher gets one last shot at the majors.");
+    expect(request.summary.strongestKnownPieces).toContain("Joe, a proud pitcher who refuses help.");
+    expect(request.summary.strongestKnownPieces).toContain("Earn a contract at an open tryout.");
+  });
+
+  it("shows a saved logline confirmation after accepting a suggestion", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ output: "When a protagonist whose want exposes the wound must win, pressure makes the cost visible." }),
+      }),
+    );
     render(<GuidedSetupClient />);
 
     for (let questionIndex = 0; questionIndex < guidedSetupQuestions.length; questionIndex += 1) {
@@ -157,7 +228,7 @@ describe("GuidedSetupClient", () => {
     }
 
     fireEvent.click(screen.getByRole("button", { name: /annoy the goblin for logline/i }));
-    const suggestion = screen.getByText(/When a protagonist whose want exposes/i).textContent ?? "";
+    const suggestion = (await screen.findByText(/When a protagonist whose want exposes/i)).textContent ?? "";
 
     fireEvent.click(screen.getByRole("button", { name: "Use suggestion" }));
 
@@ -183,6 +254,22 @@ describe("GuidedSetupClient", () => {
   });
 
   it("lets a later accepted suggestion replace the saved logline", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ output: "When a protagonist whose want exposes the wound must win, pressure makes the cost visible." }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            output:
+              "A protagonist whose want exposes the wound must risk visible failure before the opposition turns the dream into a trap.",
+          }),
+        }),
+    );
     render(<GuidedSetupClient />);
 
     for (let questionIndex = 0; questionIndex < guidedSetupQuestions.length; questionIndex += 1) {
@@ -190,14 +277,14 @@ describe("GuidedSetupClient", () => {
     }
 
     fireEvent.click(screen.getByRole("button", { name: /annoy the goblin for logline/i }));
-    const firstSuggestion = screen.getByText(/When a protagonist whose want exposes/i).textContent ?? "";
+    const firstSuggestion = (await screen.findByText(/When a protagonist whose want exposes/i)).textContent ?? "";
 
     fireEvent.click(screen.getByRole("button", { name: "Use suggestion" }));
     await screen.findByText("Accepted logline");
 
     fireEvent.click(screen.getByRole("button", { name: /annoy the goblin for logline/i }));
-    fireEvent.click(screen.getByRole("button", { name: "Another suggestion" }));
-    const secondSuggestion = screen.getByText(/^a protagonist whose want exposes/i).textContent ?? "";
+    const secondSuggestion =
+      (await screen.findByText(/^A protagonist whose want exposes/i)).textContent ?? "";
 
     expect(secondSuggestion).not.toBe(firstSuggestion);
 

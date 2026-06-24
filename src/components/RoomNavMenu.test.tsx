@@ -7,12 +7,12 @@ afterEach(() => {
 });
 
 describe("RoomNavMenu", () => {
-  it("labels the rooms overview link as Home", () => {
+  it("does not put the Home link inside the rooms dropdown", () => {
     render(<RoomNavMenu />);
 
     fireEvent.click(screen.getByRole("button", { name: "Rooms" }));
 
-    expect(screen.getByRole("link", { name: "Home" }).getAttribute("href")).toBe("/rooms");
+    expect(screen.queryByRole("link", { name: "Home" })).toBeNull();
     expect(screen.queryByRole("link", { name: /Rooms dashboard/i })).toBeNull();
   });
 

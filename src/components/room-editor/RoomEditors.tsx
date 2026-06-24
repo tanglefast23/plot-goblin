@@ -2020,7 +2020,7 @@ export function ScriptParametersEditor({ markdown, onMarkdownChange }: ScriptPar
             value={values.castSize}
           />
         </label>
-        {choiceButtons("budgetReality", BUDGET_REALITIES)}
+        {choiceButtonGroup("Budget reality", "budgetReality", BUDGET_REALITIES)}
         <label className={styles.parameterField}>
           <span>Location limits</span>
           <input

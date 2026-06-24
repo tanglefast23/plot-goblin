@@ -1,7 +1,7 @@
 import { writingStylePrompt } from "./writingStyles";
 
 export type CowriterRequest = {
-  mode: "followup" | "suggestions" | "room" | "beat" | "draft" | "scene" | "scene-suggest";
+  mode: "followup" | "suggestions" | "logline" | "room" | "beat" | "draft" | "scene" | "scene-suggest";
   room?: string;
   beat?: string;
   beatMarkdown?: string;
@@ -131,6 +131,25 @@ Task: Give 1-2 alternate stronger logline or beat suggestions. Do not replace th
 
 Current answers:
 ${asJson(request.answers)}`;
+  }
+
+  if (request.mode === "logline") {
+    return `${sharedRules}
+
+Task: Draft the single strongest, most succinct, proper screenplay logline from the setup facts below. Use the strongest known pieces first, then fill only tiny connective gaps when needed.
+
+Logline rules:
+- Return exactly one logline, not a list, note, explanation, title, tagline, or question.
+- Use a clean professional form: When [specific protagonist] must [visible goal], [specific opposition/pressure] forces [action or choice] before [stakes].
+- Keep it one sentence, ideally 25-40 words.
+- Include protagonist, visible want, opposition/pressure, stakes, and the inner contradiction or false belief only if it makes the line sharper.
+- Do not mention the goblin, the app, placeholders, or missing-answer labels.
+
+Current answers:
+${asJson(request.answers)}
+
+Strongest known pieces and warnings:
+${asJson(request.summary)}`;
   }
 
   if (request.mode === "beat") {
