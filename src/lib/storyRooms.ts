@@ -5,6 +5,7 @@ export type StoryRoom = {
   title: string;
   status: RoomStatus;
   markdownFile: string;
+  navDescription: string;
   purpose: string;
   guidingQuestion: string;
   prompts: string[];
@@ -46,6 +47,7 @@ export const storyRooms: StoryRoom[] = [
     title: "Premise",
     status: "active",
     markdownFile: "premise.md",
+    navDescription: "Logline, dramatic question, stakes, and story promise.",
     purpose: "Turn a raw idea into a logline, dramatic question, stakes, and story promise.",
     guidingQuestion: "What movie are we promising, and why must it happen now?",
     prompts: [
@@ -59,6 +61,7 @@ export const storyRooms: StoryRoom[] = [
     title: "Characters",
     status: "active",
     markdownFile: "characters.md",
+    navDescription: "Who wants what, what they need, and how pressure changes them.",
     purpose: "Shape the protagonist, antagonist, and key players around desire, flaw, pressure, and change.",
     guidingQuestion: "Who is forced to change, and what lie are they protecting?",
     prompts: [
@@ -72,6 +75,7 @@ export const storyRooms: StoryRoom[] = [
     title: "Theme",
     status: "active",
     markdownFile: "theme.md",
+    navDescription: "The belief your story tests through choices and consequences.",
     purpose: "Define the story's central argument without turning it into a sermon.",
     guidingQuestion: "What question does the story test through choices and consequences?",
     prompts: [
@@ -85,6 +89,7 @@ export const storyRooms: StoryRoom[] = [
     title: "Beats",
     status: "active",
     markdownFile: "beats.md",
+    navDescription: "Major turns from opening image to final image.",
     purpose: "Map the major turns from opening image to final image with flexible three-act defaults.",
     guidingQuestion: "Where does pressure escalate, reverse, and force a new choice?",
     prompts: [
@@ -98,6 +103,7 @@ export const storyRooms: StoryRoom[] = [
     title: "Scenes",
     status: "active",
     markdownFile: "scenes.md",
+    navDescription: "Playable scene cards where something changes.",
     purpose: "Break the story into playable scene cards where every scene creates change.",
     guidingQuestion: "What changes by the end of this scene?",
     prompts: [
@@ -111,6 +117,7 @@ export const storyRooms: StoryRoom[] = [
     title: "Script Parameters",
     status: "active",
     markdownFile: "script-parameters.md",
+    navDescription: "Drafting rules for length, tone, format, and limits.",
     purpose: "Set the strict drafting rules: length, genre, tone, rating, format, structure, and production boundaries.",
     guidingQuestion: "What rules must the script obey before it writes a single slugline?",
     prompts: [
@@ -124,6 +131,7 @@ export const storyRooms: StoryRoom[] = [
     title: "Create the Script",
     status: "active",
     markdownFile: "create-script.md",
+    navDescription: "Check if the story spine is ready to draft.",
     purpose: "Summon the goblin to check whether the script has enough bones for a halfway decent draft.",
     guidingQuestion: "Has the writer fed the goblin enough premise, character, theme, beats, and drafting rules?",
     prompts: [
@@ -134,10 +142,25 @@ export const storyRooms: StoryRoom[] = [
     ],
   },
   {
+    slug: "drafts",
+    title: "DRAFTS",
+    status: "active",
+    markdownFile: "drafts.md",
+    navDescription: "Saved screenplay drafts to edit, export, or delete.",
+    purpose: "Keep saved generated screenplay drafts so the writer can edit, export, or delete them later.",
+    guidingQuestion: "Which saved draft is worth sharpening now?",
+    prompts: [
+      "Tap a saved title to edit the draft.",
+      "Save keeps edits in this browser.",
+      "Delete drafts that are just taking up emotional shelf space.",
+    ],
+  },
+  {
     slug: "relationships",
     title: "Relationships",
     status: "coming-soon",
     markdownFile: "relationships.md",
+    navDescription: "Emotional turns, power shifts, secrets, and alliances.",
     purpose: "Track emotional geometry, power shifts, secrets, and relationship turns.",
     guidingQuestion: "How does this relationship change the story's choices?",
     prompts: ["What do they need from each other?", "Who has power now?"],
@@ -147,6 +170,7 @@ export const storyRooms: StoryRoom[] = [
     title: "World",
     status: "coming-soon",
     markdownFile: "world.md",
+    navDescription: "Arena rules, rituals, status games, and visual texture.",
     purpose: "Build the arena, rules, rituals, status games, and visual texture.",
     guidingQuestion: "How does the world pressure the story instead of decorating it?",
     prompts: ["Who has power here?", "What rule cannot be broken?"],
@@ -156,6 +180,7 @@ export const storyRooms: StoryRoom[] = [
     title: "Dialogue",
     status: "coming-soon",
     markdownFile: "dialogue.md",
+    navDescription: "Voice, subtext, status play, and character language.",
     purpose: "Develop voice, subtext, status play, and character-specific language.",
     guidingQuestion: "What is each character doing with words besides saying information?",
     prompts: ["What do they never say directly?", "What is their default verbal weapon?"],
@@ -165,6 +190,7 @@ export const storyRooms: StoryRoom[] = [
     title: "Setups/Payoffs",
     status: "coming-soon",
     markdownFile: "setups-payoffs.md",
+    navDescription: "Planted details that return with changed meaning.",
     purpose: "Track planted details that return with changed meaning.",
     guidingQuestion: "What comes back later and matters more the second time?",
     prompts: ["Where is it planted?", "How does the payoff change meaning?"],
@@ -174,6 +200,7 @@ export const storyRooms: StoryRoom[] = [
     title: "Revision",
     status: "coming-soon",
     markdownFile: "revision.md",
+    navDescription: "Rewrite targets, weak scenes, missing payoffs, and tone drift.",
     purpose: "Turn diagnostics into a rewrite plan: weak scenes, flat arcs, missing payoffs, and tone drift.",
     guidingQuestion: "What is the highest-leverage fix for the next draft?",
     prompts: ["What is weak but fixable?", "What should be cut, merged, or sharpened?"],

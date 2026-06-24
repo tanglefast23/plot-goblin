@@ -27,7 +27,8 @@ function isCowriterRequest(value: unknown): value is CowriterRequest {
     mode === "room" ||
     mode === "beat" ||
     mode === "draft" ||
-    mode === "scene"
+    mode === "scene" ||
+    mode === "scene-suggest"
   );
 }
 
@@ -56,6 +57,7 @@ function validateCowriterRequest(value: CowriterRequest) {
     validateOptionalString(value.writingStyle, "Writing style", maxLabelChars),
     validateOptionalString(value.markdown, "Markdown", maxPromptSourceChars),
     validateOptionalString(value.beatMarkdown, "Beat markdown", maxPromptSourceChars),
+    validateOptionalString(value.sceneList, "Scene list", maxPromptSourceChars),
     validateOptionalRecord(value.answers, "Answers"),
     validateOptionalRecord(value.summary, "Summary"),
   ].filter(Boolean);

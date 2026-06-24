@@ -1,11 +1,12 @@
 import { writingStylePrompt } from "./writingStyles";
 
 export type CowriterRequest = {
-  mode: "followup" | "suggestions" | "room" | "beat" | "draft" | "scene";
+  mode: "followup" | "suggestions" | "room" | "beat" | "draft" | "scene" | "scene-suggest";
   room?: string;
   beat?: string;
   beatMarkdown?: string;
   markdown?: string;
+  sceneList?: string;
   writingStyle?: string;
   answers?: Record<string, unknown>;
   summary?: Record<string, unknown>;
@@ -13,6 +14,12 @@ export type CowriterRequest = {
 
 function asJson(value: unknown) {
   return JSON.stringify(value ?? {}, null, 2);
+}
+
+function capPromptText(value: string | undefined, maxChars: number) {
+  if (!value || value.length <= maxChars) return value ?? "";
+
+  return `${value.slice(0, maxChars)}\n\n[...capped at ${maxChars} characters]`;
 }
 
 function cleanMovieKind(value: string) {
@@ -128,16 +135,17 @@ ${asJson(request.answers)}`;
 
   if (request.mode === "beat") {
     const beatName = request.beat ?? "selected";
+    const markdown = capPromptText(request.markdown, 8_000);
 
     return `${sharedRules}
 
-Task: Write the actual ${beatName} beat for THIS specific script. Dramatize what concretely happens in this beat using the protagonist, want, lie, stakes, opposition, and theme from the full script below. Do not paraphrase the current beat text and do not explain what the ${beatName} beat is for. Return one numbered option only, using this exact format: 1. ${beatName}: Replacement text.
+Task: Write the actual ${beatName} beat for THIS specific script. Dramatize what concretely happens in this beat using the protagonist, want, lie, stakes, opposition, and theme from the full script below. Do not paraphrase the current beat text and do not explain what the ${beatName} beat is for. Keep the replacement succinct and use simple words. Return one numbered option only, using this exact format: 1. ${beatName}: Replacement text.
 
 Current ${beatName} beat text (this is usually an instruction telling you what to accomplish — fulfill it with specifics, do not echo it):
 ${request.beatMarkdown ?? ""}
 
 Full script markdown (your source of truth for character, want, lie, stakes, opposition, and theme):
-${request.markdown ?? ""}`;
+${markdown}`;
   }
 
   if (request.mode === "scene") {
@@ -145,7 +153,7 @@ ${request.markdown ?? ""}`;
 
     return `${sharedRules}
 
-Task: Build the actual scene for the ${beatName} beat of THIS specific script. Turn the beat into one concrete, playable scene grounded in the protagonist, want, lie, stakes, opposition, and theme from the full script below. Make best-guess assumptions when a detail is missing and mark each invented specific with (assumed). Do not paraphrase the beat text and do not explain what the fields are for — fill them with specifics.
+Task: Build the actual scene for the ${beatName} beat of THIS specific script. Work only from the beat text below — turn it into one concrete, playable scene. Make best-guess assumptions when a detail is missing and mark each invented specific with (assumed). Do not paraphrase the beat text and do not explain what the fields are for — fill them with specifics.
 
 Return exactly 8 numbered lines, one per field, using this exact format and these exact labels:
 1. Scene title: A short, specific scene title.
@@ -157,11 +165,34 @@ Return exactly 8 numbered lines, one per field, using this exact format and thes
 7. Button: The last image, line, or action that pushes into the next beat.
 8. Purpose: Plot / character / theme / tension / setup / payoff for this scene.
 
-Current ${beatName} beat text (this is what the scene must dramatize):
-${request.beatMarkdown ?? ""}
+Current ${beatName} beat text (this is the only source for the scene — dramatize it):
+${request.beatMarkdown ?? ""}`;
+  }
 
-Full script markdown (your source of truth for character, want, lie, stakes, opposition, and theme):
-${request.markdown ?? ""}`;
+  if (request.mode === "scene-suggest") {
+    const summary = capPromptText(request.markdown, 8_000);
+    const sceneList = capPromptText(request.sceneList, 6_000);
+
+    return `${sharedRules}
+
+Task: Read the compact story summary and the current scene list below. Decide where THIS script feels thin or is missing a scene (beginning, middle, or end), then invent ONE new scene that fills that gap and earns its place. Make best-guess assumptions when a detail is missing and mark each invented specific with (assumed). Do not explain what the fields are for — fill them with specifics.
+
+Return exactly 9 numbered lines using this exact format and these exact labels:
+1. Scene title: A short, specific scene title.
+2. Location / time: A proper slugline like INT./EXT. PLACE - DAY/NIGHT.
+3. Characters: The named people in the scene, noting who applies the most pressure.
+4. Scene want: What the active character is trying to get in this scene.
+5. Opposition: What blocks the want inside this scene.
+6. Turn: What changes by the end (power, emotion, knowledge, relationship, stakes, or plan).
+7. Button: The last image, line, or action that pushes into the next scene.
+8. Purpose: Plot / character / theme / tension / setup / payoff for this scene.
+9. Placement: Where this scene belongs, written as "after scene N" using the numbers in the scene list, or "start" for the very beginning.
+
+Compact story summary (your source of truth for character, want, lie, stakes, opposition, and theme):
+${summary}
+
+Current scene list (numbered, in order — use these numbers for placement):
+${sceneList.trim() ? sceneList : "(no scenes yet — suggest an opening scene and place it at the start)"}`;
   }
 
   if (request.mode === "draft") {
@@ -173,6 +204,9 @@ Drafting rules:
 - Use standard screenplay style with scene headings, action lines, character cues, and dialogue.
 - Base the draft on the filled rooms: premise, characters, theme, beats, scenes, and script parameters.
 - Keep the selected genre/movie promise visible in situation, tone, pacing, dialogue, set pieces, and stakes.
+- Approved-story continuity rules: Do not change the protagonist, want, stakes, false belief, opposition, theme, genre, rating, POV, or ending direction unless the room export explicitly changes them.
+- Carry forward named characters, locations, relationships, and decisions from prior rooms; do not rename, merge, resurrect, kill, or replace them for convenience.
+- If two room details conflict, preserve the newest or most specific user-written choice and make the draft quietly consistent with that choice.
 - If the Script Parameters target is a short film or 15 pages or fewer, write a compact complete short-script draft.
 - If the target is a feature or longer than 15 pages, write the first 6-8 pages plus a concise continuation map for the remaining act structure.
 - Do not include generic advice before the pages. Start with a title line or the first scene heading after the final marker.

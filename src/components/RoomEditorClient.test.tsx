@@ -4,6 +4,8 @@ import { RoomEditorClient } from "./RoomEditorClient";
 import { buildScriptBase } from "@/lib/guidedSetup";
 import { PROJECT_STORAGE_KEY } from "@/lib/projectStorage";
 
+const DRAFT_STORAGE_KEY = "plot-goblin-saved-drafts";
+
 const routeState = vi.hoisted(() => ({ slug: "premise" }));
 
 vi.mock("next/navigation", () => ({
@@ -965,8 +967,20 @@ describe("RoomEditorClient", () => {
     });
   });
 
-  it("populates ordered scene cards from the beat sheet", async () => {
+  it("builds one scene in the editor from a picked beat using only that beat", async () => {
     routeState.slug = "scenes";
+    const sceneOutput = `PLOT_GOBLIN_FINAL:
+1. Scene title: Dawn At The Cage
+2. Location / time: EXT. BATTING CAGE - DAWN
+3. Characters: Rafa (most pressure)
+4. Scene want: Rafa wants one clean swing before anyone wakes up.
+5. Opposition: His taped glove keeps slipping.
+6. Turn: He admits the cracked glove is a problem.
+7. Button: He leaves the cracked ball in the dirt.
+8. Purpose: Character / setup`;
+    const fetchSpy = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ output: sceneOutput }) });
+    vi.stubGlobal("fetch", fetchSpy);
+
     const project = buildScriptBase({
       rawIdea: "A one-armed pitcher tries to make the majors.",
       genre: "Comedy",
@@ -983,47 +997,31 @@ describe("RoomEditorClient", () => {
 
 ## Opening Image
 Rafa tapes a cracked glove to his one good hand before the gates open.
-
-## Midpoint
-A scout offers one private pitch, but only if Rafa admits he needs a catcher.
-
-## Final Image
-Rafa takes the mound with Mina beside him and throws without hiding the sling.
 `;
     window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
 
     render(<RoomEditorClient />);
 
     await screen.findByRole("region", { name: "Scene cards" });
-    expect(screen.getByRole("img", { name: "Large scene goblin mascot" })).toBeTruthy();
-    expect(
-      screen.getByText(/auto-populates scene cards from answered beats only/i),
-    ).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Ask the goblin to populate scenes" }));
+    fireEvent.click(screen.getByRole("button", { name: "Populate from beat sheet" }));
+    const beatPicker = await screen.findByRole("combobox", { name: "Beat to populate from the beat sheet" });
+    fireEvent.change(beatPicker, { target: { value: "Opening Image" } });
 
-    const openingScene = await screen.findByRole("button", { name: /Opening Image/ });
-    const midpointScene = screen.getByRole("button", { name: /Midpoint/ });
-    const finalScene = screen.getByRole("button", { name: /Final Image/ });
+    const titleField = (await screen.findByRole("textbox", { name: "Scene title" })) as HTMLInputElement;
+    await waitFor(() => expect(titleField.value).toBe("Dawn At The Cage"));
 
-    expect(openingScene.compareDocumentPosition(midpointScene) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(midpointScene.compareDocumentPosition(finalScene) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-
-    await waitFor(() => {
-      const storedProject = JSON.parse(window.localStorage.getItem(PROJECT_STORAGE_KEY) ?? "{}");
-      expect(storedProject.rooms.scenes.indexOf("### Scene: Opening Image")).toBeLessThan(
-        storedProject.rooms.scenes.indexOf("### Scene: Midpoint"),
-      );
-      expect(storedProject.rooms.scenes.indexOf("### Scene: Midpoint")).toBeLessThan(
-        storedProject.rooms.scenes.indexOf("### Scene: Final Image"),
-      );
-      expect(storedProject.rooms.scenes).toContain("Make the scene want concrete from this beat: Rafa tapes");
-      expect(storedProject.rooms.scenes).toContain("**Purpose:**\nBeat: Opening Image");
-      expect(storedProject.rooms.scenes).toContain("- Opening Image\n- Midpoint\n- Final Image");
-    });
+    const body = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string) as {
+      mode: string;
+      beat: string;
+      markdown?: string;
+    };
+    expect(body.mode).toBe("scene");
+    expect(body.beat).toBe("Opening Image");
+    expect(body.markdown).toBeUndefined();
   });
 
-  it("skips unanswered beats when populating scene cards", async () => {
+  it("only offers answered beats in the populate picker", async () => {
     routeState.slug = "scenes";
     const project = buildScriptBase({
       rawIdea: "A one-armed pitcher tries to make the majors.",
@@ -1045,37 +1043,51 @@ Rafa tapes a cracked glove to his one good hand before the gates open.
 ## Setup
 [needs your answer] Establish the ordinary world, core want, false belief, relationships, and cost of staying the same.
 
-## Inciting Incident
-[needs your answer] Name the event that disrupts normal life and makes inaction impossible.
-
 ## Midpoint
 A scout offers one private pitch, but only if Rafa admits he needs a catcher.
-
-## Final Image
-A visual answer to the opening image.
 `;
     window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
 
     render(<RoomEditorClient />);
 
     await screen.findByRole("region", { name: "Scene cards" });
-    expect(screen.getByText(/answered beats/i)).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Ask the goblin to populate scenes" }));
+    fireEvent.click(screen.getByRole("button", { name: "Populate from beat sheet" }));
+    const beatPicker = await screen.findByRole("combobox", { name: "Beat to populate from the beat sheet" });
+    const options = within(beatPicker).getAllByRole("option").map((option) => (option as HTMLOptionElement).value);
 
-    expect(await screen.findByRole("button", { name: /Opening Image/ })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Midpoint/ })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Setup/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /Inciting Incident/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /Final Image/ })).toBeNull();
+    expect(options).toContain("Opening Image");
+    expect(options).toContain("Midpoint");
+    expect(options).not.toContain("Setup");
+  });
 
-    await waitFor(() => {
-      const storedProject = JSON.parse(window.localStorage.getItem(PROJECT_STORAGE_KEY) ?? "{}");
-      expect(storedProject.rooms.scenes).toContain("- Opening Image\n- Midpoint");
-      expect(storedProject.rooms.scenes).not.toContain("### Scene: Setup");
-      expect(storedProject.rooms.scenes).not.toContain("### Scene: Inciting Incident");
-      expect(storedProject.rooms.scenes).not.toContain("### Scene: Final Image");
+  it("tells the writer to populate the beat sheet first when no beats are answered", async () => {
+    routeState.slug = "scenes";
+    const project = buildScriptBase({
+      rawIdea: "A one-armed pitcher tries to make the majors.",
+      genre: "Comedy",
+      audienceFeeling: "hopeful and tense",
+      protagonist: "Stubborn one-armed pitcher",
+      surfaceWant: "become a professional baseball player",
+      stakes: "he loses the only dream he has left",
+      falseBelief: "asking for help makes him weak",
+      opposition: "better players who have two arms",
+      endingDirection: "He changes and wins",
+      structurePreference: "Classic 3-act spine",
     });
+    project.rooms.beats = `# Beats Room
+
+## Opening Image
+[needs your answer] Establish the world.
+`;
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+
+    render(<RoomEditorClient />);
+
+    await screen.findByRole("region", { name: "Scene cards" });
+
+    expect(screen.getByText(/Populate the beat sheet first/i)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Populate from beat sheet" })).toBeNull();
   });
 
   it("reorders saved scene cards by drag and drop", async () => {
@@ -1830,6 +1842,175 @@ Lena sees a frame that should not exist.
     expect(requestBody.markdown).not.toContain("Celeste smiles and blocks every honest answer. ".repeat(20));
   });
 
+  it("saves generated screenplay pages into the Drafts room", async () => {
+    routeState.slug = "create-script";
+    const project = completedDraftableProject();
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ output: "TITLE: LOVE, CURSED\n\nINT. WEDDING VENUE - DAY\nMilo raises his camera." }),
+      }),
+    );
+
+    render(<RoomEditorClient />);
+
+    await screen.findByRole("region", { name: "Create the Script draft gate" });
+    fireEvent.click(screen.getByRole("button", { name: "Please Oh Mighty Goblin. Write a draft." }));
+
+    await screen.findByRole("button", { name: "Save draft" });
+    expect(screen.getByText("Saves to Drafts room.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+
+    const savedDrafts = JSON.parse(window.localStorage.getItem(DRAFT_STORAGE_KEY) ?? "[]");
+    expect(savedDrafts).toHaveLength(1);
+    expect(savedDrafts[0]).toEqual(
+      expect.objectContaining({
+        title: "LOVE, CURSED",
+        body: expect.stringContaining("INT. WEDDING VENUE - DAY"),
+      }),
+    );
+  });
+
+  it("keeps an existing generated draft when another-draft confirmation is canceled", async () => {
+    routeState.slug = "create-script";
+    const project = completedDraftableProject();
+    project.rooms["create-script"] =
+      "# Create the Script Room\n\n## Generated screenplay draft\nTITLE: OLD DRAFT\n\nINT. VENUE - DAY\nMilo waits.";
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    render(<RoomEditorClient />);
+
+    await screen.findByRole("region", { name: "Create the Script draft gate" });
+    fireEvent.click(screen.getByRole("button", { name: "Goblin, make me another." }));
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect((screen.getByRole("textbox", { name: "Create the Script markdown" }) as HTMLTextAreaElement).value).toContain(
+      "TITLE: OLD DRAFT",
+    );
+  });
+
+  it("keeps a generated draft when delete confirmation is canceled", async () => {
+    routeState.slug = "create-script";
+    const project = completedDraftableProject();
+    project.rooms["create-script"] =
+      "# Create the Script Room\n\n## Generated screenplay draft\nTITLE: OLD DRAFT\n\nINT. VENUE - DAY\nMilo waits.";
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    render(<RoomEditorClient />);
+
+    await screen.findByRole("region", { name: "Create the Script draft gate" });
+    fireEvent.click(screen.getByRole("button", { name: "Delete draft" }));
+
+    expect((screen.getByRole("textbox", { name: "Create the Script markdown" }) as HTMLTextAreaElement).value).toContain(
+      "TITLE: OLD DRAFT",
+    );
+  });
+
+  it("offers export choices after a draft is written and downloads every format from the all option", async () => {
+    routeState.slug = "create-script";
+    const project = completedDraftableProject();
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ output: "TITLE: LOVE, CURSED\n\nINT. WEDDING VENUE - DAY\nMilo raises his camera." }),
+      }),
+    );
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    const createObjectUrlSpy = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:plot-goblin");
+    const revokeObjectUrlSpy = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+
+    render(<RoomEditorClient />);
+
+    await screen.findByRole("region", { name: "Create the Script draft gate" });
+    fireEvent.click(screen.getByRole("button", { name: "Please Oh Mighty Goblin. Write a draft." }));
+    await screen.findByRole("button", { name: "Export draft" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Export draft" }));
+    expect(await screen.findByRole("button", { name: "Export all formats" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Export Fountain" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Export Final Draft" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Export PDF" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Export Word" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Export RTF" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Export all formats" }));
+
+    expect(clickSpy).toHaveBeenCalledTimes(5);
+    expect(createObjectUrlSpy).toHaveBeenCalledTimes(5);
+    expect(revokeObjectUrlSpy).toHaveBeenCalledWith("blob:plot-goblin");
+  });
+
+  it("opens saved drafts for editing, saving, backing out, and deletion", async () => {
+    routeState.slug = "drafts";
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(buildScriptBase({})));
+    window.localStorage.setItem(
+      DRAFT_STORAGE_KEY,
+      JSON.stringify([
+        {
+          id: "draft-1",
+          title: "Love, Cursed",
+          body: "INT. WEDDING VENUE - DAY\nMilo raises his camera.",
+          createdAt: "2026-06-24T02:00:00.000Z",
+          updatedAt: "2026-06-24T02:00:00.000Z",
+        },
+      ]),
+    );
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    render(<RoomEditorClient />);
+
+    await screen.findByRole("region", { name: "Saved screenplay drafts" });
+    fireEvent.click(screen.getByRole("button", { name: "Edit Love, Cursed" }));
+
+    const draftBody = screen.getByRole("textbox", { name: "Draft body" }) as HTMLTextAreaElement;
+    fireEvent.change(draftBody, { target: { value: "INT. WEDDING VENUE - NIGHT\nMilo stops hiding." } });
+    fireEvent.click(screen.getByRole("button", { name: "Save draft edits" }));
+
+    let savedDrafts = JSON.parse(window.localStorage.getItem(DRAFT_STORAGE_KEY) ?? "[]");
+    expect(savedDrafts[0].body).toContain("Milo stops hiding");
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to drafts" }));
+    expect(screen.queryByRole("textbox", { name: "Draft body" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete Love, Cursed" }));
+    savedDrafts = JSON.parse(window.localStorage.getItem(DRAFT_STORAGE_KEY) ?? "[]");
+    expect(savedDrafts).toHaveLength(0);
+  });
+
+  it("keeps a saved draft when saved-draft deletion is canceled", async () => {
+    routeState.slug = "drafts";
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(buildScriptBase({})));
+    window.localStorage.setItem(
+      DRAFT_STORAGE_KEY,
+      JSON.stringify([
+        {
+          id: "draft-1",
+          title: "Love, Cursed",
+          body: "INT. WEDDING VENUE - DAY\nMilo raises his camera.",
+          createdAt: "2026-06-24T02:00:00.000Z",
+          updatedAt: "2026-06-24T02:00:00.000Z",
+        },
+      ]),
+    );
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    render(<RoomEditorClient />);
+
+    await screen.findByRole("region", { name: "Saved screenplay drafts" });
+    fireEvent.click(screen.getByRole("button", { name: "Delete Love, Cursed" }));
+
+    const savedDrafts = JSON.parse(window.localStorage.getItem(DRAFT_STORAGE_KEY) ?? "[]");
+    expect(savedDrafts).toHaveLength(1);
+  });
+
   it("names the exact Script Parameter fields still missing at eighty-nine percent", async () => {
     routeState.slug = "create-script";
     const project = buildScriptBase({
@@ -1860,3 +2041,30 @@ Lena sees a frame that should not exist.
     expect(screen.getByText("Still needs: Length format, Target page count")).toBeTruthy();
   });
 });
+
+function completedDraftableProject() {
+  const project = buildScriptBase({
+    rawIdea: "A cursed wedding videographer must save his sister's wedding.",
+    genre: "Comedy, Mystery",
+    audienceFeeling: "funny and tense",
+    protagonist: "Milo Voss",
+    surfaceWant: "save Lena's wedding",
+    stakes: "his family business dies and Lena's marriage collapses",
+    falseBelief: "staying detached keeps everyone safe",
+    opposition: "a celebrity planner hiding the truth",
+    endingDirection: "Milo steps in front of the camera and tells the truth",
+    structurePreference: "Classic 3-act spine",
+  });
+  project.rooms.premise =
+    "# Premise Room\n\n## Story promise\nA comedy mystery about cursed wedding videos.\n\n## Raw idea\nA cursed wedding videographer must save his sister's wedding.\n\n## Protagonist\nMilo Voss.\n\n## Surface want\nSave Lena's wedding.\n\n## Stakes\nThe family business dies and Lena's marriage collapses.\n\n## Opposition\nCeleste hides the truth.\n\n## Dramatic question\nCan Milo stop hiding behind the camera?\n\n## Polished logline\nA cursed wedding videographer must expose a fake-perfect planner to save his sister's wedding.";
+  project.rooms.characters =
+    "# Characters Room\n\n## Protagonist\nMilo Voss.\n\n### Surface want\nSave Lena's wedding.\n\n### Deeper need\nTell the truth even when it costs him.\n\n### False belief\nDetachment keeps people safe.\n\n### Flaw / defense mechanism\nHe turns pain into jokes and footage.\n\n## Antagonist / opposition\nCeleste Vale, a planner selling perfect lies.";
+  project.rooms.theme =
+    "# Theme Room\n\n## Theme question\nIs safety worth it if it requires dishonesty?\n\n## Starting belief\nMilo believes distance protects everyone.\n\n## Ending statement\nLove requires choosing the messy truth.";
+  project.rooms.beats =
+    "# Beats Room\n\n## Opening Image\nMilo films a smiling couple seconds before they split.\n\n## Inciting Incident\nLena hires Milo for her wedding despite the curse.\n\n## Act One Break\nMilo finds proof Celeste is staging perfect lies.\n\n## Midpoint\nThe curse hits the rehearsal dinner live.\n\n## All Is Lost\nLena sees Milo's hidden footage and fires him.\n\n## Climax\nMilo interrupts the ceremony with the truth.\n\n## Final Image\nMilo films himself apologizing instead of hiding.";
+  project.rooms["script-parameters"] =
+    "# Script Parameters Room\n\n## Runtime / page target\nLength format: Short film.\nTarget page count: 8 pages.\n\n## Genre / movie promise\nCurrent genre: Comedy mystery.\nAudience feeling: Funny and tense.\nTone words: Fast, heartfelt, anxious.\n\n## Structure and pacing\nStructure mode: Classic 3-act spine.\nPacing bias: Lean and fast.\nScene length rule: Short and punchy.\n\n## Format rules\nFormat: Standard spec screenplay format.\nDialogue density: Snappy.\nVoiceover / narration: No voiceover.\n\n## Rating and boundaries\nTarget rating: PG-13.\nNo-go content: No graphic injury.\n\n## Production constraints\nCast size: 6 major speaking roles.\nLocation limits: Wedding venue only.\nTime period / setting rules: Modern day.\nBudget reality: Cheap.\n\n## Point of view\nPrimary POV: Milo.\nScene access: Stay close to Milo.";
+
+  return project;
+}

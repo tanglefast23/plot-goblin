@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import styles from "@/app/workspace.module.css";
 import { buildExportMarkdown, LEGACY_NEEDS_ANSWER, NEEDS_ANSWER, NEEDS_WRITING, type ScriptBase } from "@/lib/guidedSetup";
 import { clearProject, ensureProject } from "@/lib/projectStorage";
-import { getActiveRooms, getComingSoonRooms } from "@/lib/storyRooms";
+import { getActiveRooms, getComingSoonRooms, getScriptReadiness } from "@/lib/storyRooms";
 
 function downloadMarkdown(project: ScriptBase) {
   const blob = new Blob([buildExportMarkdown(project.rooms)], { type: "text/markdown;charset=utf-8" });
@@ -28,12 +28,16 @@ export function RoomsDashboardClient() {
   }, []);
 
   function resetLocalProject() {
+    if (!window.confirm("Reset the saved script in this browser? Export first if you want a backup.")) return;
+
     clearProject();
     setProject(ensureProject());
   }
 
   const activeRooms = getActiveRooms();
   const comingSoonRooms = getComingSoonRooms();
+  const readiness = project ? getScriptReadiness(project.rooms) : null;
+  const nextRoom = readiness?.missingRooms[0]?.room;
 
   return (
     <>
@@ -55,6 +59,29 @@ export function RoomsDashboardClient() {
           </button>
         </div>
         <p className={styles.exportHint}>Saved locally{project?.updatedAt ? ` · last update ${new Date(project.updatedAt).toLocaleString()}` : ""}</p>
+        {nextRoom ? (
+          <div className={styles.nextRoomCallout}>
+            <div>
+              <span>Next best room</span>
+              <strong>{nextRoom.title}</strong>
+              <p>{readiness?.missingRooms[0]?.reason ?? nextRoom.guidingQuestion}</p>
+            </div>
+            <Link className={styles.primaryButton} href={`/rooms/${nextRoom.slug}`}>
+              Open {nextRoom.title}
+            </Link>
+          </div>
+        ) : project ? (
+          <div className={styles.nextRoomCallout}>
+            <div>
+              <span>Draft path</span>
+              <strong>The story spine is ready enough to draft.</strong>
+              <p>Head to Create the Script, save the draft you like, then export it before the browser forgets its manners.</p>
+            </div>
+            <Link className={styles.primaryButton} href="/rooms/create-script">
+              Open Create the Script
+            </Link>
+          </div>
+        ) : null}
       </section>
 
       <section aria-label="Editable MVP rooms">

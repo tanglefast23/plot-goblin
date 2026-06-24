@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { RoomEditorClient } from "./RoomEditorClient";
 import { buildScriptBase } from "@/lib/guidedSetup";
 import { PROJECT_STORAGE_KEY } from "@/lib/projectStorage";
+import { formatScenesMarkdown, formatSceneDraftValues } from "./room-editor/RoomEditorSupport";
 
 const routeState = vi.hoisted(() => ({ slug: "scenes" }));
 
@@ -34,6 +35,33 @@ function projectWithSetupBeat() {
 ## Setup
 Joe lives at the batting cages before sunrise, taping his only arm with his teeth.
 `;
+  return project;
+}
+
+function projectWithSceneCards() {
+  const project = projectWithSetupBeat();
+  project.rooms.scenes = formatScenesMarkdown(project.rooms.scenes, [
+    formatSceneDraftValues({
+      button: "He pockets the cracked ball.",
+      characters: "Joe, Mo",
+      locationTime: "EXT. BATTING CAGE - DAWN",
+      opposition: "The pitching machine keeps jamming.",
+      purpose: "Character / setup",
+      sceneWant: "Joe wants one clean swing before anyone sees him.",
+      title: "Dawn Cage",
+      turn: "Joe realizes the problem is bigger than pride.",
+    }),
+    formatSceneDraftValues({
+      button: "Mo leaves the clipboard on the fence.",
+      characters: "Joe, Mo",
+      locationTime: "INT. GYM - MORNING",
+      opposition: "Mo refuses to sign the tryout form.",
+      purpose: "Pressure / relationship",
+      sceneWant: "Joe wants Mo to clear him for tryouts.",
+      title: "Gym Argument",
+      turn: "Joe has to ask for help out loud.",
+    }),
+  ]);
   return project;
 }
 
@@ -102,6 +130,22 @@ describe("SceneBoard goblin builder", () => {
 });
 
 describe("SceneBoard behavior", () => {
+  it("deletes the selected scene from the footer and selects the next scene", async () => {
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(projectWithSceneCards()));
+
+    render(<RoomEditorClient />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Dawn Cage/ }));
+    expect((await screen.findByRole("textbox", { name: "Scene title" }) as HTMLInputElement).value).toBe("Dawn Cage");
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete selected scene" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: /Dawn Cage/ })).toBeNull();
+    });
+    expect((screen.getByRole("textbox", { name: "Scene title" }) as HTMLInputElement).value).toBe("Gym Argument");
+  });
+
   it("treats guided scene template prompts as helper text for every story field", async () => {
     const project = buildScriptBase({
       rawIdea: "A one-armed pitcher tries to make the majors.",
@@ -135,44 +179,44 @@ describe("SceneBoard behavior", () => {
     }
   });
 
-  it("shows populated scene prompts as hidden-on-focus helper text", async () => {
-    const project = buildScriptBase({
-      rawIdea: "A one-armed pitcher tries to make the majors.",
-      genre: "Comedy",
-      audienceFeeling: "hopeful and tense",
-      protagonist: "Stubborn one-armed pitcher",
-      surfaceWant: "become a professional baseball player",
-      stakes: "he loses the only dream he has left",
-      falseBelief: "asking for help makes him weak",
-      opposition: "better players who have two arms",
-      endingDirection: "He changes and wins",
-      structurePreference: "Classic 3-act spine",
-    });
-    project.rooms.beats = `# Beats Room
-
-## Midpoint
-A scout offers one private pitch, but only if Rafa admits he needs a catcher.
-`;
-    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+  it("suggests a scene, then saves it into the timeline at the goblin's placement", async () => {
+    const suggestOutput = `PLOT_GOBLIN_FINAL:
+1. Scene title: Locker Room Bargain
+2. Location / time: INT. LOCKER ROOM - NIGHT
+3. Characters: Joe, Mo (most pressure)
+4. Scene want: Joe wants Mo to forge the medical clearance.
+5. Opposition: Mo will lose his job if anyone finds out.
+6. Turn: Joe realizes he is asking a friend to lie for him.
+7. Button: Mo slides the unsigned form back across the bench.
+8. Purpose: Pressure / relationship
+9. Placement: after scene 1`;
+    const fetchSpy = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ output: suggestOutput }) });
+    vi.stubGlobal("fetch", fetchSpy);
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(projectWithSceneCards()));
 
     render(<RoomEditorClient />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Ask the goblin to populate scenes" }));
-    fireEvent.click(await screen.findByRole("button", { name: /Midpoint/ }));
+    await screen.findByRole("region", { name: "Scene cards" });
+    fireEvent.click(screen.getByRole("button", { name: "Goblin suggestion" }));
 
-    const charactersField = await screen.findByRole("textbox", { name: "Characters" });
-    expect((charactersField as HTMLTextAreaElement).value).toBe("");
-    expect(charactersField.getAttribute("placeholder")).toBe(
-      "Who is in this beat's scene, and who can apply the most pressure?",
-    );
+    const titleField = (await screen.findByRole("textbox", { name: "Scene title" })) as HTMLInputElement;
+    await waitFor(() => expect(titleField.value).toBe("Locker Room Bargain"));
 
-    fireEvent.focus(charactersField);
-    expect(charactersField.getAttribute("placeholder")).toBe("");
+    const body = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string) as {
+      mode: string;
+      sceneList?: string;
+    };
+    expect(body.mode).toBe("scene-suggest");
+    expect(body.sceneList).toContain("1. Dawn Cage");
 
-    fireEvent.blur(charactersField);
-    const sceneWantField = screen.getByRole("textbox", { name: "Scene want" });
-    expect((sceneWantField as HTMLTextAreaElement).value).toBe("");
-    expect(sceneWantField.getAttribute("placeholder")).toContain("Make the scene want concrete from this beat");
+    fireEvent.click(screen.getByRole("button", { name: "Save the suggested scene" }));
+
+    await waitFor(() => {
+      const storedProject = JSON.parse(window.localStorage.getItem(PROJECT_STORAGE_KEY) ?? "{}");
+      const scenes = storedProject.rooms.scenes as string;
+      expect(scenes.indexOf("### Scene: Dawn Cage")).toBeLessThan(scenes.indexOf("### Scene: Locker Room Bargain"));
+      expect(scenes.indexOf("### Scene: Locker Room Bargain")).toBeLessThan(scenes.indexOf("### Scene: Gym Argument"));
+    });
   });
 
   it("moves scene form focus to the next field when Enter is pressed", async () => {

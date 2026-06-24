@@ -4,10 +4,33 @@ import {
   buildDraftContextMarkdown,
   buildExportMarkdown,
   buildScriptBase,
+  buildSuggestionContextMarkdown,
   createLoglineSuggestions,
   guidedSetupQuestions,
   parseExportMarkdown,
 } from "./guidedSetup";
+
+describe("buildSuggestionContextMarkdown", () => {
+  it("condenses each room section to a single sentence", () => {
+    const context = buildSuggestionContextMarkdown({
+      premise: "# Premise Room\n\n## Logline\nA one-armed pitcher claws toward the majors. He refuses every offer of help.",
+      beats:
+        "# Beats Room\n\n## Opening Image\nJoe tapes his arm at dawn. Then he throws a hundred pitches alone. Nobody watches.",
+    });
+
+    expect(context).toContain("Logline: A one-armed pitcher claws toward the majors.");
+    expect(context).not.toContain("He refuses every offer of help");
+    expect(context).toContain("Opening Image: Joe tapes his arm at dawn.");
+    expect(context).not.toContain("Nobody watches");
+  });
+
+  it("skips rooms that have no markdown", () => {
+    const context = buildSuggestionContextMarkdown({ premise: "# Premise Room\n\n## Logline\nA quiet heist.", beats: "" });
+
+    expect(context).toContain("Logline: A quiet heist.");
+    expect(context).not.toContain("beats.md");
+  });
+});
 
 describe("guided setup model", () => {
   const needsYourAnswer = "[needs your answer]";

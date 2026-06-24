@@ -1,5 +1,58 @@
 import { describe, expect, it } from "vitest";
-import { answeredBeatSections, sceneDraftValuesFromChoices } from "./RoomEditorSupport";
+import {
+  answeredBeatSections,
+  formatSceneDraftValues,
+  numberedSceneList,
+  parseSuggestedPlacement,
+  sceneDraftValuesFromChoices,
+} from "./RoomEditorSupport";
+
+describe("numberedSceneList", () => {
+  function sceneCard(title: string, locationTime: string) {
+    return formatSceneDraftValues({
+      title,
+      locationTime,
+      characters: "Joe",
+      sceneWant: "Win.",
+      opposition: "Doubt.",
+      turn: "He changes.",
+      button: "He leaves.",
+      purpose: "Setup",
+    });
+  }
+
+  it("numbers scenes with their title and location", () => {
+    const cards = [sceneCard("Dawn Cage", "EXT. CAGE - DAWN"), sceneCard("Gym Argument", "INT. GYM - DAY")];
+
+    expect(numberedSceneList(cards)).toBe("1. Dawn Cage — EXT. CAGE - DAWN\n2. Gym Argument — INT. GYM - DAY");
+  });
+
+  it("returns an empty string when there are no scenes", () => {
+    expect(numberedSceneList([])).toBe("");
+  });
+});
+
+describe("parseSuggestedPlacement", () => {
+  it("reads an 'after scene N' placement line as the insert index", () => {
+    expect(parseSuggestedPlacement("9. Placement: after scene 1", 3)).toBe(1);
+  });
+
+  it("treats 'start' as the very beginning", () => {
+    expect(parseSuggestedPlacement("9. Placement: start", 3)).toBe(0);
+  });
+
+  it("reads a 'before scene N' placement as the slot before it", () => {
+    expect(parseSuggestedPlacement("Placement: before scene 3", 5)).toBe(2);
+  });
+
+  it("clamps an out-of-range scene number to the end", () => {
+    expect(parseSuggestedPlacement("Placement: after scene 99", 4)).toBe(4);
+  });
+
+  it("falls back to the end when there is no usable placement line", () => {
+    expect(parseSuggestedPlacement("no placement here", 6)).toBe(6);
+  });
+});
 
 describe("answeredBeatSections", () => {
   it("keeps written beats and drops needs-answer, empty, and custom-beats sections", () => {
