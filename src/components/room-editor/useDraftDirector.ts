@@ -2,7 +2,12 @@ import { useCallback, useRef, useState } from "react";
 import { cowriterRequestHeaders } from "@/lib/cowriterAccess";
 import { parseBeatSheet, parseStoryBrief, renderBeatSheet } from "@/lib/draftBeatSheet";
 import { parseChunkResult } from "@/lib/draftChunk";
-import { assembleChunkContext, estimatePageCount, shouldTopUp } from "@/lib/draftContinuity";
+import {
+  DRAFT_CHUNK_CONTEXT_MAX_CHARS,
+  assembleChunkContext,
+  estimatePageCount,
+  shouldTopUp,
+} from "@/lib/draftContinuity";
 import {
   advanceDraft,
   callWithRetry,
@@ -12,7 +17,6 @@ import {
 } from "@/lib/draftDirector";
 import { clearDraftRun, loadDraftRun, saveDraftRun, type DraftRun } from "@/lib/draftRunStorage";
 
-const MAX_PROMPT_CHARS = 36_000;
 const MAX_ATTEMPTS = 3;
 const TAIL_CHARS = 1_200;
 
@@ -67,12 +71,12 @@ export function useDraftDirector(roomExport: string, writingStyle: string, targe
         const lastPages = run.completedBeats.at(-1)?.pages ?? "";
         const context = assembleChunkContext({
           beatSheetText: renderBeatSheet(run.beatSheet),
-          currentBeatsText: `Write ${pair.map((beat) => `BEAT ${beat.index}`).join(" and ")} from the unified beat sheet above.`,
+          currentBeatsText: renderBeatSheet(pair),
           runningSummary: run.runningSummary,
           previousTail: lastPages.slice(-TAIL_CHARS),
           roomExport,
           storyBrief: run.storyBrief,
-          maxChars: MAX_PROMPT_CHARS,
+          maxChars: DRAFT_CHUNK_CONTEXT_MAX_CHARS,
         });
 
         try {

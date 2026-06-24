@@ -1,4 +1,5 @@
 import { writingStylePrompt } from "./writingStyles";
+import { DRAFT_CHUNK_CONTEXT_MAX_CHARS } from "./draftContinuity";
 
 export type CowriterRequest = {
   mode:
@@ -354,6 +355,7 @@ ${request.markdown ?? ""}`;
 
   if (request.mode === "chunk") {
     const beatLabel = request.beat ?? "the next beats";
+    const chunkContext = capPromptText(request.markdown, DRAFT_CHUNK_CONTEXT_MAX_CHARS);
     return `${sharedRules}
 
 Task: Write the actual screenplay pages for ${beatLabel} of THIS specific script, using the living beat sheet and story-so-far below. Honor every PLANTED note on these and earlier beats, and set up anything later beats will need. Hit the PAGES budget for these beats. Pick up seamlessly from the previous pages' tail.
@@ -367,7 +369,7 @@ PLOT_GOBLIN_SETUPS:
 <zero or more lines, each "- beat <number> | <thing planted that pays off in that beat>"; write the single word NONE if nothing was planted>
 
 Living beat sheet and story context:
-${request.markdown ?? ""}`;
+${chunkContext}`;
   }
 
   return `${sharedRules}

@@ -1,4 +1,7 @@
 const WORDS_PER_PAGE = 250;
+const TRIMMED_MARKER = "\n[...trimmed to fit the public bridge]";
+
+export const DRAFT_CHUNK_CONTEXT_MAX_CHARS = 18_000;
 
 export function estimatePageCount(text: string): number {
   const words = text.trim().split(/\s+/).filter(Boolean).length;
@@ -20,35 +23,90 @@ export type ChunkContextParams = {
   maxChars: number;
 };
 
-function compose(params: ChunkContextParams, includeSummary: boolean, roomChars: number): string {
+function capText(value: string, maxChars: number): string {
+  if (maxChars <= 0) return "";
+  if (value.length <= maxChars) return value;
+  if (maxChars <= TRIMMED_MARKER.length) return value.slice(0, maxChars);
+
+  return `${value.slice(0, maxChars - TRIMMED_MARKER.length)}${TRIMMED_MARKER}`;
+}
+
+function compose(
+  params: ChunkContextParams,
+  options: {
+    beatSheetText: string;
+    includeSummary: boolean;
+    previousTail: string;
+    runningSummary: string;
+    storyContext: string;
+  },
+): string {
   const compactStoryContext = params.storyBrief?.trim();
   const sections = [
-    "## Unified beat sheet (the living blueprint — honor every PLANTED note)",
-    params.beatSheetText,
+    compactStoryContext ? "## Story brief (compressed room facts)" : "## Room export (facts: premise, characters, theme, parameters)",
+    options.storyContext,
     "",
     "## Beats to write now",
     params.currentBeatsText,
     "",
-    includeSummary ? "## Story so far" : "",
-    includeSummary ? params.runningSummary : "",
-    "",
     "## Previous pages (tail — pick up seamlessly)",
-    params.previousTail,
+    options.previousTail,
     "",
-    compactStoryContext ? "## Story brief (compressed room facts)" : "## Room export (facts: premise, characters, theme, parameters)",
-    compactStoryContext || params.roomExport.slice(0, roomChars),
+    options.includeSummary ? "## Story so far" : "",
+    options.includeSummary ? options.runningSummary : "",
+    "",
+    "## Unified beat sheet (the living blueprint — honor every PLANTED note)",
+    options.beatSheetText,
   ];
   return sections.filter((line) => line !== "").join("\n").trim();
 }
 
 export function assembleChunkContext(params: ChunkContextParams): string {
-  const full = compose(params, true, params.roomExport.length);
+  const storyContext = params.storyBrief?.trim() || params.roomExport;
+  const full = compose(params, {
+    beatSheetText: params.beatSheetText,
+    includeSummary: true,
+    previousTail: params.previousTail,
+    runningSummary: params.runningSummary,
+    storyContext,
+  });
   if (full.length <= params.maxChars) return full;
 
-  const withoutSummary = compose(params, false, params.roomExport.length);
+  const withoutSummary = compose(params, {
+    beatSheetText: params.beatSheetText,
+    includeSummary: false,
+    previousTail: params.previousTail,
+    runningSummary: "",
+    storyContext,
+  });
   if (withoutSummary.length <= params.maxChars) return withoutSummary;
 
-  const overflow = withoutSummary.length - params.maxChars;
-  const trimmedRoomChars = Math.max(0, params.roomExport.length - overflow);
-  return compose(params, false, trimmedRoomChars).slice(0, params.maxChars);
+  const fixedWithoutBeatSheet = compose(params, {
+    beatSheetText: "",
+    includeSummary: false,
+    previousTail: params.previousTail,
+    runningSummary: "",
+    storyContext,
+  });
+  if (fixedWithoutBeatSheet.length <= params.maxChars) {
+    const beatSheetBudget = params.maxChars - fixedWithoutBeatSheet.length - 1;
+    return compose(params, {
+      beatSheetText: capText(params.beatSheetText, beatSheetBudget),
+      includeSummary: false,
+      previousTail: params.previousTail,
+      runningSummary: "",
+      storyContext,
+    });
+  }
+
+  const compactFixed = compose(params, {
+    beatSheetText: "",
+    includeSummary: false,
+    previousTail: capText(params.previousTail, 600),
+    runningSummary: "",
+    storyContext: capText(storyContext, 2_000),
+  });
+  if (compactFixed.length <= params.maxChars) return compactFixed;
+
+  return capText(compactFixed, params.maxChars);
 }

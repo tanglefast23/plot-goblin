@@ -58,4 +58,24 @@ describe("assembleChunkContext", () => {
     expect(out).toContain("BEAT 4 | PAGES: 5 | TITLE: D");
     expect(out).not.toContain(huge);
   });
+
+  it("keeps the current beats and story brief when the full beat sheet is too large", () => {
+    const hugeBeatSheet = Array.from(
+      { length: 80 },
+      (_, index) => `BEAT ${index + 1} | PAGES: 3 | TITLE: Long beat\nINTENT: ${"specific turn ".repeat(20)}`,
+    ).join("\n---\n");
+
+    const out = assembleChunkContext({
+      ...base,
+      beatSheetText: hugeBeatSheet,
+      currentBeatsText: "BEAT 42 | PAGES: 4 | TITLE: The exact beat to write\nINTENT: Mara chooses the trap.",
+      storyBrief: "premise: Mara robs the haunted landlord; theme: pride blocks help",
+      maxChars: 1_400,
+    });
+
+    expect(out.length).toBeLessThanOrEqual(1_400);
+    expect(out).toContain("The exact beat to write");
+    expect(out).toContain("Mara chooses the trap");
+    expect(out).toContain("Mara robs the haunted landlord");
+  });
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildCowriterPrompt, cleanHermesOutput } from "./hermesCowriter";
+import { DRAFT_CHUNK_CONTEXT_MAX_CHARS } from "./draftContinuity";
 
 describe("Hermes co-writer prompt", () => {
   it("asks for suggestions without rewriting automatically", () => {
@@ -134,6 +135,19 @@ describe("Hermes co-writer prompt", () => {
     expect(prompt).toContain("Full script markdown");
     expect(prompt).toContain("## Opening Image");
     expect(prompt).toContain("## theme.md");
+  });
+
+  it("caps chunk context below the public bridge prompt limit", () => {
+    const oversizedContext = `${"C".repeat(DRAFT_CHUNK_CONTEXT_MAX_CHARS)}SHOULD_NOT_APPEAR`;
+    const prompt = buildCowriterPrompt({
+      mode: "chunk",
+      beat: "3 and 4",
+      markdown: oversizedContext,
+    });
+
+    expect(prompt).not.toContain("SHOULD_NOT_APPEAR");
+    expect(prompt).toContain(`[...capped at ${DRAFT_CHUNK_CONTEXT_MAX_CHARS} characters]`);
+    expect(prompt.length).toBeLessThan(24_000);
   });
 
   it("asks for a full scene built from only the beat text using the eight field labels", () => {
