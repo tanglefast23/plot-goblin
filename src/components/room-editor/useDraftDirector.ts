@@ -42,6 +42,7 @@ export type DraftDirectorState = {
 export function useDraftDirector(roomExport: string, writingStyle: string, targetPages: number) {
   const [state, setState] = useState<DraftDirectorState>({ run: null, statusLine: "", error: null, stitched: null });
   const cancelled = useRef(false);
+  const running = useRef(false);
 
   useEffect(() => {
     const existing = loadDraftRun();
@@ -84,6 +85,7 @@ export function useDraftDirector(roomExport: string, writingStyle: string, targe
           run = advanceDraft(run, pair, chunk);
           persist(run);
         } catch (caught) {
+          if (cancelled.current) return;
           const paused: DraftRun = { ...run, status: "paused" };
           persist(paused, { statusLine: "", error: caught instanceof Error ? caught.message : "Drafting stalled." });
           return;
@@ -103,41 +105,53 @@ export function useDraftDirector(roomExport: string, writingStyle: string, targe
   );
 
   const start = useCallback(async () => {
+    if (running.current) return;
+    running.current = true;
     cancelled.current = false;
     setState({ run: null, statusLine: "Planning the whole movie…", error: null, stitched: null });
 
-    const planResult = await callWithRetry(
-      () => callCowriter({ mode: "plan", markdown: roomExport, writingStyle, targetPages }),
-      { maxAttempts: MAX_ATTEMPTS, sleep },
-    ).catch((caught: Error) => {
-      setState((prev) => ({ ...prev, statusLine: "", error: caught.message }));
-      return null;
-    });
-    if (!planResult) return;
+    try {
+      const planResult = await callWithRetry(
+        () => callCowriter({ mode: "plan", markdown: roomExport, writingStyle, targetPages }),
+        { maxAttempts: MAX_ATTEMPTS, sleep },
+      ).catch((caught: Error) => {
+        setState((prev) => ({ ...prev, statusLine: "", error: caught.message }));
+        return null;
+      });
+      if (!planResult) return;
 
-    const beatSheet = parseBeatSheet(planResult);
-    if (beatSheet.length === 0) {
-      setState((prev) => ({ ...prev, statusLine: "", error: "The goblin's blueprint came back empty. Try again." }));
-      return;
+      const beatSheet = parseBeatSheet(planResult);
+      if (beatSheet.length === 0) {
+        setState((prev) => ({ ...prev, statusLine: "", error: "The goblin's blueprint came back empty. Try again." }));
+        return;
+      }
+
+      const run: DraftRun = {
+        beatSheet,
+        completedBeats: [],
+        runningSummary: "",
+        nextBeatIndex: 1,
+        targetPages,
+        status: "running",
+      };
+      persist(run);
+      await runLoop(run);
+    } finally {
+      running.current = false;
     }
-
-    const run: DraftRun = {
-      beatSheet,
-      completedBeats: [],
-      runningSummary: "",
-      nextBeatIndex: 1,
-      targetPages,
-      status: "running",
-    };
-    persist(run);
-    await runLoop(run);
   }, [persist, roomExport, runLoop, targetPages, writingStyle]);
 
   const resume = useCallback(async () => {
+    if (running.current) return;
     const existing = loadDraftRun();
     if (!existing) return;
+    running.current = true;
     cancelled.current = false;
-    await runLoop({ ...existing, status: "running" });
+    try {
+      await runLoop({ ...existing, status: "running" });
+    } finally {
+      running.current = false;
+    }
   }, [runLoop]);
 
   const stop = useCallback(() => {
