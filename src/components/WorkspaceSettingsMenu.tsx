@@ -3,7 +3,7 @@
 import { useId, useRef, useState } from "react";
 import styles from "@/app/workspace.module.css";
 import { ACCESS_KEY_STORAGE_KEY, ACCESS_MODE_STORAGE_KEY, clearCowriterAccess } from "@/lib/cowriterAccess";
-import { loadSavedDrafts } from "@/lib/draftStorage";
+import { loadSavedDrafts, type SavedDraft } from "@/lib/draftStorage";
 import { clearProject, ensureProject, importProjectMarkdown, loadProject } from "@/lib/projectStorage";
 import {
   buildMarkdownArchiveFile,
@@ -40,6 +40,10 @@ function downloadScreenplayFormat(format: ScreenplayExportFormatId) {
   downloadFile(buildScreenplayExportFile(project.rooms, format));
 }
 
+function exportFormatLabel(formatId: ScreenplayExportFormatId) {
+  return screenplayExportFormats.find((format) => format.id === formatId)?.label ?? "selected format";
+}
+
 function currentAiAccessLabel() {
   const mode = window.localStorage.getItem(ACCESS_MODE_STORAGE_KEY);
   const hasBridgeKey = Boolean(window.localStorage.getItem(ACCESS_KEY_STORAGE_KEY)?.trim());
@@ -57,6 +61,7 @@ export function WorkspaceSettingsMenu() {
   const [isTestingBridgeKey, setIsTestingBridgeKey] = useState(false);
   const [bridgeKeyTestResult, setBridgeKeyTestResult] = useState<"idle" | "saved" | "failed">("idle");
   const [selectedDraftExportFormat, setSelectedDraftExportFormat] = useState<ScreenplayExportFormatId | null>(null);
+  const [draftExportChoices, setDraftExportChoices] = useState<SavedDraft[]>([]);
   const [status, setStatus] = useState("");
   const menuId = useId();
   const exportMenuId = useId();
@@ -78,7 +83,10 @@ export function WorkspaceSettingsMenu() {
   function toggleSettingsMenu() {
     setIsOpen((current) => {
       const next = !current;
-      if (!next) setExportMenuOpen(false);
+      if (!next) {
+        setExportMenuOpen(false);
+        setDraftExportChoices([]);
+      }
       if (next) syncAiAccessFields();
       return next;
     });
@@ -171,9 +179,46 @@ export function WorkspaceSettingsMenu() {
     }
   }
 
+  function toggleExportMenu() {
+    setExportMenuOpen((current) => {
+      const next = !current;
+      if (!next) setDraftExportChoices([]);
+      return next;
+    });
+  }
+
   function selectAndDownloadScreenplayFormat(format: ScreenplayExportFormatId) {
     setSelectedDraftExportFormat(format);
+    const savedDrafts = loadSavedDrafts();
+
+    if (savedDrafts.length > 1) {
+      setDraftExportChoices(savedDrafts);
+      setStatus(`Choose a draft to export as ${exportFormatLabel(format)}.`);
+      return;
+    }
+
+    setDraftExportChoices([]);
+
+    if (savedDrafts.length === 1) {
+      downloadFile(buildSavedDraftExportFile(savedDrafts[0], format));
+      setStatus(`Exported ${savedDrafts[0].title} as ${exportFormatLabel(format)}.`);
+      setExportMenuOpen(false);
+      return;
+    }
+
     downloadScreenplayFormat(format);
+  }
+
+  function downloadSavedDraft(draft: SavedDraft) {
+    if (!selectedDraftExportFormat) {
+      setStatus("Select a format before exporting a draft.");
+      return;
+    }
+
+    downloadFile(buildSavedDraftExportFile(draft, selectedDraftExportFormat));
+    setStatus(`Exported ${draft.title} as ${exportFormatLabel(selectedDraftExportFormat)}.`);
+    setDraftExportChoices([]);
+    setExportMenuOpen(false);
   }
 
   function downloadAllSavedDrafts() {
@@ -192,9 +237,8 @@ export function WorkspaceSettingsMenu() {
       downloadFile(buildSavedDraftExportFile(draft, selectedDraftExportFormat));
     }
 
-    const formatLabel =
-      screenplayExportFormats.find((format) => format.id === selectedDraftExportFormat)?.label ?? "selected format";
-    setStatus(`Exported ${drafts.length} drafts as ${formatLabel}.`);
+    setStatus(`Exported ${drafts.length} drafts as ${exportFormatLabel(selectedDraftExportFormat)}.`);
+    setDraftExportChoices([]);
     setExportMenuOpen(false);
   }
 
@@ -228,7 +272,7 @@ export function WorkspaceSettingsMenu() {
               aria-expanded={exportMenuOpen}
               aria-haspopup="menu"
               className={`${styles.settingsAction} ${styles.settingsDisclosure}`}
-              onClick={() => setExportMenuOpen((current) => !current)}
+              onClick={toggleExportMenu}
               type="button"
             >
               Export screenplay
@@ -243,6 +287,18 @@ export function WorkspaceSettingsMenu() {
                     Export {format.label}
                   </button>
                 ))}
+                {draftExportChoices.length > 1 && selectedDraftExportFormat ? (
+                  <div className={styles.settingsDraftChoices}>
+                    <span className={styles.settingsDraftChoiceLabel}>
+                      Choose draft for {exportFormatLabel(selectedDraftExportFormat)}
+                    </span>
+                    {draftExportChoices.map((draft) => (
+                      <button className={styles.settingsAction} key={draft.id} onClick={() => downloadSavedDraft(draft)} type="button">
+                        Export {draft.title} as {exportFormatLabel(selectedDraftExportFormat)}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>

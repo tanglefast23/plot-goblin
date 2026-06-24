@@ -326,11 +326,57 @@ describe("WorkspaceShell", () => {
     expect(screen.getByText("Select a format before exporting all drafts.")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Export Fountain" }));
+    expect(clickSpy).not.toHaveBeenCalled();
+    expect(screen.getByText("Choose a draft to export as Fountain.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Export Love, Cursed as Fountain" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Export Moon Murder as Fountain" })).toBeTruthy();
+
     fireEvent.click(screen.getByRole("button", { name: "Export all drafts" }));
 
-    expect(clickSpy).toHaveBeenCalledTimes(3);
-    expect(createObjectUrlSpy).toHaveBeenCalledTimes(3);
-    expect(revokeObjectUrlSpy).toHaveBeenCalledTimes(3);
+    expect(clickSpy).toHaveBeenCalledTimes(2);
+    expect(createObjectUrlSpy).toHaveBeenCalledTimes(2);
+    expect(revokeObjectUrlSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("exports a chosen saved draft after selecting a screenplay format", async () => {
+    window.localStorage.setItem(
+      DRAFT_STORAGE_KEY,
+      JSON.stringify([
+        {
+          body: "Title: Love, Cursed\n\nINT. WEDDING VENUE - DAY\nMilo raises his camera.",
+          createdAt: "2026-06-24T02:00:00.000Z",
+          id: "draft-1",
+          title: "Love, Cursed",
+          updatedAt: "2026-06-24T02:00:00.000Z",
+        },
+        {
+          body: "Title: Moon Murder\n\nEXT. LUNAR RIDGE - NIGHT\nBootprints cross the dust.",
+          createdAt: "2026-06-24T03:00:00.000Z",
+          id: "draft-2",
+          title: "Moon Murder",
+          updatedAt: "2026-06-24T03:00:00.000Z",
+        },
+      ]),
+    );
+    render(
+      <WorkspaceShell>
+        <p>Workspace content</p>
+      </WorkspaceShell>,
+    );
+
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:plot-goblin");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Export screenplay" }));
+    fireEvent.click(screen.getByRole("button", { name: "Export PDF" }));
+    expect(clickSpy).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Export Moon Murder as PDF" }));
+
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Exported Moon Murder as PDF.")).toBeTruthy();
   });
 
   it("imports an exported markdown bundle from topbar settings", async () => {

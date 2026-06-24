@@ -109,6 +109,29 @@ CUT TO:
     expect(exported.contents).toContain("%%EOF");
   });
 
+  it("keeps smart apostrophes readable in PDF exports", () => {
+    const project = buildScriptBase({});
+    project.rooms["create-script"] = `# Create the Script Room
+
+## Generated screenplay draft
+TITLE: ONE-ARM SMALL BALL
+
+EXT. BUSTED BATTING CAGE - DAWN
+
+He hops into the batter’s box.
+
+JOE
+We’re just learning each other’s toxic patterns.
+`;
+
+    const exported = buildScreenplayExportFile(project.rooms, "pdf");
+
+    expect(exported.contents).toContain("batter's box");
+    expect(exported.contents).toContain("We're just learning each other's toxic");
+    expect(exported.contents).not.toContain("batter?s box");
+    expect(exported.contents).not.toContain("We?re just learning each other?s toxic patterns.");
+  });
+
   it("paginates PDF exports without dropping later screenplay pages", () => {
     const project = buildScriptBase({});
     const longAction = Array.from({ length: 260 }, (_value, index) => `Action line ${index + 1}.`).join("\n");

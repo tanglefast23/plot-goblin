@@ -252,8 +252,19 @@ function rtfParagraph(block: ScreenplayBlock) {
   }
 }
 
+function pdfReadableText(value: string) {
+  return value
+    .replace(/[\u2018\u2019\u201b\u2032]/g, "'")
+    .replace(/[\u201c\u201d\u201f\u2033]/g, '"')
+    .replace(/[\u2013\u2014]/g, "-")
+    .replace(/\u2026/g, "...")
+    .replace(/\u00a0/g, " ");
+}
+
 function pdfEscape(value: string) {
-  return value.replace(/[\\()]/g, (match) => `\\${match}`).replace(/[^\x20-\x7e]/g, "?");
+  return pdfReadableText(value)
+    .replace(/[\\()]/g, (match) => `\\${match}`)
+    .replace(/[^\x20-\x7e]/g, "?");
 }
 
 function wrapLine(line: string, limit = 88) {
@@ -587,7 +598,10 @@ export function buildScreenplayExportFile(rooms: RoomMarkdown, format: Screenpla
 }
 
 export function buildSavedDraftExportFile(draft: SavedDraft, format: ScreenplayExportFormatId): ScreenplayExportFile {
-  const file = buildScreenplayExportFile({ "create-script": `# ${draft.title}\n\n${draft.body}` }, format);
+  const file = buildScreenplayExportFile(
+    { "create-script": `# Create the Script Room\n\n## Generated screenplay draft\n${draft.body}` },
+    format,
+  );
   const extension = file.filename.split(".").pop() ?? format;
 
   return {

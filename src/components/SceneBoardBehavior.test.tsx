@@ -65,67 +65,18 @@ function projectWithSceneCards() {
   return project;
 }
 
-const SCENE_OUTPUT = `PLOT_GOBLIN_FINAL:
-1. Scene title: Dawn Cage
-2. Location / time: EXT. BATTING CAGE - DAWN
-3. Characters: Joe, Mo (most pressure)
-4. Scene want: Joe wants one clean swing before anyone wakes up.
-5. Opposition: His shoulder is shaking and the machine keeps jamming.
-6. Turn: Joe admits, just to himself, that he cannot do this alone.
-7. Button: He leaves one ball sitting in the dirt.
-8. Purpose: Character / setup`;
-
-describe("SceneBoard goblin builder", () => {
-  it("fills the scene form from the chosen beat using the LLM", async () => {
-    const fetchSpy = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ output: SCENE_OUTPUT }) });
-    vi.stubGlobal("fetch", fetchSpy);
+describe("SceneBoard selected scene panel", () => {
+  it("does not duplicate the beat population controls inside the scene editor", async () => {
     window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(projectWithSetupBeat()));
 
     render(<RoomEditorClient />);
 
-    const beatSelect = await screen.findByRole("combobox", { name: "Beat for the goblin to build" });
-    fireEvent.change(beatSelect, { target: { value: "Setup" } });
-    fireEvent.click(screen.getByRole("button", { name: "Ask the goblin to build this scene from a beat" }));
+    await screen.findByRole("region", { name: "Scene cards" });
 
-    const titleField = (await screen.findByRole("textbox", { name: "Scene title" })) as HTMLInputElement;
-    await waitFor(() => expect(titleField.value).toBe("Dawn Cage"));
-    expect((screen.getByRole("textbox", { name: "Location / time" }) as HTMLInputElement).value).toBe(
-      "EXT. BATTING CAGE - DAWN",
-    );
-    expect((screen.getByRole("textbox", { name: "Characters" }) as HTMLTextAreaElement).value).toBe(
-      "Joe, Mo (most pressure)",
-    );
-    expect((screen.getByRole("textbox", { name: "Turn" }) as HTMLTextAreaElement).value).toContain(
-      "cannot do this alone",
-    );
-
-    const body = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string) as {
-      mode: string;
-      beat: string;
-    };
-    expect(body.mode).toBe("scene");
-    expect(body.beat).toBe("Setup");
-  });
-
-  it("re-asks the goblin on another attempt and reverts the draft on close", async () => {
-    const fetchSpy = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ output: SCENE_OUTPUT }) });
-    vi.stubGlobal("fetch", fetchSpy);
-    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(projectWithSetupBeat()));
-
-    render(<RoomEditorClient />);
-
-    const beatSelect = await screen.findByRole("combobox", { name: "Beat for the goblin to build" });
-    fireEvent.change(beatSelect, { target: { value: "Setup" } });
-    fireEvent.click(screen.getByRole("button", { name: "Ask the goblin to build this scene from a beat" }));
-
-    const titleField = (await screen.findByRole("textbox", { name: "Scene title" })) as HTMLInputElement;
-    await waitFor(() => expect(titleField.value).toBe("Dawn Cage"));
-
-    fireEvent.click(screen.getByRole("button", { name: "Ask the goblin for another scene attempt" }));
-    await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2));
-
-    fireEvent.click(screen.getByRole("button", { name: "Discard the goblin scene draft" }));
-    await waitFor(() => expect(titleField.value).toBe(""));
+    expect(screen.getByRole("button", { name: "Populate from beat sheet" })).toBeTruthy();
+    expect(screen.queryByText("Build this scene from a beat")).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "Beat for the goblin to build" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Ask the goblin to build this scene from a beat" })).toBeNull();
   });
 });
 
