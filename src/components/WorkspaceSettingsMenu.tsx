@@ -45,10 +45,20 @@ function downloadAllScreenplayFormats() {
   }
 }
 
+function currentAiAccessLabel() {
+  const mode = window.localStorage.getItem(ACCESS_MODE_STORAGE_KEY);
+  const hasBridgeKey = Boolean(window.localStorage.getItem(ACCESS_KEY_STORAGE_KEY)?.trim());
+
+  if (mode === "local") return "Local";
+  if (mode === "public" && hasBridgeKey) return "Bridge key";
+  return "Not set";
+}
+
 export function WorkspaceSettingsMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [bridgeKey, setBridgeKey] = useState("");
+  const [aiAccessLabel, setAiAccessLabel] = useState("Not set");
   const [isTestingBridgeKey, setIsTestingBridgeKey] = useState(false);
   const [status, setStatus] = useState("");
   const menuId = useId();
@@ -57,6 +67,7 @@ export function WorkspaceSettingsMenu() {
 
   function syncAiAccessFields() {
     setBridgeKey(window.localStorage.getItem(ACCESS_KEY_STORAGE_KEY) ?? "");
+    setAiAccessLabel(currentAiAccessLabel());
   }
 
   function toggleSettingsMenu() {
@@ -80,6 +91,7 @@ export function WorkspaceSettingsMenu() {
   function resetAiAccess() {
     clearCowriterAccess();
     setBridgeKey("");
+    setAiAccessLabel("Not set");
     setStatus("AI access reset.");
     setExportMenuOpen(false);
     setIsOpen(false);
@@ -113,6 +125,7 @@ export function WorkspaceSettingsMenu() {
       window.localStorage.setItem(ACCESS_KEY_STORAGE_KEY, trimmed);
       window.localStorage.setItem(ACCESS_MODE_STORAGE_KEY, "public");
       setBridgeKey(trimmed);
+      setAiAccessLabel("Bridge key");
       setStatus("Bridge key saved.");
       setExportMenuOpen(false);
       setIsOpen(false);
@@ -128,6 +141,7 @@ export function WorkspaceSettingsMenu() {
     window.localStorage.removeItem(ACCESS_KEY_STORAGE_KEY);
     window.localStorage.setItem(ACCESS_MODE_STORAGE_KEY, "local");
     setBridgeKey("");
+    setAiAccessLabel("Local");
     setStatus("Local AI access selected.");
     setExportMenuOpen(false);
     setIsOpen(false);
@@ -198,6 +212,7 @@ export function WorkspaceSettingsMenu() {
           </div>
           <span className={styles.settingsLabel}>AI access</span>
           <div className={styles.settingsAccessPanel}>
+            <p className={styles.settingsAccessCurrent}>Current: {aiAccessLabel}</p>
             <label className={styles.settingsAccessField}>
               <span>Bridge access key</span>
               <input

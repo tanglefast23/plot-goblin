@@ -176,6 +176,20 @@
   background: rgb(var(--goblin-lichen-rgb) / 0.18);
 }
 
+.settingsAccessCurrent {
+  min-height: 30px;
+  margin: 0;
+  border: 1px solid rgb(var(--goblin-night-rgb) / 0.14);
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: var(--goblin-night);
+  background: rgb(var(--goblin-gold-rgb) / 0.3);
+  font-size: 0.64rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .settingsAccessField {
   display: grid;
   gap: 6px;

@@ -144,6 +144,32 @@ describe("WorkspaceShell", () => {
     expect(window.localStorage.getItem(ACCESS_MODE_STORAGE_KEY)).toBeNull();
   });
 
+  it("shows the current AI access mode in settings", async () => {
+    window.localStorage.setItem(ACCESS_MODE_STORAGE_KEY, "local");
+
+    const { rerender } = render(
+      <WorkspaceShell>
+        <p>Workspace content</p>
+      </WorkspaceShell>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    expect(await screen.findByText("Current: Local")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    window.localStorage.setItem(ACCESS_KEY_STORAGE_KEY, "friend-key");
+    window.localStorage.setItem(ACCESS_MODE_STORAGE_KEY, "public");
+
+    rerender(
+      <WorkspaceShell>
+        <p>Workspace content</p>
+      </WorkspaceShell>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    expect(await screen.findByText("Current: Bridge key")).toBeTruthy();
+  });
+
   it("tests and saves a bridge access key from settings", async () => {
     const fetchSpy = vi.fn().mockResolvedValueOnce({
       ok: true,
