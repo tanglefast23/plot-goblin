@@ -53,6 +53,7 @@ import {
   parseSceneDraftValues,
   parseSuggestedPlacement,
   numberedSceneList,
+  playGoblinSquashSound,
   renameBeatSection,
   reorderSceneCards,
   sceneCardTemplate,
@@ -1546,6 +1547,7 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
   const [writingStyle, setWritingStyle] = useState(defaultWritingStyleId);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState("");
+  const [savedDraftConfirmation, setSavedDraftConfirmation] = useState<SavedDraft | null>(null);
   const exportMenuId = useId();
   const draftBody = generatedDraftBody(markdown);
   const hasDraft = draftBody.length > 0;
@@ -1598,6 +1600,7 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
       onMarkdownChange(`# Create the Script Room\n\n## Generated screenplay draft\n${output}\n`);
       setExportMenuOpen(false);
       setSaveStatus("");
+      setSavedDraftConfirmation(null);
       setGateState({ status: "drafted" });
     } catch (caught) {
       setGateState({
@@ -1613,12 +1616,21 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
     onMarkdownChange("# Create the Script Room\n\n");
     setExportMenuOpen(false);
     setSaveStatus("");
+    setSavedDraftConfirmation(null);
     setGateState({ status: "idle" });
   }
 
   function saveDraftOutput() {
     const savedDraft = saveNewDraft(draftBody);
-    setSaveStatus(savedDraft ? "Saved to Drafts room." : "Nothing to save yet.");
+    if (!savedDraft) {
+      setSaveStatus("Nothing to save yet.");
+      setSavedDraftConfirmation(null);
+      return;
+    }
+
+    playGoblinSquashSound();
+    setSaveStatus("");
+    setSavedDraftConfirmation(savedDraft);
   }
 
   function exportDraft(format: ScreenplayExportFormatId) {
@@ -1760,6 +1772,18 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
             <small aria-live="polite" className={styles.scriptDraftStatus}>
               {saveStatus}
             </small>
+          ) : null}
+          {savedDraftConfirmation ? (
+            <div className={styles.scriptSaveConfirmation} key={savedDraftConfirmation.id} role="status">
+              <span aria-hidden="true" className={styles.scriptSaveSpark} />
+              <div>
+                <strong>Draft tucked into the Drafts room.</strong>
+                <small>{savedDraftConfirmation.title} is waiting there with a tiny clipboard.</small>
+              </div>
+              <Link className={`${styles.primaryButton} ${styles.scriptSaveTakeMeThere}`} href="/rooms/drafts">
+                Take me there
+              </Link>
+            </div>
           ) : null}
         </div>
       ) : null}

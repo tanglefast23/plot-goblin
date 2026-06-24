@@ -141,6 +141,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+function fakeAudioParam() {
+  return {
+    exponentialRampToValueAtTime: vi.fn(),
+    setValueAtTime: vi.fn(),
+  };
+}
+
 describe("RoomEditorClient", () => {
   it("does not keep autosaving when loaded room markdown is unchanged", async () => {
     const project = buildScriptBase({
@@ -2035,6 +2042,33 @@ Lena sees a frame that should not exist.
     routeState.slug = "create-script";
     const project = completedDraftableProject();
     window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+    const audioInstances: FakeAudioContext[] = [];
+    class FakeAudioContext {
+      currentTime = 0;
+      destination = {};
+      sampleRate = 8_000;
+      state = "running";
+
+      constructor() {
+        audioInstances.push(this);
+      }
+
+      close = vi.fn().mockResolvedValue(undefined);
+      createBiquadFilter = () => ({ connect: vi.fn(), frequency: fakeAudioParam(), type: "lowpass" });
+      createBuffer = (_channels: number, length: number) => ({
+        getChannelData: () => new Float32Array(length),
+      });
+      createBufferSource = () => ({ buffer: null, connect: vi.fn(), start: vi.fn(), stop: vi.fn() });
+      createGain = () => ({ connect: vi.fn(), gain: fakeAudioParam() });
+      createOscillator = () => ({
+        connect: vi.fn(),
+        frequency: fakeAudioParam(),
+        start: vi.fn(),
+        stop: vi.fn(),
+        type: "triangle",
+      });
+    }
+    vi.stubGlobal("AudioContext", FakeAudioContext);
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValueOnce({
@@ -2060,6 +2094,9 @@ Lena sees a frame that should not exist.
         body: expect.stringContaining("INT. WEDDING VENUE - DAY"),
       }),
     );
+    expect(audioInstances).toHaveLength(1);
+    expect(screen.getByText("Draft tucked into the Drafts room.")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Take me there" }).getAttribute("href")).toBe("/rooms/drafts");
   });
 
   it("keeps an existing generated draft when another-draft confirmation is canceled", async () => {
