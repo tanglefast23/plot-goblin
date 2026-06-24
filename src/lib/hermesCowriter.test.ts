@@ -90,6 +90,52 @@ describe("Hermes co-writer prompt", () => {
     expect(prompt).toContain("[...capped at 8000 characters]");
   });
 
+  it("treats the Opening Image as a still filmable before-image with full script context", () => {
+    const prompt = buildCowriterPrompt({
+      mode: "beat",
+      beat: "Opening Image",
+      beatMarkdown: "Show the world before the story changes.",
+      markdown:
+        "# Plot Goblin Export\n\n## premise.md\n\nA one-armed pitcher tries to make the majors.\n\n## theme.md\n\nPride blocks help.",
+    });
+
+    expect(prompt).toContain("Write an Opening Image, not a scene beat");
+    expect(prompt).toContain("a single still, filmable before-image");
+    expect(prompt).toContain("Show the world of the story through action, setting, mood, and visual detail");
+    expect(prompt).toContain("Establish the genre and tone immediately");
+    expect(prompt).toContain("Hint at the central theme or emotional conflict");
+    expect(prompt).toContain("Create curiosity in the audience");
+    expect(prompt).toContain("Avoid exposition, backstory dumps, or overly literary description");
+    expect(prompt).toContain("Act as a before image that can later contrast with the final image");
+    expect(prompt).toContain("Full script markdown");
+    expect(prompt).toContain("## premise.md");
+    expect(prompt).toContain("## theme.md");
+  });
+
+  it("treats the Final Image as a still filmable after-image with full script context", () => {
+    const prompt = buildCowriterPrompt({
+      mode: "beat",
+      beat: "Final Image",
+      beatMarkdown: "Create the closing visual that answers, twists, or contrasts the opening image.",
+      markdown:
+        "# Plot Goblin Export\n\n## premise.md\n\nA one-armed pitcher tries to make the majors.\n\n## beats.md\n\n## Opening Image\nJoe hides his taped arm in an empty batting cage.\n\n## theme.md\n\nPride blocks help.",
+    });
+
+    expect(prompt).toContain("Write a Final Image, not a scene beat");
+    expect(prompt).toContain("a single still, filmable after-image");
+    expect(prompt).toContain("Show the result of the character's journey without explaining it");
+    expect(prompt).toContain("Visually contrast with the opening image");
+    expect(prompt).toContain("Reveal what has changed in the character, world, relationship, or central conflict");
+    expect(prompt).toContain("Leave the audience with a clear emotional aftertaste");
+    expect(prompt).toContain("Echo the theme of the story in a simple, powerful way");
+    expect(prompt).toContain("Avoid speeches, exposition, or explaining the moral");
+    expect(prompt).toContain("Work as the story's final emotional punctuation mark");
+    expect(prompt).not.toContain("Create curiosity in the audience");
+    expect(prompt).toContain("Full script markdown");
+    expect(prompt).toContain("## Opening Image");
+    expect(prompt).toContain("## theme.md");
+  });
+
   it("asks for a full scene built from only the beat text using the eight field labels", () => {
     const prompt = buildCowriterPrompt({
       mode: "scene",
@@ -238,5 +284,34 @@ describe("Hermes co-writer prompt", () => {
     const prompt = buildCowriterPrompt({ mode: "scene-suggest", markdown: "Logline: A quiet heist.", sceneList: "" });
 
     expect(prompt).toContain("no scenes yet");
+  });
+});
+
+describe("plan mode", () => {
+  it("asks for a labeled, page-budgeted unified beat sheet", () => {
+    const prompt = buildCowriterPrompt({
+      mode: "plan",
+      markdown: "# Premise\nA heist gone wrong.",
+      targetPages: 100,
+    });
+    expect(prompt).toContain("unified beat sheet");
+    expect(prompt).toContain("BEAT 1 | PAGES:");
+    expect(prompt).toContain("INTENT:");
+    expect(prompt).toContain("100");
+    expect(prompt).toContain("PLOT_GOBLIN_FINAL:");
+  });
+});
+
+describe("chunk mode", () => {
+  it("asks for the three labeled output sections and honors planted setups", () => {
+    const prompt = buildCowriterPrompt({
+      mode: "chunk",
+      markdown: "## Beats to write now\nBEAT 4",
+      beat: "4 and 5",
+    });
+    expect(prompt).toContain("PLOT_GOBLIN_PAGES:");
+    expect(prompt).toContain("PLOT_GOBLIN_SUMMARY:");
+    expect(prompt).toContain("PLOT_GOBLIN_SETUPS:");
+    expect(prompt).toContain("PLANTED");
   });
 });

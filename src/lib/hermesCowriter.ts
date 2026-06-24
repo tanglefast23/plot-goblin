@@ -1,12 +1,13 @@
 import { writingStylePrompt } from "./writingStyles";
 
 export type CowriterRequest = {
-  mode: "followup" | "suggestions" | "logline" | "room" | "beat" | "draft" | "scene" | "scene-suggest";
+  mode: "followup" | "suggestions" | "logline" | "room" | "beat" | "draft" | "scene" | "scene-suggest" | "plan" | "chunk";
   room?: string;
   beat?: string;
   beatMarkdown?: string;
   markdown?: string;
   sceneList?: string;
+  targetPages?: number;
   writingStyle?: string;
   answers?: Record<string, unknown>;
   summary?: Record<string, unknown>;
@@ -78,6 +79,14 @@ Movie-kind weight:
 - Sci-fi and fantasy choices should make the speculative promise matter through rules, wonder, costs, and story consequences.
 - Hybrid genres must honor each selected promise instead of flattening everything into generic drama.
 - When generating screenplay pages, keep the selected movie kind visible in scene ideas, dialogue lane, tension, set pieces, pacing, and payoffs.`;
+}
+
+function isOpeningImageBeat(beatName: string) {
+  return beatName.trim().toLowerCase() === "opening image";
+}
+
+function isFinalImageBeat(beatName: string) {
+  return beatName.trim().toLowerCase() === "final image";
 }
 
 export function cleanHermesOutput(output: string) {
@@ -155,10 +164,37 @@ ${asJson(request.summary)}`;
   if (request.mode === "beat") {
     const beatName = request.beat ?? "selected";
     const markdown = capPromptText(request.markdown, 8_000);
+    const task = isOpeningImageBeat(beatName)
+      ? `Task: Write an Opening Image, not a scene beat, for THIS specific script. Make it a single still, filmable before-image that uses the protagonist, world, desire, flaw, mood, genre, tone, theme, and emotional conflict from the full script below. Keep the replacement succinct and use simple words. Return one numbered option only, using this exact format: 1. ${beatName}: Replacement text.
+
+Opening Image rules:
+- Show the world of the story through action, setting, mood, and visual detail.
+- Establish the genre and tone immediately.
+- Hint at the central theme or emotional conflict.
+- Introduce the main character's life, problem, desire, or flaw without explaining it.
+- Create curiosity in the audience.
+- Avoid exposition, backstory dumps, or overly literary description.
+- Be filmable: describe only what the audience can see and hear.
+- Feel specific, memorable, and symbolic, not generic.
+- Act as a before image that can later contrast with the final image of the story.`
+      : isFinalImageBeat(beatName)
+        ? `Task: Write a Final Image, not a scene beat, for THIS specific script. Make it a single still, filmable after-image that uses the protagonist, world, changed desire or flaw, mood, genre, tone, theme, emotional conflict, and the Opening Image from the full script below. Keep the replacement succinct and use simple words. Return one numbered option only, using this exact format: 1. ${beatName}: Replacement text.
+
+Final Image rules:
+- Show the result of the character's journey without explaining it.
+- Visually contrast with the opening image.
+- Reveal what has changed in the character, world, relationship, or central conflict.
+- Leave the audience with a clear emotional aftertaste.
+- Echo the theme of the story in a simple, powerful way.
+- Avoid speeches, exposition, or explaining the moral.
+- Be filmable: describe only what the audience can see and hear.
+- Feel inevitable but not obvious.
+- Work as the story's final emotional punctuation mark.`
+      : `Task: Write the actual ${beatName} beat for THIS specific script. Dramatize what concretely happens in this beat using the protagonist, want, lie, stakes, opposition, and theme from the full script below. Do not paraphrase the current beat text and do not explain what the ${beatName} beat is for. Keep the replacement succinct and use simple words. Return one numbered option only, using this exact format: 1. ${beatName}: Replacement text.`;
 
     return `${sharedRules}
 
-Task: Write the actual ${beatName} beat for THIS specific script. Dramatize what concretely happens in this beat using the protagonist, want, lie, stakes, opposition, and theme from the full script below. Do not paraphrase the current beat text and do not explain what the ${beatName} beat is for. Keep the replacement succinct and use simple words. Return one numbered option only, using this exact format: 1. ${beatName}: Replacement text.
+${task}
 
 Current ${beatName} beat text (this is usually an instruction telling you what to accomplish — fulfill it with specifics, do not echo it):
 ${request.beatMarkdown ?? ""}
@@ -235,6 +271,41 @@ Drafting rules:
 - Do not include generic advice before the pages. Start with a title line or the first scene heading after the final marker.
 
 Complete Plot Goblin room export:
+${request.markdown ?? ""}`;
+  }
+
+  if (request.mode === "plan") {
+    const targetPages = request.targetPages ?? 100;
+    return `${sharedRules}
+
+Task: Build the unified beat sheet (UNIFIED BEAT SHEET) for a full ${targetPages}-page feature of THIS specific script. Read the structural beats, every scene the writer already wrote, and the room facts below. Decide how many beats a strong, award-worthy version of this movie needs (usually 15-30). Expand thin spots, add the connective beats a real feature requires, and keep the writer's existing choices.
+
+Output rules:
+- Return ONLY beat blocks in this exact format, one per beat, divided by a line containing only ---:
+  BEAT 1 | PAGES: <n> | TITLE: <short title>
+  INTENT: <one line of what concretely happens>
+- Assign each beat a PAGES budget. The budgets MUST sum to about ${targetPages}.
+- Number beats sequentially from 1. Do not write screenplay pages here — only the plan.
+
+Complete Plot Goblin room export (structural beats, scenes, premise, characters, theme, parameters):
+${request.markdown ?? ""}`;
+  }
+
+  if (request.mode === "chunk") {
+    const beatLabel = request.beat ?? "the next beats";
+    return `${sharedRules}
+
+Task: Write the actual screenplay pages for ${beatLabel} of THIS specific script, using the living beat sheet and story-so-far below. Honor every PLANTED note on these and earlier beats, and set up anything later beats will need. Hit the PAGES budget for these beats. Pick up seamlessly from the previous pages' tail.
+
+Output EXACTLY these three labeled sections, in this order, after the final marker:
+PLOT_GOBLIN_PAGES:
+<standard screenplay pages: scene headings, action, character cues, dialogue>
+PLOT_GOBLIN_SUMMARY:
+<2-3 sentences recapping what happened in these beats>
+PLOT_GOBLIN_SETUPS:
+<zero or more lines, each "- beat <number> | <thing planted that pays off in that beat>"; write the single word NONE if nothing was planted>
+
+Living beat sheet and story context:
 ${request.markdown ?? ""}`;
   }
 
