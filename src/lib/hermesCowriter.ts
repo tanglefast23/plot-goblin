@@ -278,7 +278,7 @@ ${request.markdown ?? ""}`;
     const targetPages = request.targetPages ?? 100;
     return `${sharedRules}
 
-Task: Build the unified beat sheet (UNIFIED BEAT SHEET) for a full ${targetPages}-page feature of THIS specific script. Read the structural beats, every scene the writer already wrote, and the room facts below. Decide how many beats a strong, award-worthy version of this movie needs (usually 15-30). Expand thin spots, add the connective beats a real feature requires, and keep the writer's existing choices.
+Task: Build the unified beat sheet for a full ${targetPages}-page feature of THIS specific script. Read the structural beats, every scene the writer already wrote, and the room facts below. Decide how many beats a strong, award-worthy version of this movie needs (usually 15-30). Expand thin spots, add the connective beats a real feature requires, and keep the writer's existing choices.
 
 Output rules:
 - Return ONLY beat blocks in this exact format, one per beat, divided by a line containing only ---:
