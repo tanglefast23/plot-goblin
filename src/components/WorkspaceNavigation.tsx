@@ -33,10 +33,10 @@ export function WorkspaceNavigation() {
         </Link>
       ) : null}
       <RoomNavMenu buttonClassName={styles.linkButton} />
-      <WorkspaceSettingsMenu />
       <Link className={styles.linkButton} href="/rooms">
         Home
       </Link>
+      <WorkspaceSettingsMenu />
     </nav>
   );
 }

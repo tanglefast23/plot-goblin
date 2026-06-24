@@ -57,7 +57,7 @@ describe("WorkspaceShell", () => {
     expect(await screen.findByRole("link", { name: /guided setup/i })).toBeDefined();
   });
 
-  it("shows room links in the topbar and keeps Home as the far-right navigation button", async () => {
+  it("shows room links in the topbar and keeps Settings as the far-right navigation button", async () => {
     render(
       <WorkspaceShell>
         <p>Workspace content</p>
@@ -68,7 +68,7 @@ describe("WorkspaceShell", () => {
     expect(within(navigation).getByRole("link", { name: "Premise" }).getAttribute("href")).toBe("/rooms/premise");
     expect((await within(navigation).findByRole("link", { name: "Home" })).getAttribute("href")).toBe("/rooms");
     expect(within(navigation).queryByRole("button", { name: "Rooms" })).toBeNull();
-    expect(navigation.lastElementChild?.textContent).toBe("Home");
+    expect(navigation.lastElementChild?.querySelector("button")?.getAttribute("aria-label")).toBe("Settings");
   });
 
   it("keeps the guided setup shortcut for an auto-created blank rooms project", async () => {
