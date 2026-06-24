@@ -60,10 +60,19 @@ export function WorkspaceSettingsMenu() {
   const [bridgeKey, setBridgeKey] = useState("");
   const [aiAccessLabel, setAiAccessLabel] = useState("Not set");
   const [isTestingBridgeKey, setIsTestingBridgeKey] = useState(false);
+  const [bridgeKeyTestResult, setBridgeKeyTestResult] = useState<"idle" | "saved" | "failed">("idle");
   const [status, setStatus] = useState("");
   const menuId = useId();
   const exportMenuId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const bridgeKeyButtonLabel = isTestingBridgeKey
+    ? "Testing..."
+    : bridgeKeyTestResult === "saved"
+      ? "Bridge key saved"
+      : bridgeKeyTestResult === "failed"
+        ? "Bridge key failed"
+        : "Test and save bridge key";
 
   function syncAiAccessFields() {
     setBridgeKey(window.localStorage.getItem(ACCESS_KEY_STORAGE_KEY) ?? "");
@@ -102,10 +111,12 @@ export function WorkspaceSettingsMenu() {
 
     if (!trimmed) {
       setStatus("Paste a bridge key or use local.");
+      setBridgeKeyTestResult("failed");
       return;
     }
 
     setIsTestingBridgeKey(true);
+    setBridgeKeyTestResult("idle");
     setStatus("");
 
     try {
@@ -119,6 +130,7 @@ export function WorkspaceSettingsMenu() {
 
       if (!response.ok) {
         setStatus(data.error ?? "Bridge key test failed.");
+        setBridgeKeyTestResult("failed");
         return;
       }
 
@@ -127,11 +139,12 @@ export function WorkspaceSettingsMenu() {
       setBridgeKey(trimmed);
       setAiAccessLabel("Bridge key");
       setStatus("Bridge key saved.");
+      setBridgeKeyTestResult("saved");
       setExportMenuOpen(false);
-      setIsOpen(false);
     } catch (caught) {
       const detail = caught instanceof Error ? caught.message : "Unknown test failure.";
       setStatus(`Bridge key test could not run. ${detail}`);
+      setBridgeKeyTestResult("failed");
     } finally {
       setIsTestingBridgeKey(false);
     }
@@ -217,7 +230,10 @@ export function WorkspaceSettingsMenu() {
               <span>Bridge access key</span>
               <input
                 autoComplete="off"
-                onChange={(event) => setBridgeKey(event.target.value)}
+                onChange={(event) => {
+                  setBridgeKey(event.target.value);
+                  setBridgeKeyTestResult("idle");
+                }}
                 placeholder="Paste bridge key"
                 type="password"
                 value={bridgeKey}
@@ -225,7 +241,7 @@ export function WorkspaceSettingsMenu() {
             </label>
             <div className={styles.settingsAccessActions}>
               <button className={styles.settingsAction} disabled={isTestingBridgeKey} onClick={saveBridgeKey} type="button">
-                {isTestingBridgeKey ? "Testing..." : "Test and save bridge key"}
+                {bridgeKeyButtonLabel}
               </button>
               <button className={styles.settingsAction} disabled={isTestingBridgeKey} onClick={useLocalAiAccess} type="button">
                 Use local

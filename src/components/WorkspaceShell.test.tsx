@@ -199,8 +199,38 @@ describe("WorkspaceShell", () => {
     await waitFor(() => {
       expect(window.localStorage.getItem(ACCESS_KEY_STORAGE_KEY)).toBe("friend-public-key");
       expect(window.localStorage.getItem(ACCESS_MODE_STORAGE_KEY)).toBe("public");
+      expect(screen.getByRole("button", { name: "Bridge key saved" })).toBeTruthy();
       expect(screen.getByText("Bridge key saved.")).toBeTruthy();
     });
+  });
+
+  it("shows bridge key failure on the settings save button", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ error: "Enter the Plot Goblin access key to ask the public Hermes bridge." }),
+      }),
+    );
+
+    render(
+      <WorkspaceShell>
+        <p>Workspace content</p>
+      </WorkspaceShell>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    fireEvent.change(await screen.findByLabelText("Bridge access key"), {
+      target: { value: "wrong-key" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Test and save bridge key" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Bridge key failed" })).toBeTruthy();
+      expect(screen.getByText("Enter the Plot Goblin access key to ask the public Hermes bridge.")).toBeTruthy();
+    });
+    expect(window.localStorage.getItem(ACCESS_KEY_STORAGE_KEY)).toBeNull();
+    expect(window.localStorage.getItem(ACCESS_MODE_STORAGE_KEY)).toBeNull();
   });
 
   it("switches AI access back to local from settings", async () => {
