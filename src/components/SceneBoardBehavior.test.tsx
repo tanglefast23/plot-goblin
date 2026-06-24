@@ -201,4 +201,33 @@ describe("SceneBoard behavior", () => {
     fireEvent.keyDown(locationField, { code: "Enter", key: "Enter" });
     expect(document.activeElement).toBe(charactersField);
   });
+
+  it("preserves spaces typed at the end of scene fields", async () => {
+    const project = buildScriptBase({
+      rawIdea: "A one-armed pitcher tries to make the majors.",
+      genre: "Comedy",
+      audienceFeeling: "hopeful and tense",
+      protagonist: "Stubborn one-armed pitcher",
+      surfaceWant: "become a professional baseball player",
+      stakes: "he loses the only dream he has left",
+      falseBelief: "asking for help makes him weak",
+      opposition: "better players who have two arms",
+      endingDirection: "He changes and wins",
+      structurePreference: "Classic 3-act spine",
+    });
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+
+    render(<RoomEditorClient />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Start new scene" }));
+
+    const titleField = await screen.findByRole("textbox", { name: "Scene title" }) as HTMLInputElement;
+    const charactersField = screen.getByRole("textbox", { name: "Characters" }) as HTMLTextAreaElement;
+
+    fireEvent.change(titleField, { target: { value: "Tryout opens " } });
+    fireEvent.change(charactersField, { target: { value: "Rafa and Mo " } });
+
+    expect(titleField.value).toBe("Tryout opens ");
+    expect(charactersField.value).toBe("Rafa and Mo ");
+  });
 });

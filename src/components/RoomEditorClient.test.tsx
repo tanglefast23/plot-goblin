@@ -331,6 +331,31 @@ describe("RoomEditorClient", () => {
     expect(document.activeElement).toBe(storyPromiseField);
   });
 
+  it("preserves spaces typed at the end of guided room answers", async () => {
+    const project = buildScriptBase({
+      rawIdea: "A one-armed pitcher tries to make the majors.",
+      genre: "Comedy",
+      audienceFeeling: "hopeful and tense",
+      protagonist: "Stubborn one-armed pitcher",
+      surfaceWant: "become a professional baseball player",
+      stakes: "he loses the only dream he has left",
+      falseBelief: "asking for help makes him weak",
+      opposition: "better players who have two arms",
+      endingDirection: "He changes and wins",
+      structurePreference: "Classic 3-act spine",
+    });
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+
+    render(<RoomEditorClient />);
+
+    await screen.findByRole("region", { name: "Premise questions" });
+    const rawIdeaField = screen.getByRole("textbox", { name: "Raw idea" }) as HTMLTextAreaElement;
+
+    fireEvent.change(rawIdeaField, { target: { value: "Joe wants " } });
+
+    expect(rawIdeaField.value).toBe("Joe wants ");
+  });
+
   it("places beat suggest buttons directly above their text boxes", async () => {
     routeState.slug = "beats";
     const project = buildScriptBase({
@@ -356,6 +381,32 @@ describe("RoomEditorClient", () => {
 
     expect(titleInput.compareDocumentPosition(suggestButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(suggestButton.compareDocumentPosition(textBox) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("preserves spaces typed at the end of beat notes", async () => {
+    routeState.slug = "beats";
+    const project = buildScriptBase({
+      rawIdea: "A one-armed pitcher tries to make the majors.",
+      genre: "Comedy",
+      audienceFeeling: "hopeful and tense",
+      protagonist: "Stubborn one-armed pitcher",
+      surfaceWant: "become a professional baseball player",
+      stakes: "he loses the only dream he has left",
+      falseBelief: "asking for help makes him weak",
+      opposition: "better players who have two arms",
+      endingDirection: "He changes and wins",
+      structurePreference: "Classic 3-act spine",
+    });
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+
+    render(<RoomEditorClient />);
+
+    await screen.findByRole("region", { name: "Beat cork board" });
+    const textBox = screen.getByRole("textbox", { name: "Opening Image beat" }) as HTMLTextAreaElement;
+
+    fireEvent.change(textBox, { target: { value: "Beat wants " } });
+
+    expect(textBox.value).toBe("Beat wants ");
   });
 
   it("asks Hermes for one guided room field and applies the suggestion", async () => {

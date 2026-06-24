@@ -46,6 +46,7 @@ import {
   beatNoteRows,
   cleanGuidedFieldValue,
   cowriterRequestHeaders,
+  editableGuidedFieldValue,
   escapeRegExp,
   formatSceneDraftValues,
   formatRoomSections,
@@ -241,7 +242,7 @@ export function GuidedRoomEditor({ firstFieldRef, markdown, onMarkdownChange, pr
         const helperText = shouldUseGuidedFieldPlaceholder(roomSlug, field, generatedFieldsByHeading.get(field.heading), project)
           ? cleanGuidedFieldValue(field.body)
           : "";
-        const value = helperText ? "" : cleanGuidedFieldValue(field.body);
+        const value = helperText ? "" : editableGuidedFieldValue(field.body);
         const suggestion = fieldSuggestions[index];
         const fieldId = `guided-${roomSlug}-field-${index}`;
 

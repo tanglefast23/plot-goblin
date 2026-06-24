@@ -384,6 +384,13 @@ export function cleanSceneDraftValue(value: string) {
     .trim();
 }
 
+export function editableSceneDraftValue(value: string) {
+  return value
+    .replace(/\[(?:needs your answer|needs answer|needs writing)\]\s*/gi, "")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n");
+}
+
 export function sceneField(markdown: string, label: string) {
   const match = new RegExp(`^\\*\\*${escapeRegExp(label)}:\\*\\*\\s*(.*)$`, "im").exec(markdown);
   if (!match) return "";
@@ -409,7 +416,7 @@ export function sceneField(markdown: string, label: string) {
 export function sceneDraftField(markdown: string, label: string) {
   const match = new RegExp(`^\\*\\*${escapeRegExp(label)}:\\*\\*\\s*(.*)$`, "im").exec(markdown);
   if (!match) return "";
-  if (match[1]?.trim()) return cleanSceneDraftValue(match[1]);
+  if (match[1]?.trim()) return editableSceneDraftValue(match[1]);
 
   const afterField = markdown.slice(match.index + match[0].length).replace(/^\n/, "").split("\n");
   const fieldLines: string[] = [];
@@ -422,10 +429,10 @@ export function sceneDraftField(markdown: string, label: string) {
     }
 
     if (/^(\*\*[^*]+:\*\*|#{1,6}\s+|---)/.test(trimmed)) break;
-    fieldLines.push(line.trimEnd());
+    fieldLines.push(line);
   }
 
-  return cleanSceneDraftValue(fieldLines.join("\n"));
+  return editableSceneDraftValue(fieldLines.join("\n"));
 }
 
 export function sceneSummary(markdown: string): SceneSummary {
@@ -439,8 +446,8 @@ export function sceneSummary(markdown: string): SceneSummary {
 }
 
 export function cleanSceneDraftTitle(value: string) {
-  const cleaned = cleanSceneValue(value);
-  return cleaned === "[Short title]" ? "" : cleaned;
+  const cleaned = editableSceneDraftValue(value);
+  return cleaned.trim() === "[Short title]" ? "" : cleaned;
 }
 
 export function sceneDraftFieldIsHelper(label: keyof SceneDraftValues, value: string) {
@@ -530,16 +537,15 @@ export function parseSceneDraftPlaceholders(markdown: string): SceneDraftValues 
 }
 
 export function sceneDraftBlock(value: string, fallback: string) {
-  const cleaned = value.trim();
-  return cleaned || `${NEEDS_WRITING} ${fallback}`;
+  return value.trim() ? value : `${NEEDS_WRITING} ${fallback}`;
 }
 
 export function sceneDraftInline(value: string, fallback: string) {
-  return value.trim() || fallback;
+  return value.trim() ? value : fallback;
 }
 
 export function formatSceneDraftValues(values: SceneDraftValues) {
-  return `### Scene: ${values.title.trim() || "[Short title]"}
+  return `### Scene: ${values.title.trim() ? values.title : "[Short title]"}
 
 **Location / time:** ${sceneDraftInline(values.locationTime, "INT./EXT. PLACE - DAY/NIGHT")}
 
@@ -648,7 +654,7 @@ export function formatGuidedRoomFields(intro: string, fields: GuidedRoomField[])
     intro.trimEnd(),
     ...fields.map((field) => {
       const heading = field.heading.trim() || "Untitled question";
-      const body = field.body.replace(/\r\n/g, "\n").trimEnd();
+      const body = field.body.replace(/\r\n/g, "\n");
       return body ? `${"#".repeat(field.level)} ${heading}\n${body}` : `${"#".repeat(field.level)} ${heading}`;
     }),
   ].filter(Boolean);
@@ -661,6 +667,12 @@ export function cleanGuidedFieldValue(value: string) {
     .replace(/\[(?:needs your answer|needs answer|needs writing)\]\s*/gi, "")
     .replace(/^\s*-\s+/gm, "")
     .trim();
+}
+
+export function editableGuidedFieldValue(value: string) {
+  return value
+    .replace(/\[(?:needs your answer|needs answer|needs writing)\]\s*/gi, "")
+    .replace(/^\s*-\s+/gm, "");
 }
 
 export function isGuidedFieldHelper(value: string) {
@@ -710,7 +722,7 @@ export function updateGuidedRoomField(markdown: string, fieldIndex: number, body
   const parsed = parseGuidedRoomFields(markdown);
   if (!parsed.fields[fieldIndex]) return markdown;
 
-  const nextBody = body.trim() || NEEDS_ANSWER;
+  const nextBody = body.trim() ? body : NEEDS_ANSWER;
   const fields = parsed.fields.map((field, index) => (index === fieldIndex ? { ...field, body: nextBody } : field));
   return formatGuidedRoomFields(parsed.intro, fields);
 }
@@ -745,7 +757,7 @@ export function formatRoomSections(intro: string, sections: BeatSection[]) {
     intro.trimEnd(),
     ...sections.map((section) => {
       const heading = section.heading.trim() || "Untitled Beat";
-      const body = section.body.replace(/\r\n/g, "\n").trimEnd();
+      const body = section.body.replace(/\r\n/g, "\n");
       return body ? `## ${heading}\n${body}` : `## ${heading}`;
     }),
   ].filter(Boolean);
