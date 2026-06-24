@@ -3,6 +3,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { RoomEditorClient } from "./RoomEditorClient";
 import { buildScriptBase } from "@/lib/guidedSetup";
 import { PROJECT_STORAGE_KEY } from "@/lib/projectStorage";
+import {
+  draftWaitingMessageDelayMs,
+  draftWaitingMessages,
+  randomDraftWaitingMessageIndex,
+} from "./room-editor/RoomEditors";
 
 const DRAFT_STORAGE_KEY = "plot-goblin-saved-drafts";
 
@@ -1196,6 +1201,63 @@ Rafa tapes a cracked glove to his one good hand before the gates open.
     expect(body.markdown).toBeUndefined();
   });
 
+  it("shows the picked beat above a populated scene draft with save and close actions", async () => {
+    routeState.slug = "scenes";
+    const sceneOutput = `PLOT_GOBLIN_FINAL:
+1. Scene title: Ceremony Truth
+2. Location / time: INT. WEDDING VENUE - NIGHT
+3. Characters: Milo, Lena, Celeste
+4. Scene want: Milo wants Lena to hear the truth before she signs the lie.
+5. Opposition: Celeste controls the room and everyone wants the wedding to continue.
+6. Turn: Lena stops defending the perfect story.
+7. Button: Milo lowers the camera.
+8. Purpose: Climax`;
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ output: sceneOutput }) }));
+
+    const project = buildScriptBase({
+      rawIdea: "A wedding videographer exposes a curse.",
+      genre: "Comedy mystery",
+      audienceFeeling: "funny and tense",
+      protagonist: "Milo",
+      surfaceWant: "make a perfect wedding video",
+      stakes: "the couple builds a marriage on a lie",
+      falseBelief: "truth ruins love",
+      opposition: "Celeste",
+      endingDirection: "The truth saves the wedding",
+      structurePreference: "Classic 3-act spine",
+    });
+    project.rooms.beats = `# Beats Room
+
+## Climax
+Milo interrupts the ceremony with the truth.
+`;
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+
+    render(<RoomEditorClient />);
+
+    await screen.findByRole("region", { name: "Scene cards" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Populate from beat sheet" }));
+    const beatPicker = await screen.findByRole("combobox", { name: "Beat to populate from the beat sheet" });
+    fireEvent.change(beatPicker, { target: { value: "Climax" } });
+
+    const titleField = (await screen.findByRole("textbox", { name: "Scene title" })) as HTMLInputElement;
+    await waitFor(() => expect(titleField.value).toBe("Ceremony Truth"));
+
+    expect(screen.getByText("Climax")).toBeTruthy();
+    const headerActions = screen.getByLabelText("Beat-built scene actions");
+    expect(within(headerActions).getByRole("button", { name: "Ask the goblin for another scene attempt" })).toBeTruthy();
+    expect(within(headerActions).getByRole("button", { name: "Save beat-built scene" })).toBeTruthy();
+    expect(within(headerActions).getByRole("button", { name: "Close beat-built scene draft" })).toBeTruthy();
+
+    fireEvent.click(within(headerActions).getByRole("button", { name: "Save beat-built scene" }));
+
+    await waitFor(() => {
+      const storedProject = JSON.parse(window.localStorage.getItem(PROJECT_STORAGE_KEY) ?? "{}");
+      expect(storedProject.rooms.scenes).toContain("### Scene: Ceremony Truth");
+    });
+  });
+
   it("only offers answered beats in the populate picker", async () => {
     routeState.slug = "scenes";
     const project = buildScriptBase({
@@ -1869,7 +1931,7 @@ Rafa wants to hide the injury.
     expect(draftGoblin.querySelector('[data-mascot-part="glasses"]')).toBeTruthy();
     expect(draftGoblin.querySelector('[data-mascot-part="fang"]')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Please Oh Mighty Goblin. Write a draft." }));
+    fireEvent.click(screen.getByRole("button", { name: "Quick sample" }));
 
     const scriptParametersLinks = (await screen.findAllByRole("link", {
       name: /Script Parameters - take me there/i,
@@ -2018,20 +2080,26 @@ Lena sees a frame that should not exist.
     fireEvent.change(writingStyleSelect, { target: { value: "sorkin-legal" } });
     vi.useFakeTimers();
     act(() => {
-      fireEvent.click(screen.getByRole("button", { name: "Please Oh Mighty Goblin. Write a draft." }));
+      fireEvent.click(screen.getByRole("button", { name: "Quick sample" }));
     });
 
     expect(screen.getByRole("button", { name: "Goblin is writing..." })).toBeTruthy();
     expect(screen.getByLabelText("Animated writing ellipsis")).toBeTruthy();
     expect(screen.getByRole("img", { name: "Mini goblin running while the draft is written" })).toBeTruthy();
+    expect(draftWaitingMessages).toHaveLength(26);
+    expect(randomDraftWaitingMessageIndex(0, 0.99)).toBe(draftWaitingMessages.length - 1);
+
     act(() => {
       vi.advanceTimersByTime(5000);
     });
-    expect(screen.getByRole("button", { name: "Please wait. The goblin is bribing the commas..." })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Goblin is writing..." })).toBeTruthy();
+
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValueOnce(0.99);
     act(() => {
-      vi.advanceTimersByTime(5000);
+      vi.advanceTimersByTime(draftWaitingMessageDelayMs - 5000);
     });
-    expect(screen.getByRole("button", { name: "Tiny quill tantrum. Five more seconds..." })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Emergency semicolon meeting in progress..." })).toBeTruthy();
+    expect(randomSpy).toHaveBeenCalledTimes(1);
     vi.useRealTimers();
     resolveDraft({
       ok: true,
@@ -2091,7 +2159,7 @@ Lena sees a frame that should not exist.
     render(<RoomEditorClient />);
 
     await screen.findByRole("region", { name: "Create the Script draft gate" });
-    fireEvent.click(screen.getByRole("button", { name: "Please Oh Mighty Goblin. Write a draft." }));
+    fireEvent.click(screen.getByRole("button", { name: "Quick sample" }));
 
     await screen.findByText(/The goblin wrote a draft/i);
 
@@ -2164,7 +2232,7 @@ Lena sees a frame that should not exist.
     render(<RoomEditorClient />);
 
     await screen.findByRole("region", { name: "Create the Script draft gate" });
-    fireEvent.click(screen.getByRole("button", { name: "Please Oh Mighty Goblin. Write a draft." }));
+    fireEvent.click(screen.getByRole("button", { name: "Quick sample" }));
     await screen.findByRole("button", { name: "Export draft" });
 
     fireEvent.click(screen.getByRole("button", { name: "Export draft" }));
@@ -2175,6 +2243,9 @@ Lena sees a frame that should not exist.
     expect(screen.getByRole("button", { name: "Export PDF" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Export Word" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Export RTF" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Export all drafts" }).parentElement?.parentElement).toBe(
+      document.body,
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Export all drafts" }));
 
@@ -2224,6 +2295,56 @@ Lena sees a frame that should not exist.
     fireEvent.click(screen.getByRole("button", { name: "Delete Love, Cursed" }));
     savedDrafts = JSON.parse(window.localStorage.getItem(DRAFT_STORAGE_KEY) ?? "[]");
     expect(savedDrafts).toHaveLength(0);
+  });
+
+  it("exports one saved draft from the Drafts room after a format is picked", async () => {
+    routeState.slug = "drafts";
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(buildScriptBase({})));
+    window.localStorage.setItem(
+      DRAFT_STORAGE_KEY,
+      JSON.stringify([
+        {
+          id: "draft-1",
+          title: "Love, Cursed",
+          body: "TITLE: LOVE, CURSED\n\nINT. WEDDING VENUE - DAY\nMilo raises his camera.",
+          createdAt: "2026-06-24T02:00:00.000Z",
+          updatedAt: "2026-06-24T02:00:00.000Z",
+        },
+        {
+          id: "draft-2",
+          title: "Moon Dust",
+          body: "TITLE: MOON DUST\n\nINT. MOON BASE - NIGHT\nAda checks the airlock.",
+          createdAt: "2026-06-24T03:00:00.000Z",
+          updatedAt: "2026-06-24T03:00:00.000Z",
+        },
+      ]),
+    );
+    let downloadedFilename = "";
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+      downloadedFilename = this.download;
+    });
+    const createObjectUrlSpy = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:plot-goblin");
+    const revokeObjectUrlSpy = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+
+    render(<RoomEditorClient />);
+
+    await screen.findByRole("region", { name: "Saved screenplay drafts" });
+    fireEvent.click(screen.getByRole("button", { name: "Export Love, Cursed" }));
+
+    expect(await screen.findByRole("button", { name: "Export Love, Cursed as Fountain" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Export Love, Cursed as Final Draft" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Export Love, Cursed as PDF" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Export Love, Cursed as Word" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Export Love, Cursed as RTF" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Export Love, Cursed as Fountain" }));
+
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(downloadedFilename).toBe("plot-goblin-draft-love-cursed.fountain");
+    expect(await (createObjectUrlSpy.mock.calls[0][0] as Blob).text()).toContain("Title: LOVE, CURSED");
+    expect(await (createObjectUrlSpy.mock.calls[0][0] as Blob).text()).not.toContain("MOON DUST");
+    expect(revokeObjectUrlSpy).toHaveBeenCalledWith("blob:plot-goblin");
+    expect(screen.getByText("Exported Love, Cursed as Fountain.")).toBeTruthy();
   });
 
   it("keeps a saved draft when saved-draft deletion is canceled", async () => {

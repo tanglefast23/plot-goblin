@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  type CSSProperties,
   forwardRef,
   type KeyboardEvent as ReactKeyboardEvent,
   type RefObject,
@@ -12,6 +13,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import styles from "@/app/workspace.module.css";
 import { parseCowriterChoices } from "@/lib/cowriterChoices";
 import { deleteSavedDraft, loadSavedDrafts, saveNewDraft, updateSavedDraft, type SavedDraft } from "@/lib/draftStorage";
@@ -72,6 +74,8 @@ import {
   type SceneDraftValues,
   type ScriptParameterValues,
 } from "./RoomEditorSupport";
+import { FullScriptDirector } from "./FullScriptDirector";
+import { useDraftDirector } from "./useDraftDirector";
 import { defaultWritingStyleIdForGenre, writingStyleOptions } from "@/lib/writingStyles";
 
 type GuidedRoomEditorProps = {
@@ -648,13 +652,9 @@ export const SceneBoard = forwardRef<SceneBoardHandle, SceneBoardProps>(function
   const canSaveScene = draftChanged && displayedSceneDraft.trim().length > 0 && displayedSceneDraft !== activeScene;
 
   const beatOptions = useMemo(() => answeredBeatSections(project?.rooms.beats ?? ""), [project]);
-  const [selectedBeatHeading, setSelectedBeatHeading] = useState<string | null>(null);
-  const matchedBeatHeading = useMemo(() => {
-    const title = sceneValues.title.trim().toLowerCase();
-    if (!title) return "";
-    return beatOptions.find((beat) => beat.heading.trim().toLowerCase() === title)?.heading ?? "";
-  }, [beatOptions, sceneValues.title]);
-  const activeBeatHeading = selectedBeatHeading ?? matchedBeatHeading;
+  const preFillSnapshot = useRef<{ draft: string; changed: boolean } | null>(null);
+  const [beatFillHeading, setBeatFillHeading] = useState("");
+  const [beatFillActive, setBeatFillActive] = useState(false);
   const {
     beginSuggestion: beginSceneFill,
     clearSuggestion: clearSceneFill,
@@ -663,21 +663,19 @@ export const SceneBoard = forwardRef<SceneBoardHandle, SceneBoardProps>(function
     suggestions: sceneFillStates,
   } = useSuggestionStates();
   const sceneFill = sceneFillStates[0];
-  const preFillSnapshot = useRef<{ draft: string; changed: boolean } | null>(null);
-  const [goblinFilled, setGoblinFilled] = useState(false);
   const [suggestionActive, setSuggestionActive] = useState(false);
   const [suggestionPlacement, setSuggestionPlacement] = useState(0);
 
-  async function buildSceneFromBeat(headingOverride?: string, options?: { fresh?: boolean }) {
-    const heading = headingOverride ?? activeBeatHeading;
+  async function buildSceneFromBeat(heading: string, options?: { fresh?: boolean; resetSnapshot?: boolean }) {
     const beat = beatOptions.find((option) => option.heading === heading);
     if (!beat) return;
 
     const baseValues = options?.fresh ? parseSceneDraftValues(template) : sceneValues;
-    if (!goblinFilled) {
-      preFillSnapshot.current = options?.fresh
-        ? { draft: template, changed: false }
-        : { draft: sceneDraft, changed: draftChanged };
+    if (options?.resetSnapshot || !beatFillActive) {
+      preFillSnapshot.current = {
+        changed: options?.fresh ? false : draftChanged,
+        draft: options?.fresh ? template : sceneDraft,
+      };
     }
 
     const mascotCycle = beginSceneFill(0);
@@ -707,7 +705,8 @@ export const SceneBoard = forwardRef<SceneBoardHandle, SceneBoardProps>(function
 
       setSceneDraft(formatSceneDraftValues({ ...baseValues, ...filledValues }));
       setDraftChanged(true);
-      setGoblinFilled(true);
+      setBeatFillHeading(beat.heading);
+      setBeatFillActive(true);
       finishSceneFill(0, mascotCycle, { error: "", text: "" });
     } catch (caught) {
       failSceneFill(0, mascotCycle, {
@@ -720,14 +719,14 @@ export const SceneBoard = forwardRef<SceneBoardHandle, SceneBoardProps>(function
   async function buildFromBeat(heading: string) {
     setSuggestionActive(false);
     setSelectedSceneIndex(null);
-    setSelectedBeatHeading(heading);
-    setGoblinFilled(false);
-    await buildSceneFromBeat(heading, { fresh: true });
+    setBeatFillHeading(heading);
+    setBeatFillActive(false);
+    await buildSceneFromBeat(heading, { fresh: true, resetSnapshot: true });
   }
 
   async function suggestScene() {
     setSelectedSceneIndex(null);
-    setSelectedBeatHeading(null);
+    resetBeatFill();
     const mascotCycle = beginSceneFill(0);
 
     try {
@@ -794,20 +793,21 @@ export const SceneBoard = forwardRef<SceneBoardHandle, SceneBoardProps>(function
     setSceneDraft(snapshot?.draft ?? template);
     setDraftChanged(snapshot?.changed ?? false);
     resetGoblinFill();
-  }
-
-  function pickBeat(heading: string) {
-    setSelectedBeatHeading(heading);
-    resetGoblinFill();
+    focusSceneDraft();
   }
 
   function focusSceneDraft() {
     window.setTimeout(() => firstSceneRef.current?.focus(), 0);
   }
 
-  function resetGoblinFill() {
+  function resetBeatFill() {
     preFillSnapshot.current = null;
-    setGoblinFilled(false);
+    setBeatFillActive(false);
+    setBeatFillHeading("");
+  }
+
+  function resetGoblinFill() {
+    resetBeatFill();
     setSuggestionActive(false);
     clearSceneFill(0);
   }
@@ -1029,67 +1029,47 @@ export const SceneBoard = forwardRef<SceneBoardHandle, SceneBoardProps>(function
         <div className={styles.sceneDraftPanel}>
           <div className={styles.sceneDraftHeader}>
             <p className={styles.sceneDraftKicker}>
-              {selectedSceneIndex === null ? "New scene draft" : "Selected scene"}
+              {beatFillActive && beatFillHeading
+                ? beatFillHeading
+                : selectedSceneIndex === null
+                  ? "New scene draft"
+                  : "Selected scene"}
             </p>
-          </div>
-          {beatOptions.length > 0 ? (
-            <div className={styles.sceneGoblinFill}>
-              <label className={styles.parameterField}>
-                <span>Build this scene from a beat</span>
-                <select
-                  aria-label="Beat for the goblin to build"
-                  onChange={(event) => pickBeat(event.target.value)}
-                  value={activeBeatHeading}
+            {beatFillActive && beatFillHeading ? (
+              <div aria-label="Beat-built scene actions" className={styles.sceneDraftHeaderActions}>
+                <button
+                  aria-label="Ask the goblin for another scene attempt"
+                  className={`${styles.fieldUseSuggestionButton} ${styles.goblinSuggestButton} ${
+                    sceneFill?.isLoading ? styles.goblinSuggestButtonSquashed : ""
+                  }`}
+                  disabled={sceneFill?.isLoading}
+                  onClick={() => buildSceneFromBeat(beatFillHeading)}
+                  type="button"
                 >
-                  <option value="">Pick a beat for the goblin to build…</option>
-                  {beatOptions.map((beat) => (
-                    <option key={beat.heading} value={beat.heading}>
-                      {beat.heading}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className={styles.suggestionButtonCluster}>
-                {goblinFilled ? (
-                  <>
-                    <button
-                      aria-label="Ask the goblin for another scene attempt"
-                      className={`${styles.fieldUseSuggestionButton} ${styles.goblinSuggestButton} ${
-                        sceneFill?.isLoading ? styles.goblinSuggestButtonSquashed : ""
-                      }`}
-                      disabled={sceneFill?.isLoading}
-                      onClick={() => buildSceneFromBeat()}
-                      type="button"
-                    >
-                      {sceneFill?.isLoading ? "Thinking" : "Another attempt"}
-                    </button>
-                    <button
-                      aria-label="Discard the goblin scene draft"
-                      className={styles.fieldUseSuggestionButton}
-                      onClick={discardSceneFill}
-                      type="button"
-                    >
-                      Close
-                    </button>
-                  </>
-                ) : (
+                  {sceneFill?.isLoading ? "Thinking" : "Another attempt"}
+                </button>
+                {canSaveScene ? (
                   <button
-                    aria-label="Ask the goblin to build this scene from a beat"
-                    className={`${styles.fieldSuggestButton} ${styles.goblinSuggestButton} ${
-                      sceneFill?.isLoading ? styles.goblinSuggestButtonSquashed : ""
-                    }`}
-                    disabled={!activeBeatHeading || sceneFill?.isLoading}
-                    onClick={() => buildSceneFromBeat()}
+                    aria-label="Save beat-built scene"
+                    className={`${styles.primaryButton} ${styles.sceneDraftHeaderSave}`}
+                    onClick={saveScene}
+                    ref={saveSceneButtonRef}
                     type="button"
                   >
-                    {sceneFill?.isLoading ? "Building" : "Ask the goblin to build this scene"}
+                    Save
                   </button>
-                )}
-                <SuggestionGoblin label="scene builder" state={sceneFill?.mascotState} />
+                ) : null}
+                <button
+                  aria-label="Close beat-built scene draft"
+                  className={styles.fieldUseSuggestionButton}
+                  onClick={discardSceneFill}
+                  type="button"
+                >
+                  Close
+                </button>
               </div>
-              {sceneFill?.error ? <p className={styles.fieldSuggestionError}>{sceneFill.error}</p> : null}
-            </div>
-          ) : null}
+            ) : null}
+          </div>
           <section aria-label="Scene card questions" className={styles.sceneQuestionPanel}>
             <label className={styles.parameterField}>
               <span>Scene title</span>
@@ -1240,7 +1220,7 @@ export const SceneBoard = forwardRef<SceneBoardHandle, SceneBoardProps>(function
                     Delete scene
                   </button>
                 ) : null}
-                {canSaveScene ? (
+                {canSaveScene && !beatFillActive ? (
                   <button className={styles.primaryButton} onClick={saveScene} ref={saveSceneButtonRef} type="button">
                     Save scene
                   </button>
@@ -1393,14 +1373,43 @@ type CreateScriptGateState =
   | { message: string; status: "error" }
   | { status: "drafted" };
 
-const draftWaitingMessages = [
+export const draftWaitingMessageDelayMs = 8000;
+
+export const draftWaitingMessages = [
   "Goblin is writing",
   "Please wait. The goblin is bribing the commas",
   "Tiny quill tantrum. Five more seconds",
   "Hold please. Act Two is arguing",
   "Do not refresh. The verbs are being sharpened",
   "Almost there. A subplot is being cornered",
+  "The midpoint is refusing to make eye contact",
+  "A side character just demanded snacks",
+  "The third act is looking for its shoes",
+  "Plot holes are being lightly threatened",
+  "The protagonist is practicing wanting something visible",
+  "The antagonist has requested better lighting",
+  "One theme is being lured into the room",
+  "The draft is chewing with its mouth closed",
+  "A scene heading is putting on pants",
+  "The stakes are being made less decorative",
+  "A joke has entered committee review",
+  "The emotional arc is doing stretches",
+  "Someone found a motive under the couch",
+  "The cold open is pretending not to panic",
+  "A weak verb has been escorted outside",
+  "The screenplay is asking for one responsible adult",
+  "Three commas have formed a union",
+  "The ending is being bribed with snacks",
+  "A dramatic question is blinking into existence",
+  "Emergency semicolon meeting in progress",
 ];
+
+export function randomDraftWaitingMessageIndex(currentIndex: number, randomValue = Math.random()) {
+  if (draftWaitingMessages.length <= 1) return 0;
+
+  const candidateIndex = Math.floor(randomValue * (draftWaitingMessages.length - 1));
+  return candidateIndex >= currentIndex ? candidateIndex + 1 : candidateIndex;
+}
 
 function downloadFile(file: ScreenplayExportFile) {
   const contents =
@@ -1416,6 +1425,28 @@ function downloadFile(file: ScreenplayExportFile) {
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(url);
+}
+
+function draftExportMenuPosition(button: HTMLButtonElement | null, menu: HTMLDivElement | null) {
+  if (!button) return null;
+
+  const viewportPadding = 12;
+  const gap = 8;
+  const minimumMenuWidth = 220;
+  const rect = button.getBoundingClientRect();
+  const menuWidth = Math.max(menu?.offsetWidth ?? minimumMenuWidth, minimumMenuWidth);
+  const menuHeight = menu?.offsetHeight ?? 0;
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+  const left = Math.max(viewportPadding, Math.min(rect.right - menuWidth, viewportWidth - menuWidth - viewportPadding));
+  const belowTop = rect.bottom + gap;
+  const aboveTop = rect.top - gap - menuHeight;
+  const top =
+    menuHeight > 0 && belowTop + menuHeight > viewportHeight - viewportPadding && aboveTop >= viewportPadding
+      ? aboveTop
+      : Math.min(belowTop, Math.max(viewportPadding, viewportHeight - menuHeight - viewportPadding));
+
+  return { left, top };
 }
 
 function generatedDraftBody(markdown: string) {
@@ -1441,11 +1472,14 @@ export function DraftsRoom() {
   const [editingTitle, setEditingTitle] = useState("");
   const [editingBody, setEditingBody] = useState("");
   const [status, setStatus] = useState("");
+  const [exportMenuDraftId, setExportMenuDraftId] = useState<string | null>(null);
+  const exportMenuBaseId = useId();
 
   function openDraft(draft: SavedDraft) {
     setSelectedDraftId(draft.id);
     setEditingTitle(draft.title);
     setEditingBody(draft.body);
+    setExportMenuDraftId(null);
     setStatus("");
   }
 
@@ -1465,6 +1499,7 @@ export function DraftsRoom() {
 
     const updatedDrafts = deleteSavedDraft(id);
     setDrafts(updatedDrafts);
+    if (exportMenuDraftId === id) setExportMenuDraftId(null);
     if (selectedDraftId === id) {
       setSelectedDraftId(null);
       setEditingBody("");
@@ -1473,10 +1508,18 @@ export function DraftsRoom() {
     setStatus("Draft deleted.");
   }
 
+  function exportDraft(draft: SavedDraft, format: ScreenplayExportFormatId) {
+    downloadFile(buildSavedDraftExportFile(draft, format));
+    const formatLabel = screenplayExportFormats.find((option) => option.id === format)?.label ?? "selected format";
+    setExportMenuDraftId(null);
+    setStatus(`Exported ${draft.title} as ${formatLabel}.`);
+  }
+
   function closeDraft() {
     setSelectedDraftId(null);
     setEditingBody("");
     setEditingTitle("");
+    setExportMenuDraftId(null);
     setStatus("");
   }
 
@@ -1521,22 +1564,57 @@ export function DraftsRoom() {
       ) : (
         <div className={styles.draftListPanel}>
           {drafts.length > 0 ? (
-            drafts.map((draft) => (
-              <article className={styles.draftListItem} key={draft.id}>
-                <button
-                  aria-label={`Edit ${draft.title}`}
-                  className={styles.draftTitleButton}
-                  onClick={() => openDraft(draft)}
-                  type="button"
-                >
-                  <span>Edit {draft.title}</span>
-                  <small>Saved {new Date(draft.updatedAt).toLocaleString()}</small>
-                </button>
-                <button className={styles.draftDeleteButton} onClick={() => deleteDraft(draft.id)} type="button">
-                  Delete {draft.title}
-                </button>
-              </article>
-            ))
+            drafts.map((draft) => {
+              const exportMenuId = `${exportMenuBaseId}-${draft.id}`;
+              const exportMenuOpen = exportMenuDraftId === draft.id;
+
+              return (
+                <article className={styles.draftListItem} key={draft.id}>
+                  <button
+                    aria-label={`Edit ${draft.title}`}
+                    className={styles.draftTitleButton}
+                    onClick={() => openDraft(draft)}
+                    type="button"
+                  >
+                    <span>Edit {draft.title}</span>
+                    <small>Saved {new Date(draft.updatedAt).toLocaleString()}</small>
+                  </button>
+                  <div className={styles.draftListActions}>
+                    <div className={styles.draftExportMenu}>
+                      <button
+                        aria-label={`Export ${draft.title}`}
+                        aria-controls={exportMenuId}
+                        aria-expanded={exportMenuOpen}
+                        aria-haspopup="menu"
+                        className={styles.draftExportButton}
+                        onClick={() => setExportMenuDraftId((currentId) => (currentId === draft.id ? null : draft.id))}
+                        type="button"
+                      >
+                        Export
+                      </button>
+                      {exportMenuOpen ? (
+                        <div className={styles.draftExportChoices} id={exportMenuId}>
+                          {screenplayExportFormats.map((format) => (
+                            <button
+                              aria-label={`Export ${draft.title} as ${format.label}`}
+                              className={styles.settingsAction}
+                              key={format.id}
+                              onClick={() => exportDraft(draft, format.id)}
+                              type="button"
+                            >
+                              Export {format.label}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                    <button className={styles.draftDeleteButton} onClick={() => deleteDraft(draft.id)} type="button">
+                      Delete {draft.title}
+                    </button>
+                  </div>
+                </article>
+              );
+            })
           ) : (
             <p className={styles.nudge}>No saved drafts yet. Save one from Create the Script when a draft earns its keep.</p>
           )}
@@ -1560,27 +1638,81 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
   }, [project.answers.genre, project.rooms]);
   const [gateState, setGateState] = useState<CreateScriptGateState>({ status: "idle" });
   const [writingStyle, setWritingStyle] = useState(defaultWritingStyle);
+  const draftContext = useMemo(() => buildDraftContextMarkdown(project.rooms), [project.rooms]);
+  const targetPages = useMemo(
+    () =>
+      numberParameter(project.rooms["script-parameters"] ?? "", "Target page count", 0) ||
+      numberParameter(project.rooms["script-parameters"] ?? "", "Exact page count", 100),
+    [project.rooms],
+  );
+  const director = useDraftDirector(draftContext, writingStyle, targetPages);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [exportMenuPosition, setExportMenuPosition] = useState<{ left: number; top: number } | null>(null);
   const [selectedDraftExportFormat, setSelectedDraftExportFormat] = useState<ScreenplayExportFormatId | null>(null);
   const [saveStatus, setSaveStatus] = useState("");
   const [savedDraftConfirmation, setSavedDraftConfirmation] = useState<SavedDraft | null>(null);
+  const savedStitchedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!director.stitched || savedStitchedRef.current === director.stitched) return;
+    savedStitchedRef.current = director.stitched;
+    const savedDraft = saveNewDraft(director.stitched);
+    onMarkdownChange(`# Create the Script Room\n\n## Generated screenplay draft\n${director.stitched}\n`);
+    setSavedDraftConfirmation(savedDraft);
+  }, [director.stitched, onMarkdownChange]);
   const [draftWaitingMessageIndex, setDraftWaitingMessageIndex] = useState(0);
+  const exportMenuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const exportMenuRef = useRef<HTMLDivElement | null>(null);
   const writingStyleId = useId();
   const exportMenuId = useId();
   const draftBody = generatedDraftBody(markdown);
   const hasDraft = draftBody.length > 0;
   const isDrafting = gateState.status === "drafting";
   const draftWaitingMessage = draftWaitingMessages[draftWaitingMessageIndex] ?? draftWaitingMessages[0];
+  const exportMenuStyle = exportMenuPosition
+    ? ({
+        "--script-export-menu-left": `${exportMenuPosition.left}px`,
+        "--script-export-menu-top": `${exportMenuPosition.top}px`,
+      } as CSSProperties)
+    : undefined;
 
   useEffect(() => {
     if (!isDrafting) return;
 
     const interval = window.setInterval(() => {
-      setDraftWaitingMessageIndex((currentIndex) => (currentIndex + 1) % draftWaitingMessages.length);
-    }, 5000);
+      setDraftWaitingMessageIndex((currentIndex) => randomDraftWaitingMessageIndex(currentIndex));
+    }, draftWaitingMessageDelayMs);
 
     return () => window.clearInterval(interval);
   }, [isDrafting]);
+
+  useEffect(() => {
+    if (!exportMenuOpen) return;
+
+    function syncExportMenuPosition() {
+      setExportMenuPosition(draftExportMenuPosition(exportMenuButtonRef.current, exportMenuRef.current));
+    }
+
+    const animationFrame = window.requestAnimationFrame(syncExportMenuPosition);
+    window.addEventListener("resize", syncExportMenuPosition);
+    window.addEventListener("scroll", syncExportMenuPosition, true);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.removeEventListener("resize", syncExportMenuPosition);
+      window.removeEventListener("scroll", syncExportMenuPosition, true);
+    };
+  }, [exportMenuOpen]);
+
+  function toggleExportMenu() {
+    if (exportMenuOpen) {
+      setExportMenuOpen(false);
+      return;
+    }
+
+    setExportMenuPosition(draftExportMenuPosition(exportMenuButtonRef.current, null));
+    setExportMenuOpen(true);
+  }
 
   async function requestDraft() {
     if (!readiness.ready) {
@@ -1692,6 +1824,32 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
     setExportMenuOpen(false);
   }
 
+  const exportChoices =
+    exportMenuOpen && exportMenuPosition && typeof document !== "undefined"
+      ? createPortal(
+          <div className={styles.scriptExportChoices} id={exportMenuId} ref={exportMenuRef} style={exportMenuStyle}>
+            <button
+              className={`${styles.settingsAction} ${styles.settingsAllAction}`}
+              onClick={exportAllSavedDrafts}
+              type="button"
+            >
+              Export all drafts
+            </button>
+            {screenplayExportFormats.map((format) => (
+              <button
+                className={styles.settingsAction}
+                key={format.id}
+                onClick={() => exportDraft(format.id)}
+                type="button"
+              >
+                Export {format.label}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )
+      : null;
+
   return (
     <section aria-label="Create the Script draft gate" className={styles.scriptGatePanel}>
       <div aria-label="Huge Create the Script goblin" className={styles.scriptGateGoblin} role="img">
@@ -1738,9 +1896,21 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
             </span>
           ) : null}
         </label>
+        {readiness.ready ? (
+          <FullScriptDirector
+            run={director.run}
+            statusLine={director.statusLine}
+            error={director.error}
+            stitched={director.stitched}
+            onStart={director.start}
+            onResume={director.resume}
+            onStop={director.stop}
+            onReset={director.reset}
+          />
+        ) : null}
         <button
           aria-label={isDrafting ? `${draftWaitingMessage}...` : undefined}
-          className={`${styles.primaryButton} ${styles.goblinDraftButton}`}
+          className={`${styles.secondaryButton} ${styles.goblinDraftButton}`}
           disabled={isDrafting}
           onClick={requestDraft}
           type="button"
@@ -1755,7 +1925,7 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
               </span>
             </>
           ) : (
-            "Please Oh Mighty Goblin. Write a draft."
+            "Quick sample"
           )}
         </button>
       </div>
@@ -1812,33 +1982,14 @@ export function CreateScriptRoom({ markdown, onMarkdownChange, project }: Create
                 aria-expanded={exportMenuOpen}
                 aria-haspopup="menu"
                 className={styles.secondaryButton}
-                onClick={() => setExportMenuOpen((current) => !current)}
+                onClick={toggleExportMenu}
+                ref={exportMenuButtonRef}
                 type="button"
               >
                 Export draft
               </button>
-              {exportMenuOpen ? (
-                <div className={styles.scriptExportChoices} id={exportMenuId}>
-                  <button
-                    className={`${styles.settingsAction} ${styles.settingsAllAction}`}
-                    onClick={exportAllSavedDrafts}
-                    type="button"
-                  >
-                    Export all drafts
-                  </button>
-                  {screenplayExportFormats.map((format) => (
-                    <button
-                      className={styles.settingsAction}
-                      key={format.id}
-                      onClick={() => exportDraft(format.id)}
-                      type="button"
-                    >
-                      Export {format.label}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
             </div>
+            {exportChoices}
           </div>
           {saveStatus ? (
             <small aria-live="polite" className={styles.scriptDraftStatus}>
