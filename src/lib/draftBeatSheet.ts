@@ -11,21 +11,22 @@ export type UnifiedBeatSheet = Beat[];
 export type PlantedSetup = { beatIndex: number; note: string };
 
 const BEAT_HEADER = /^BEAT\s+\d+\s*\|\s*PAGES:\s*(\d+)\s*\|\s*TITLE:\s*(.+)$/i;
-const INTENT_LINE = /^INTENT:\s*(.*)$/i;
+const INTENT_LINE = /^INTENT:\s*(.+)$/i;
 
 export function parseBeatSheet(raw: string): UnifiedBeatSheet {
-  const lines = raw.replace(/\r\n/g, "\n").split("\n");
+  const lines = raw.replace(/\r\n|\r/g, "\n").split("\n");
   const beats: UnifiedBeatSheet = [];
   let current: Beat | null = null;
 
   for (const line of lines) {
     const header = BEAT_HEADER.exec(line.trim());
     if (header) {
+      const [, rawPages, rawTitle] = header;
       if (current) beats.push(current);
       current = {
         index: beats.length + 1,
-        pageBudget: Number.parseInt(header[1], 10),
-        title: header[2].trim(),
+        pageBudget: Number.parseInt(rawPages, 10),
+        title: rawTitle.trim(),
         intent: "",
         setups: [],
       };

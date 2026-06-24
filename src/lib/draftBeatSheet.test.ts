@@ -33,8 +33,9 @@ describe("parseBeatSheet", () => {
       "INTENT: Something happens.",
     ].join("\n");
 
-    expect(parseBeatSheet(raw)).toHaveLength(1);
-    expect(parseBeatSheet(raw)[0].index).toBe(1);
+    const sheet = parseBeatSheet(raw);
+    expect(sheet).toHaveLength(1);
+    expect(sheet[0].index).toBe(1);
   });
 
   it("renumbers indices sequentially even if the model misnumbers", () => {
@@ -56,6 +57,7 @@ describe("mergeSetups", () => {
   it("ignores setups whose beat index is out of range", () => {
     const sheet = parseBeatSheet("BEAT 1 | PAGES: 3 | TITLE: A\nINTENT: x");
     const next = mergeSetups(sheet, [{ beatIndex: 99, note: "nope" }]);
+    expect(next).toHaveLength(1);
     expect(next[0].setups).toEqual([]);
   });
 });
@@ -77,5 +79,11 @@ describe("renderBeatSheet", () => {
     expect(text).toContain("BEAT 1 | PAGES: 3 | TITLE: A");
     expect(text).toContain("INTENT: x");
     expect(text).toContain("PLANTED: gun on the mantel");
+  });
+
+  it("produces output that re-parses into an equivalent sheet", () => {
+    const sheet = parseBeatSheet("BEAT 1 | PAGES: 3 | TITLE: A\nINTENT: x\n---\nBEAT 2 | PAGES: 5 | TITLE: B\nINTENT: y");
+    const roundTripped = parseBeatSheet(renderBeatSheet(sheet));
+    expect(roundTripped).toEqual(sheet);
   });
 });
