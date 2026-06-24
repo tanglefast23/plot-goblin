@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { cowriterRequestHeaders } from "@/lib/cowriterAccess";
 import { parseBeatSheet, renderBeatSheet } from "@/lib/draftBeatSheet";
 import { parseChunkResult } from "@/lib/draftChunk";
@@ -40,14 +40,14 @@ export type DraftDirectorState = {
 };
 
 export function useDraftDirector(roomExport: string, writingStyle: string, targetPages: number) {
-  const [state, setState] = useState<DraftDirectorState>({ run: null, statusLine: "", error: null, stitched: null });
+  const [state, setState] = useState<DraftDirectorState>(() => ({
+    run: loadDraftRun(),
+    statusLine: "",
+    error: null,
+    stitched: null,
+  }));
   const cancelled = useRef(false);
   const running = useRef(false);
-
-  useEffect(() => {
-    const existing = loadDraftRun();
-    if (existing) setState((prev) => ({ ...prev, run: existing }));
-  }, []);
 
   const persist = useCallback((run: DraftRun, patch: Partial<DraftDirectorState> = {}) => {
     saveDraftRun(run);
