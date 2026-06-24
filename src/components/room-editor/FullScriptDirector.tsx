@@ -1,11 +1,5 @@
-import { useEffect, useState } from "react";
 import type { DraftRun } from "@/lib/draftRunStorage";
 import styles from "@/app/workspace.module.css";
-import {
-  draftWaitingMessageDelayMs,
-  draftWaitingMessages,
-  randomDraftWaitingMessageIndex,
-} from "./RoomEditorSupport";
 
 type Props = {
   run: DraftRun | null;
@@ -22,46 +16,12 @@ export function FullScriptDirector({ run, statusLine, error, stitched, onStart, 
   const planning = !run && statusLine === "Planning the whole movie…";
   const running = planning || run?.status === "running" || run?.status === "planning";
   const paused = run?.status === "paused";
-  const [draftWaitingMessageIndex, setDraftWaitingMessageIndex] = useState(0);
-  const draftWaitingMessage = draftWaitingMessages[draftWaitingMessageIndex] ?? draftWaitingMessages[0];
-
-  useEffect(() => {
-    if (!planning) return;
-
-    const interval = window.setInterval(() => {
-      setDraftWaitingMessageIndex((currentIndex) => randomDraftWaitingMessageIndex(currentIndex));
-    }, draftWaitingMessageDelayMs);
-
-    return () => window.clearInterval(interval);
-  }, [planning]);
-
-  function startFullScript() {
-    setDraftWaitingMessageIndex(0);
-    onStart();
-  }
 
   return (
     <section aria-label="Full script director" className={styles.scriptGatePanel}>
-      {!run && (
-        <button
-          aria-label={planning ? `${draftWaitingMessage}...` : undefined}
-          className={`${styles.primaryButton} ${styles.goblinDraftButton}`}
-          disabled={planning}
-          type="button"
-          onClick={startFullScript}
-        >
-          {planning ? (
-            <>
-              <span>{draftWaitingMessage}</span>
-              <span aria-label="Animated writing ellipsis" className={styles.writingEllipsis} role="img">
-                <span aria-hidden="true">.</span>
-                <span aria-hidden="true">.</span>
-                <span aria-hidden="true">.</span>
-              </span>
-            </>
-          ) : (
-            "Write the full script"
-          )}
+      {!run && !planning && (
+        <button className={`${styles.primaryButton} ${styles.goblinDraftButton}`} type="button" onClick={onStart}>
+          Write the full script
         </button>
       )}
 

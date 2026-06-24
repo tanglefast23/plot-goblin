@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { isCowriterRequestForTest } from "./route";
+import { hermesCowriterTimeoutsForTest, isCowriterRequestForTest } from "./route";
 import { GET, POST } from "./route";
 
 const originalEnv = {
@@ -242,5 +242,12 @@ describe("cowriter request validation", () => {
 
   it("rejects an unknown mode", () => {
     expect(isCowriterRequestForTest({ mode: "nonsense" })).toBe(false);
+  });
+});
+
+describe("Hermes co-writer timeouts", () => {
+  it("gives screenplay drafting requests more than two minutes to finish", () => {
+    expect(hermesCowriterTimeoutsForTest.localHermesMs).toBeGreaterThanOrEqual(240_000);
+    expect(hermesCowriterTimeoutsForTest.remoteHermesBridgeMs).toBeGreaterThanOrEqual(250_000);
   });
 });

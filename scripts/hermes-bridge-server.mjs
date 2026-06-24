@@ -11,6 +11,7 @@ const execFileAsync = promisify(execFile);
 const port = Number.parseInt(process.env.PORT || process.env.PLOT_GOBLIN_HERMES_BRIDGE_PORT || "8787", 10);
 const host = process.env.PLOT_GOBLIN_HERMES_BRIDGE_HOST || "127.0.0.1";
 const maxPromptChars = Number.parseInt(process.env.PLOT_GOBLIN_HERMES_BRIDGE_MAX_PROMPT_CHARS || "24000", 10);
+const hermesCommandTimeoutMs = Number.parseInt(process.env.PLOT_GOBLIN_HERMES_COMMAND_TIMEOUT_MS || "240000", 10);
 const rateLimit = Number.parseInt(process.env.PLOT_GOBLIN_HERMES_BRIDGE_RATE_LIMIT_PER_MINUTE || "8", 10);
 const tokenFile = process.env.PLOT_GOBLIN_HERMES_BRIDGE_TOKEN_FILE || join(homedir(), ".hermes", "secrets", "plot-goblin-hermes-bridge-token");
 const buckets = new Map();
@@ -86,7 +87,7 @@ function checkLimit(id) {
 
 async function runHermes(prompt) {
   const { stdout } = await execFileAsync("hermes", ["chat", "-Q", "--source", "plot-goblin-public-bridge", "-q", prompt], {
-    timeout: 120_000,
+    timeout: Number.isFinite(hermesCommandTimeoutMs) ? hermesCommandTimeoutMs : 240_000,
     maxBuffer: 1024 * 1024,
     env: process.env,
   });

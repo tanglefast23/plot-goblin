@@ -2192,14 +2192,14 @@ Lena sees a frame that should not exist.
     });
 
     expect(screen.getByRole("img", { name: "Mini goblin running while the draft is written" })).toBeTruthy();
-    expect(screen.getAllByRole("button", { name: "Goblin is writing..." })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "Goblin is writing..." })).toHaveLength(1);
 
     const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.99);
     act(() => {
       vi.advanceTimersByTime(draftWaitingMessageDelayMs);
     });
 
-    expect(screen.getAllByRole("button", { name: "Emergency semicolon meeting in progress..." })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "Emergency semicolon meeting in progress..." })).toHaveLength(1);
     expect(randomSpy).toHaveBeenCalled();
   });
 

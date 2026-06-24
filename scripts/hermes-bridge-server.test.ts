@@ -4,6 +4,7 @@ import { chmod, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createServer } from "node:net";
+import { readFile } from "node:fs/promises";
 import { afterEach, describe, expect, it } from "vitest";
 
 let bridgeProcess: ChildProcess | null = null;
@@ -98,5 +99,11 @@ describe("Hermes bridge server", () => {
     expect(data.error).toContain("Hermes command failed");
     expect(data.error).not.toContain("You are Plot Goblin");
     expect(data.error).not.toContain("-q");
+  });
+
+  it("gives Hermes more than two minutes to generate screenplay drafts by default", async () => {
+    const script = await readFile("scripts/hermes-bridge-server.mjs", "utf8");
+
+    expect(script).toContain('PLOT_GOBLIN_HERMES_COMMAND_TIMEOUT_MS || "240000"');
   });
 });

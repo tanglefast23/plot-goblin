@@ -13,6 +13,8 @@ const maxRequestBodyBytes = 64_000;
 const maxPromptSourceChars = 36_000;
 const maxSerializedContextChars = 12_000;
 const maxLabelChars = 160;
+const localHermesTimeoutMs = 240_000;
+const remoteHermesBridgeTimeoutMs = 250_000;
 
 function jsonResponse(body: unknown, status = 200, headers?: HeadersInit) {
   return Response.json(body, { status, headers });
@@ -112,7 +114,7 @@ async function callLocalHermes(prompt: string) {
     "-q",
     prompt,
   ], {
-    timeout: 120_000,
+    timeout: localHermesTimeoutMs,
     maxBuffer: 1024 * 1024,
     env: process.env,
   });
@@ -135,7 +137,7 @@ async function callRemoteHermesBridge(prompt: string) {
       "x-hermes-bridge-token": bridgeToken,
     },
     body: JSON.stringify({ prompt }),
-    signal: AbortSignal.timeout(130_000),
+    signal: AbortSignal.timeout(remoteHermesBridgeTimeoutMs),
   });
 
   const data = (await response.json().catch(() => ({}))) as { output?: string; error?: string };
@@ -209,6 +211,10 @@ export async function GET(request: Request) {
 }
 
 export const isCowriterRequestForTest = isCowriterRequest;
+export const hermesCowriterTimeoutsForTest = {
+  localHermesMs: localHermesTimeoutMs,
+  remoteHermesBridgeMs: remoteHermesBridgeTimeoutMs,
+};
 
 export async function POST(request: Request) {
   const contentLength = Number(request.headers.get("content-length") ?? 0);
