@@ -41,18 +41,31 @@ describe("advanceDraft", () => {
       pages: "PAGES 1-2",
       summary: "Mara escapes.",
       setups: [{ beatIndex: 3, note: "keycard pocketed" }],
+      ledger: {
+        people: [{ name: "Mara Vale", note: "protagonist", source: "generated" }],
+        objects: [],
+        locations: [],
+        events: [],
+        warnings: [],
+      },
     });
 
     expect(next.completedBeats).toEqual([{ indices: [1, 2], pages: "PAGES 1-2", summary: "Mara escapes." }]);
     expect(next.runningSummary).toContain("Mara escapes.");
     expect(next.beatSheet[2].setups).toEqual(["keycard pocketed"]);
+    expect(next.continuityLedger?.people).toEqual([{ name: "Mara Vale", note: "protagonist", source: "generated" }]);
     expect(next.nextBeatIndex).toBe(3);
     expect(next.status).toBe("running");
   });
 
   it("marks the run done when the last beat is consumed", () => {
     const run = { ...baseRun(), nextBeatIndex: 3 };
-    const next = advanceDraft(run, [run.beatSheet[2]], { pages: "PAGES 3", summary: "End.", setups: [] });
+    const next = advanceDraft(run, [run.beatSheet[2]], {
+      pages: "PAGES 3",
+      summary: "End.",
+      setups: [],
+      ledger: { people: [], objects: [], locations: [], events: [], warnings: [] },
+    });
     expect(next.nextBeatIndex).toBe(4);
     expect(next.status).toBe("done");
   });
@@ -62,8 +75,14 @@ describe("advanceDraft", () => {
       pages: "PAGES 1-2",
       summary: "Mara escapes.",
       setups: [],
+      ledger: { people: [], objects: [], locations: [], events: [], warnings: [] },
     });
-    const second = advanceDraft(first, [first.beatSheet[2]], { pages: "PAGES 3", summary: "Mara wins.", setups: [] });
+    const second = advanceDraft(first, [first.beatSheet[2]], {
+      pages: "PAGES 3",
+      summary: "Mara wins.",
+      setups: [],
+      ledger: { people: [], objects: [], locations: [], events: [], warnings: [] },
+    });
     expect(second.runningSummary).toBe("Mara escapes.\nMara wins.");
   });
 });

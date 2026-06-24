@@ -360,13 +360,32 @@ ${request.markdown ?? ""}`;
 
 Task: Write the actual screenplay pages for ${beatLabel} of THIS specific script, using the living beat sheet and story-so-far below. Honor every PLANTED note on these and earlier beats, and set up anything later beats will need. Hit the PAGES budget for these beats. Pick up seamlessly from the previous pages' tail.
 
-Output EXACTLY these three labeled sections, in this order, after the final marker:
+Continuity ledger rules:
+- Use canonical names and facts from the Continuity ledger (locked facts) section when it is present.
+- Do not rename ledgered people, recurring objects, locations, or events.
+- Keep dates and relative timing consistent with the ledger.
+- Do not duplicate a ledgered event as a new discovery; callback is fine, restaging the discovery is not.
+- If you introduce a new named person, recurring object, location, dated event, or timeline fact, add it to PLOT_GOBLIN_LEDGER.
+- If you notice a possible conflict, report it under WARNINGS instead of silently choosing a new version.
+
+Output EXACTLY these four labeled sections, in this order, after the final marker:
 PLOT_GOBLIN_PAGES:
 <standard screenplay pages: scene headings, action, character cues, dialogue>
 PLOT_GOBLIN_SUMMARY:
 <2-3 sentences recapping what happened in these beats>
 PLOT_GOBLIN_SETUPS:
 <zero or more lines, each "- beat <number> | <thing planted that pays off in that beat>"; write the single word NONE if nothing was planted>
+PLOT_GOBLIN_LEDGER:
+PEOPLE:
+- <new or reinforced canonical person name | role/identity>; write NONE if no additions
+OBJECTS:
+- <new or reinforced recurring object name | identity>; write NONE if no additions
+LOCATIONS:
+- <new or reinforced location name | identity>; write NONE if no additions
+EVENTS:
+- <new or reinforced event/date/timeline fact | canonical timing>; write NONE if no additions
+WARNINGS:
+- <possible conflict or duplicate avoided>; write NONE if no warnings
 
 Living beat sheet and story context:
 ${chunkContext}`;

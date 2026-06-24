@@ -51,6 +51,25 @@ describe("assembleChunkContext", () => {
     expect(out).not.toContain("Long source room export");
   });
 
+  it("includes the continuity ledger as locked facts", () => {
+    const out = assembleChunkContext({
+      ...base,
+      continuityLedger: {
+        people: [{ name: "Joe Kaplan", note: "protagonist", source: "seeded" }],
+        objects: [{ name: "Brenda", note: "pitching machine", source: "generated" }],
+        locations: [],
+        events: [{ name: "River Dogs open tryout", note: "this Saturday", source: "generated" }],
+        warnings: ["Possible duplicate tryout flyer discovery avoided."],
+      },
+    });
+
+    expect(out).toContain("## Continuity ledger (locked facts)");
+    expect(out).toContain("- Joe Kaplan | protagonist");
+    expect(out).toContain("- Brenda | pitching machine");
+    expect(out).toContain("- River Dogs open tryout | this Saturday");
+    expect(out).toContain("- Possible duplicate tryout flyer discovery avoided.");
+  });
+
   it("drops the running summary first when over budget, keeping the beat sheet and current beats", () => {
     const huge = "x".repeat(40_000);
     const out = assembleChunkContext({ ...base, runningSummary: huge, maxChars: 5_000 });

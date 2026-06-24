@@ -1,4 +1,5 @@
 import type { UnifiedBeatSheet } from "./draftBeatSheet";
+import type { ContinuityLedger } from "./draftContinuityLedger";
 
 export const DRAFT_RUN_STORAGE_KEY = "plot-goblin-draft-run";
 
@@ -8,6 +9,7 @@ export type DraftRunStatus = "planning" | "running" | "paused" | "done" | "error
 export type DraftRun = {
   beatSheet: UnifiedBeatSheet;
   completedBeats: CompletedBeat[];
+  continuityLedger?: ContinuityLedger;
   runningSummary: string;
   nextBeatIndex: number;
   storyBrief?: string;

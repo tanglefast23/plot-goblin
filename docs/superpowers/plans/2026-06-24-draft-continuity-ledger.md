@@ -16,14 +16,14 @@
 - Create: `src/lib/draftContinuityLedger.ts`
 - Test: `src/lib/draftContinuityLedger.test.ts`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Add tests for parsing a ledger block, rendering it back into prompt text, merging generated entries, preserving seeded entries, and warning on same-first-name/same-role conflicts.
 
 Run: `npx vitest run src/lib/draftContinuityLedger.test.ts`
 Expected: FAIL because `src/lib/draftContinuityLedger.ts` does not exist.
 
-- [ ] **Step 2: Implement minimal ledger code**
+- [x] **Step 2: Implement minimal ledger code**
 
 Create a module with:
 
@@ -45,7 +45,7 @@ export function seedContinuityLedger(roomExport: string): ContinuityLedger;
 
 Use exact normalized-name matching plus a same-first-name/same-role warning for generated people that conflict with seeded people.
 
-- [ ] **Step 3: Verify tests pass**
+- [x] **Step 3: Verify tests pass**
 
 Run: `npx vitest run src/lib/draftContinuityLedger.test.ts`
 Expected: PASS.
@@ -56,14 +56,14 @@ Expected: PASS.
 - Modify: `src/lib/draftChunk.ts`
 - Test: `src/lib/draftChunk.test.ts`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Add a chunk parser test with `PLOT_GOBLIN_LEDGER` containing `PEOPLE`, `OBJECTS`, `LOCATIONS`, `EVENTS`, and `WARNINGS`.
 
 Run: `npx vitest run src/lib/draftChunk.test.ts`
 Expected: FAIL because `ChunkResult` has no `ledger` property.
 
-- [ ] **Step 2: Implement parser extension**
+- [x] **Step 2: Implement parser extension**
 
 Import the ledger parser, add `ledger: ContinuityLedger` to `ChunkResult`, and parse the optional section with:
 
@@ -74,7 +74,7 @@ return { pages, summary, setups: parseSetups(setupsBlock), ledger: parseContinui
 
 Update section boundaries so `PLOT_GOBLIN_SETUPS` stops before `PLOT_GOBLIN_LEDGER`.
 
-- [ ] **Step 3: Verify tests pass**
+- [x] **Step 3: Verify tests pass**
 
 Run: `npx vitest run src/lib/draftChunk.test.ts`
 Expected: PASS.
@@ -88,14 +88,14 @@ Expected: PASS.
 - Test: `src/lib/draftDirector.test.ts`
 - Test: `src/lib/draftContinuity.test.ts`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Add a draft director test proving `advanceDraft` merges a chunk ledger into `run.continuityLedger`. Add a continuity context test proving rendered ledger text appears in assembled chunk context.
 
 Run: `npx vitest run src/lib/draftDirector.test.ts src/lib/draftContinuity.test.ts`
 Expected: FAIL because runs do not store ledgers and context assembly has no ledger section.
 
-- [ ] **Step 2: Implement run/context changes**
+- [x] **Step 2: Implement run/context changes**
 
 Add `continuityLedger?: ContinuityLedger` to `DraftRun`.
 Update `advanceDraft` to merge `chunk.ledger`.
@@ -104,7 +104,7 @@ Include `## Continuity ledger (locked facts)` in `assembleChunkContext`.
 Seed a new run with `seedContinuityLedger(roomExport)` in `useDraftDirector`.
 Pass `run.continuityLedger` into `assembleChunkContext`.
 
-- [ ] **Step 3: Verify tests pass**
+- [x] **Step 3: Verify tests pass**
 
 Run: `npx vitest run src/lib/draftDirector.test.ts src/lib/draftContinuity.test.ts`
 Expected: PASS.
@@ -115,14 +115,14 @@ Expected: PASS.
 - Modify: `src/lib/hermesCowriter.ts`
 - Test: `src/lib/hermesCowriter.test.ts`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Add a chunk prompt test proving it asks for `PLOT_GOBLIN_LEDGER`, prohibits renaming names/objects/locations/events, preserves dates/timing, and avoids duplicate event discoveries.
 
 Run: `npx vitest run src/lib/hermesCowriter.test.ts`
 Expected: FAIL because current chunk prompt only requests pages, summary, and setups.
 
-- [ ] **Step 2: Implement prompt text**
+- [x] **Step 2: Implement prompt text**
 
 Change chunk output instructions to require four sections in order:
 
@@ -135,7 +135,7 @@ PLOT_GOBLIN_LEDGER:
 
 Add explicit rules to preserve canonical ledger facts and report new people, objects, locations, events, dates, and warnings.
 
-- [ ] **Step 3: Verify tests pass**
+- [x] **Step 3: Verify tests pass**
 
 Run: `npx vitest run src/lib/hermesCowriter.test.ts`
 Expected: PASS.
@@ -145,12 +145,12 @@ Expected: PASS.
 **Files:**
 - Verify only.
 
-- [ ] **Step 1: Run focused tests**
+- [x] **Step 1: Run focused tests**
 
 Run: `npx vitest run src/lib/draftContinuityLedger.test.ts src/lib/draftChunk.test.ts src/lib/draftDirector.test.ts src/lib/draftContinuity.test.ts src/lib/hermesCowriter.test.ts`
 Expected: PASS.
 
-- [ ] **Step 2: Run project verification**
+- [x] **Step 2: Run project verification**
 
 Run:
 

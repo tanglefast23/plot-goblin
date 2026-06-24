@@ -1,3 +1,5 @@
+import { renderContinuityLedger, type ContinuityLedger } from "./draftContinuityLedger";
+
 const WORDS_PER_PAGE = 250;
 const TRIMMED_MARKER = "\n[...trimmed to fit the public bridge]";
 
@@ -19,6 +21,7 @@ export type ChunkContextParams = {
   runningSummary: string;
   previousTail: string;
   roomExport: string;
+  continuityLedger?: ContinuityLedger;
   storyBrief?: string;
   maxChars: number;
 };
@@ -42,10 +45,14 @@ function compose(
   },
 ): string {
   const compactStoryContext = params.storyBrief?.trim();
+  const continuityLedger = params.continuityLedger
+    ? ["## Continuity ledger (locked facts)", renderContinuityLedger(params.continuityLedger), ""]
+    : [];
   const sections = [
     compactStoryContext ? "## Story brief (compressed room facts)" : "## Room export (facts: premise, characters, theme, parameters)",
     options.storyContext,
     "",
+    ...continuityLedger,
     "## Beats to write now",
     params.currentBeatsText,
     "",

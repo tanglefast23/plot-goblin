@@ -1,9 +1,11 @@
 import type { PlantedSetup } from "./draftBeatSheet";
+import { parseContinuityLedger, type ContinuityLedger } from "./draftContinuityLedger";
 
 export type ChunkResult = {
   pages: string;
   summary: string;
   setups: PlantedSetup[];
+  ledger: ContinuityLedger;
 };
 
 const SETUP_LINE = /^-\s*beat\s+(\d+)\s*\|\s*(.+)$/i;
@@ -34,10 +36,11 @@ function parseSetups(block: string | null): PlantedSetup[] {
 export function parseChunkResult(raw: string): ChunkResult | null {
   const normalized = raw.replace(/\r\n|\r/g, "\n");
   const pages = section(normalized, "PLOT_GOBLIN_PAGES:", ["PLOT_GOBLIN_SUMMARY:", "PLOT_GOBLIN_SETUPS:"]);
-  const summary = section(normalized, "PLOT_GOBLIN_SUMMARY:", ["PLOT_GOBLIN_SETUPS:"]);
-  const setupsBlock = section(normalized, "PLOT_GOBLIN_SETUPS:", []);
+  const summary = section(normalized, "PLOT_GOBLIN_SUMMARY:", ["PLOT_GOBLIN_SETUPS:", "PLOT_GOBLIN_LEDGER:"]);
+  const setupsBlock = section(normalized, "PLOT_GOBLIN_SETUPS:", ["PLOT_GOBLIN_LEDGER:"]);
+  const ledgerBlock = section(normalized, "PLOT_GOBLIN_LEDGER:", []);
 
   if (!pages || !summary) return null;
 
-  return { pages, summary, setups: parseSetups(setupsBlock) };
+  return { pages, summary, setups: parseSetups(setupsBlock), ledger: parseContinuityLedger(ledgerBlock) };
 }
