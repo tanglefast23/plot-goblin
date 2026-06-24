@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildExportMarkdown, buildScriptBase } from "@/lib/guidedSetup";
 import { ACCESS_KEY_STORAGE_KEY, ACCESS_MODE_STORAGE_KEY } from "@/lib/cowriterAccess";
+import { DRAFT_STORAGE_KEY } from "@/lib/draftStorage";
 import { PROJECT_STORAGE_KEY, saveProject } from "@/lib/projectStorage";
 import { WorkspaceShell } from "./WorkspaceShell";
 
@@ -25,6 +26,27 @@ afterEach(() => {
 });
 
 describe("WorkspaceShell", () => {
+  it("shows the local-save status beside the Plot Goblin brand", async () => {
+    window.localStorage.setItem(
+      PROJECT_STORAGE_KEY,
+      JSON.stringify({
+        ...buildScriptBase(completedSetupAnswers),
+        updatedAt: "2026-06-24T05:39:11.000Z",
+      }),
+    );
+
+    render(
+      <WorkspaceShell>
+        <p>Workspace content</p>
+      </WorkspaceShell>,
+    );
+
+    const brandStatus = await screen.findByLabelText("Plot Goblin save status");
+    expect(brandStatus.textContent).toContain("Plot Goblin");
+    expect(brandStatus.textContent).toContain("Saved locally");
+    expect(brandStatus.textContent).toContain("last update");
+  });
+
   it("shows the guided setup shortcut before a script has been started", async () => {
     render(
       <WorkspaceShell>
@@ -35,7 +57,7 @@ describe("WorkspaceShell", () => {
     expect(await screen.findByRole("link", { name: /guided setup/i })).toBeDefined();
   });
 
-  it("shows Home as a topbar button next to the rooms dropdown", async () => {
+  it("shows room links in the topbar and keeps Home as the far-right navigation button", async () => {
     render(
       <WorkspaceShell>
         <p>Workspace content</p>
@@ -43,8 +65,10 @@ describe("WorkspaceShell", () => {
     );
 
     const navigation = screen.getByRole("navigation", { name: "Plot Goblin navigation" });
+    expect(within(navigation).getByRole("link", { name: "Premise" }).getAttribute("href")).toBe("/rooms/premise");
     expect((await within(navigation).findByRole("link", { name: "Home" })).getAttribute("href")).toBe("/rooms");
-    expect(within(navigation).getByRole("button", { name: "Rooms" })).toBeTruthy();
+    expect(within(navigation).queryByRole("button", { name: "Rooms" })).toBeNull();
+    expect(navigation.lastElementChild?.textContent).toBe("Home");
   });
 
   it("keeps the guided setup shortcut for an auto-created blank rooms project", async () => {
@@ -251,7 +275,26 @@ describe("WorkspaceShell", () => {
     expect(screen.getByText("Local AI access selected.")).toBeTruthy();
   });
 
-  it("opens screenplay export choices and downloads every format from the all option", async () => {
+  it("exports all saved drafts only after a screenplay format is selected", async () => {
+    window.localStorage.setItem(
+      DRAFT_STORAGE_KEY,
+      JSON.stringify([
+        {
+          body: "Title: Love, Cursed\n\nINT. WEDDING VENUE - DAY\nMilo raises his camera.",
+          createdAt: "2026-06-24T02:00:00.000Z",
+          id: "draft-1",
+          title: "Love, Cursed",
+          updatedAt: "2026-06-24T02:00:00.000Z",
+        },
+        {
+          body: "Title: Moon Murder\n\nEXT. LUNAR RIDGE - NIGHT\nBootprints cross the dust.",
+          createdAt: "2026-06-24T03:00:00.000Z",
+          id: "draft-2",
+          title: "Moon Murder",
+          updatedAt: "2026-06-24T03:00:00.000Z",
+        },
+      ]),
+    );
     render(
       <WorkspaceShell>
         <p>Workspace content</p>
@@ -265,7 +308,8 @@ describe("WorkspaceShell", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Export screenplay" }));
 
-    expect(await screen.findByRole("button", { name: "Export all formats" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "Export all drafts" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Export all formats" })).toBeNull();
     expect(screen.getByRole("button", { name: "Export Fountain" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Export Final Draft" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Export PDF" })).toBeTruthy();
@@ -276,11 +320,17 @@ describe("WorkspaceShell", () => {
     const createObjectUrlSpy = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:plot-goblin");
     const revokeObjectUrlSpy = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
 
-    fireEvent.click(screen.getByRole("button", { name: "Export all formats" }));
+    fireEvent.click(screen.getByRole("button", { name: "Export all drafts" }));
 
-    expect(clickSpy).toHaveBeenCalledTimes(5);
-    expect(createObjectUrlSpy).toHaveBeenCalledTimes(5);
-    expect(revokeObjectUrlSpy).toHaveBeenCalledTimes(5);
+    expect(clickSpy).not.toHaveBeenCalled();
+    expect(screen.getByText("Select a format before exporting all drafts.")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Export Fountain" }));
+    fireEvent.click(screen.getByRole("button", { name: "Export all drafts" }));
+
+    expect(clickSpy).toHaveBeenCalledTimes(3);
+    expect(createObjectUrlSpy).toHaveBeenCalledTimes(3);
+    expect(revokeObjectUrlSpy).toHaveBeenCalledTimes(3);
   });
 
   it("imports an exported markdown bundle from topbar settings", async () => {

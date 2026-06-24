@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { buildScriptBase } from "./guidedSetup";
-import { ensureProject, PROJECT_STORAGE_KEY } from "./projectStorage";
+import { ensureProject, PROJECT_STORAGE_KEY, saveSetupProject } from "./projectStorage";
 
 afterEach(() => {
   window.localStorage.clear();
@@ -101,5 +101,30 @@ describe("project storage", () => {
     expect(migrated.rooms["script-parameters"]).toContain("Current genre: Comedy.");
     expect(persisted).toContain("create-script");
     expect(persisted).toContain("script-parameters");
+  });
+
+  it("saves rerun setup answers without replacing existing room writing", () => {
+    const project = buildScriptBase({
+      rawIdea: "Original baseball idea.",
+      genre: "Sports drama",
+      structurePreference: "Classic 3-act spine",
+    });
+    project.rooms.beats = "# Beats Room\n\n## Opening Image\nRafa tapes his glove with one hand.";
+    window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+
+    const saved = saveSetupProject({
+      rawIdea: "Updated baseball idea.",
+      genre: "Sports comedy",
+      audienceFeeling: "Hopeful",
+      structurePreference: "Loose beat map",
+    });
+
+    expect(saved.answers.rawIdea).toBe("Updated baseball idea.");
+    expect(saved.answers.genre).toBe("Sports comedy");
+    expect(saved.rooms.beats).toBe("# Beats Room\n\n## Opening Image\nRafa tapes his glove with one hand.");
+    expect(saved.rooms.premise).toBe(project.rooms.premise);
+    expect(JSON.parse(window.localStorage.getItem(PROJECT_STORAGE_KEY) ?? "{}").rooms.beats).toContain(
+      "Rafa tapes his glove with one hand.",
+    );
   });
 });

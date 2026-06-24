@@ -1,107 +1,11 @@
 .roomMenu {
-  position: relative;
   display: inline-flex;
-}
-
-.trigger {
-  display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-family: inherit;
-}
-
-.trigger::after {
-  width: 7px;
-  height: 7px;
-  border-right: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  margin-top: -4px;
-  content: "";
-  transform: rotate(45deg);
-  transition: transform 160ms ease;
-}
-
-.trigger[aria-expanded="true"]::after {
-  margin-top: 3px;
-  transform: rotate(225deg);
-}
-
-.panel {
-  position: absolute;
-  z-index: 40;
-  top: calc(100% + 10px);
-  left: 0;
-  width: min(78vw, 320px);
-  border: 1px solid rgb(var(--goblin-night-rgb) / 0.18);
-  border-radius: 8px;
-  padding: 10px;
-  background: rgb(var(--goblin-mist-rgb) / 0.96);
-  box-shadow: 0 18px 42px rgb(var(--goblin-night-rgb) / 0.16);
-}
-
-.roomMenu[data-align="end"] .panel {
-  right: 0;
-  left: auto;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .roomLink {
-  display: grid;
-  gap: 3px;
-  border-radius: 8px;
-  padding: 10px 12px;
-  color: var(--goblin-night);
-  text-decoration: none;
-}
-
-.roomList {
-  display: grid;
-  gap: 4px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.roomLink {
-  border: 1px solid transparent;
-  background: rgb(var(--goblin-mist-rgb) / 0.62);
-}
-
-.roomLink:hover,
-.roomLink:focus-visible {
-  border-color: rgb(var(--goblin-night-rgb) / 0.18);
-  background: rgb(var(--goblin-lichen-rgb) / 0.34);
-  outline: none;
-}
-
-.roomLink span {
-  font-size: 0.78rem;
-  font-weight: 950;
-  letter-spacing: 0.06em;
-  line-height: 1.12;
-  text-transform: uppercase;
-}
-
-.roomLink small {
-  color: rgb(var(--goblin-night-rgb) / 0.62);
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0;
-}
-
-.roomDisabled {
-  cursor: default;
-  opacity: 0.48;
-  filter: grayscale(1);
-}
-
-.roomDisabled:hover {
-  border-color: transparent;
-  background: rgb(var(--goblin-mist-rgb) / 0.62);
-}
-
-@media (max-width: 520px) {
-  .panel {
-    width: min(88vw, 320px);
-  }
+  white-space: nowrap;
 }
