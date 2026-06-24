@@ -1,5 +1,6 @@
 import type { Beat } from "./draftBeatSheet";
 import { mergeSetups } from "./draftBeatSheet";
+import { emptyContinuityLedger, mergeContinuityLedgers } from "./draftContinuityLedger";
 import type { ChunkResult } from "./draftChunk";
 import type { DraftRun } from "./draftRunStorage";
 
@@ -17,6 +18,7 @@ export function advanceDraft(run: DraftRun, beatsInChunk: Beat[], chunk: ChunkRe
     ...run,
     beatSheet: mergeSetups(run.beatSheet, chunk.setups),
     completedBeats: [...run.completedBeats, { indices, pages: chunk.pages, summary: chunk.summary }],
+    continuityLedger: mergeContinuityLedgers(run.continuityLedger ?? emptyContinuityLedger(), chunk.ledger),
     runningSummary: run.runningSummary ? `${run.runningSummary}\n${chunk.summary}` : chunk.summary,
     nextBeatIndex,
     status: finished ? "done" : "running",

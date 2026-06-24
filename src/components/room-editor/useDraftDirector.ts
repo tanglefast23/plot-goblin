@@ -15,6 +15,7 @@ import {
   stitchDraft,
   type CowriterCallResult,
 } from "@/lib/draftDirector";
+import { seedContinuityLedger } from "@/lib/draftContinuityLedger";
 import { clearDraftRun, loadDraftRun, saveDraftRun, type DraftRun } from "@/lib/draftRunStorage";
 
 const MAX_ATTEMPTS = 3;
@@ -75,6 +76,7 @@ export function useDraftDirector(roomExport: string, writingStyle: string, targe
           runningSummary: run.runningSummary,
           previousTail: lastPages.slice(-TAIL_CHARS),
           roomExport,
+          continuityLedger: run.continuityLedger,
           storyBrief: run.storyBrief,
           maxChars: DRAFT_CHUNK_CONTEXT_MAX_CHARS,
         });
@@ -134,6 +136,7 @@ export function useDraftDirector(roomExport: string, writingStyle: string, targe
       const run: DraftRun = {
         beatSheet,
         completedBeats: [],
+        continuityLedger: seedContinuityLedger(roomExport),
         runningSummary: "",
         nextBeatIndex: 1,
         storyBrief: parseStoryBrief(planResult),

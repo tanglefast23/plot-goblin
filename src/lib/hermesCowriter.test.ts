@@ -360,16 +360,22 @@ describe("plan mode", () => {
 });
 
 describe("chunk mode", () => {
-  it("asks for the three labeled output sections and honors planted setups", () => {
+  it("asks for the four labeled output sections and honors planted setups", () => {
     const prompt = buildCowriterPrompt({
       mode: "chunk",
-      markdown: "## Beats to write now\nBEAT 4",
+      markdown:
+        "## Continuity ledger (locked facts)\nPEOPLE:\n- Joe Kaplan | protagonist\nEVENTS:\n- River Dogs open tryout | this Saturday",
       beat: "4 and 5",
     });
     expect(prompt).toContain("PLOT_GOBLIN_PAGES:");
     expect(prompt).toContain("PLOT_GOBLIN_SUMMARY:");
     expect(prompt).toContain("PLOT_GOBLIN_SETUPS:");
+    expect(prompt).toContain("PLOT_GOBLIN_LEDGER:");
     expect(prompt).toContain("PLANTED");
+    expect(prompt).toContain("Do not rename ledgered people, recurring objects, locations, or events");
+    expect(prompt).toContain("Keep dates and relative timing consistent with the ledger");
+    expect(prompt).toContain("Do not duplicate a ledgered event as a new discovery");
+    expect(prompt).toContain("new named person, recurring object, location, dated event, or timeline fact");
   });
 
   it("omits suggestion-only guidance from chunk prompts", () => {

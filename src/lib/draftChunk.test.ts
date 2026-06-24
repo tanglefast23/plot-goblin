@@ -35,6 +35,41 @@ describe("parseChunkResult", () => {
     expect(result?.setups).toEqual([]);
   });
 
+  it("parses the optional continuity ledger section", () => {
+    const raw = [
+      "PLOT_GOBLIN_PAGES:",
+      "pages",
+      "PLOT_GOBLIN_SUMMARY:",
+      "recap",
+      "PLOT_GOBLIN_SETUPS:",
+      "NONE",
+      "PLOT_GOBLIN_LEDGER:",
+      "PEOPLE:",
+      "- Joe Kaplan | protagonist",
+      "OBJECTS:",
+      "- Brenda | Joe's pitching machine",
+      "LOCATIONS:",
+      "- busted batting cage | recurring practice spot",
+      "EVENTS:",
+      "- River Dogs open tryout | this Saturday",
+      "WARNINGS:",
+      "- Duplicate tryout flyer avoided.",
+    ].join("\n");
+
+    const result = parseChunkResult(raw);
+
+    expect(result?.setups).toEqual([]);
+    expect(result?.ledger.people).toEqual([{ name: "Joe Kaplan", note: "protagonist", source: "generated" }]);
+    expect(result?.ledger.objects).toEqual([{ name: "Brenda", note: "Joe's pitching machine", source: "generated" }]);
+    expect(result?.ledger.locations).toEqual([
+      { name: "busted batting cage", note: "recurring practice spot", source: "generated" },
+    ]);
+    expect(result?.ledger.events).toEqual([
+      { name: "River Dogs open tryout", note: "this Saturday", source: "generated" },
+    ]);
+    expect(result?.ledger.warnings).toEqual(["Duplicate tryout flyer avoided."]);
+  });
+
   it("skips malformed setup lines", () => {
     const raw = "PLOT_GOBLIN_PAGES:\np\nPLOT_GOBLIN_SUMMARY:\ns\nPLOT_GOBLIN_SETUPS:\n- garbage with no beat\n- beat 3 | valid";
     expect(parseChunkResult(raw)?.setups).toEqual([{ beatIndex: 3, note: "valid" }]);
